@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -18,7 +20,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        window.location.href = `${BASE}/login`;
       }
     }
     return Promise.reject(err);

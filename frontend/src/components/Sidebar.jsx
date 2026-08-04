@@ -46,7 +46,7 @@ export default function Sidebar({ items }) {
         <div className="sidebar-header">
           <div className="sidebar-header-top">
             <div className="sidebar-logo">
-              <img src="/logo-electrixstudio.png" alt="ElectrixStudio" />
+              <img src={`${import.meta.env.BASE_URL}logo-electrixstudio.png`} alt="ElectrixStudio" />
             </div>
             <button
               type="button"

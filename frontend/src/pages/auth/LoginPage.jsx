@@ -51,7 +51,7 @@ export default function LoginPage() {
 
       <div className="auth-card">
         <div className="auth-logo">
-          <img src="/logo-electrixstudio.png" alt="ElectrixStudio" />
+          <img src={`${import.meta.env.BASE_URL}logo-electrixstudio.png`} alt="ElectrixStudio" />
           <h1>Sistema de Consumo Eléctrico</h1>
           <p>Análisis energético profesional</p>
         </div>
