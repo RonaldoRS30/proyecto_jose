@@ -1,0 +1,4 @@
+LINE 66 TOOL Read
+PATH: c:\proyecto_jose\frontend\src\pages\auth\LoginPage.jsx
+
+{'path': 'c:\\proyecto_jose\\frontend\\src\\pages\\auth\\LoginPage.jsx'}

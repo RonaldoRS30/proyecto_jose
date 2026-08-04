@@ -1,0 +1,24 @@
+TARGET: backend/routes/recomendacionRoutes.js
+ENTRIES: 1
+
+BEST WRITE: C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\a539afb2-4b20-4a9d-b479-82f7ba55fe98\a539afb2-4b20-4a9d-b479-82f7ba55fe98.jsonl line 350 len=841
+
+=== FULL WRITE CONTENT ===
+const express = require('express');
+const recomendacionController = require('../controllers/recomendacionController');
+const { authenticate } = require('../middlewares/authMiddleware');
+const { authorizeRoles } = require('../middlewares/roleMiddleware');
+
+const router = express.Router();
+
+router.use(authenticate);
+router.use(authorizeRoles('admin', 'cliente'));
+
+router.get('/', recomendacionController.listar);
+router.get('/:id', authorizeRoles('admin'), recomendacionController.obtener);
+router.post('/', authorizeRoles('admin'), recomendacionController.crear);
+router.put('/:id', authorizeRoles('admin'), recomendacionController.actualizar);
+router.delete('/:id', authorizeRoles('admin'), recomendacionController.eliminar);
+router.patch('/:id/toggle', authorizeRoles('admin'), recomendacionController.toggle);
+
+module.exports = router;

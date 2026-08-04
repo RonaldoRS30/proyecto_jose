@@ -1,0 +1,4 @@
+LINE 163 TOOL Read
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+{'offset': 130, 'path': 'c:\\proyecto_jose\\backend\\services\\clienteService.js'}

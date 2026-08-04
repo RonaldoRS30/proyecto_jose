@@ -1,0 +1,53 @@
+LINE 162 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+=== OLD ===
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
+=== NEW ===
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
+
+const UMBRAL_ALERTA_CONSUMO = 1.3;
+
+const getUltimosCalculosPorCliente = async () => {
+  const calculos = await Calculo.findAll({
+    order: [['created_at', 'DESC']],
+    include: [
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido', 'documento', 'email'] },
+    ],
+  });
+
+  const map = new Map();
+  for (const calc of calculos) {
+    if (!map.has(calc.cliente_id)) map.set(calc.cliente_id, calc);
+  }
+  return map;
+};
+
+const buildAlertasConsumo = (ultimosMap, consumoPromedio) => {
+  if (!consumoPromedio || consumoPromedio <= 0) return [];
+
+  const umbral = consumoPromedio * UMBRAL_ALERTA_CONSUMO;
+  const alertas = [];
+
+  for (const calc of ultimosMap.values()) {
+    const consumo = parseFloat(calc.consumo_mes_total);
+    if (consumo <= umbral) continue;
+
+    const pct = Math.round(((consumo / consumoPromedio) - 1) * 100);
+    alertas.push({
+      clienteId: calc.cliente_id,
+      clienteNombre: calc.cliente
+        ? `${calc.cliente.nombre} ${calc.cliente.apellido || ''}`.trim()
+        : `Cliente #${calc.cliente_id}`,
+      consumoMes: roundNum(consumo),
+      consumoPromedio: roundNum(consumoPromedio),
+      porcentajeSobrePromedio: pct,
+      calculoId: calc.id,
+      fecha: calc.created_at,
+    });
+  }
+
+  return alertas.sort((a, b) => b.consumoMes - a.consumoMes).slice(0, 10);
+};

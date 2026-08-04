@@ -1,0 +1,11 @@
+LINE 54 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\codigoLoginService.js
+
+=== OLD ===
+  if (!codigoAcceso.cliente || !codigoAcceso.cliente.activo) {
+    throw new AppError('Cliente inactivo. Contacte al administrador', 403);
+  }
+=== NEW ===
+  if (!codigoAcceso.cliente) {
+    throw new AppError('Cliente no encontrado para este código', 403);
+  }

@@ -1,0 +1,8 @@
+LINE 167 TOOL StrReplace
+PATH: c:\proyecto_jose\frontend\src\services\api.js
+
+=== OLD ===
+export const getEstadisticas = () => api.get('/clientes/estadisticas');
+=== NEW ===
+export const getEstadisticas = () => api.get('/clientes/estadisticas');
+export const getClientesExportResumen = () => api.get('/clientes/export-resumen');

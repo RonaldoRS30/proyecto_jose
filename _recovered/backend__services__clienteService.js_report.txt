@@ -1,0 +1,113 @@
+TARGET: backend/services/clienteService.js
+ENTRIES: 25
+
+BEST WRITE: C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\a539afb2-4b20-4a9d-b479-82f7ba55fe98\a539afb2-4b20-4a9d-b479-82f7ba55fe98.jsonl line 18 len=2941
+
+=== FULL WRITE CONTENT ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+  CodigoAcceso,
+  Electrodomestico,
+  Calculo,
+  Reporte,
+  HistorialAcceso,
+} = require('../models');
+const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { AppError } = require('../utils/errorHandler');
+
+const listarClientes = async ({ search, activo, page = 1, limit = 10 }) => {
+  const where = {};
+  if (activo !== undefined) where.activo = activo === 'true' || activo === true;
+  if (search) {
+    where[Op.or] = [
+      { nombre: { [Op.like]: `%${search}%` } },
+      { apellido: { [Op.like]: `%${search}%` } },
+      { documento: { [Op.like]: `%${search}%` } },
+      { email: { [Op.like]: `%${search}%` } },
+      { codigo_interno: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const offset = (page - 1) * limit;
+  const { count, rows } = await Cliente.findAndCountAll({
+    where,
+    include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+    order: [['created_at', 'DESC']],
+    limit: parseInt(limit),
+    offset,
+  });
+
+  return { total: count, page: parseInt(page), limit: parseInt(limit), data: rows };
+};
+
+const crearCliente = async (data) => {
+  const codigo_interno = data.codigo_interno || generarCodigoInterno();
+  return Cliente.create({ ...data, codigo_interno });
+};
+
+const obtenerCliente = async (id) => {
+  const cliente = await Cliente.findByPk(id, {
+    include: [
+      { model: CodigoAcceso, as: 'codigos' },
+      { model: Electrodomestico, as: 'electrodomesticos' },
+    ],
+  });
+  if (!cliente) throw new AppError('Cliente no encontrado', 404);
+  return cliente;
+};
+
+const actualizarCliente = async (id, data) => {
+  const cliente = await obtenerCliente(id);
+  await cliente.update(data);
+  return cliente;
+};
+
+const eliminarCliente = async (id) => {
+  const cliente = await obtenerCliente(id);
+  await cliente.destroy();
+  return { message: 'Cliente eliminado' };
+};
+
+const toggleCliente = async (id) => {
+  const cliente = await obtenerCliente(id);
+  await cliente.update({ activo: !cliente.activo });
+  return cliente;
+};
+
+const getEstadisticasAdmin = async () => {
+  const [totalClientes, clientesActivos, totalCalculos, totalReportes] = await Promise.all([
+    Cliente.count(),
+    Cliente.count({ where: { activo: true } }),
+    Calculo.count(),
+    Reporte.count(),
+  ]);
+
+  const calculos = await Calculo.findAll({
+    attributes: ['consumo_mes_total', 'gasto_mensual_total'],
+  });
+
+  const consumoPromedio =
+    calculos.length > 0
+      ? calculos.reduce((s, c) => s + parseFloat(c.consumo_mes_total), 0) / calculos.length
+      : 0;
+
+  return {
+    totalClientes,
+    clientesActivos,
+    clientesInactivos: totalClientes - clientesActivos,
+    totalCalculos,
+    totalReportes,
+    consumoPromedio: Math.round(consumoPromedio * 100) / 100,
+  };
+};
+
+module.exports = {
+  listarClientes,
+  crearCliente,
+  obtenerCliente,
+  actualizarCliente,
+  eliminarCliente,
+  toggleCliente,
+  getEstadisticasAdmin,
+};

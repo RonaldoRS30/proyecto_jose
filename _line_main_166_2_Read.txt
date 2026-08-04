@@ -1,0 +1,4 @@
+LINE 166 TOOL Read
+PATH: c:\proyecto_jose\frontend\src\services\api.js
+
+{'path': 'c:\\proyecto_jose\\frontend\\src\\services\\api.js', 'limit': 55}

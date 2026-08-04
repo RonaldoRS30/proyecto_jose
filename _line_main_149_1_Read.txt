@@ -1,0 +1,4 @@
+LINE 149 TOOL Read
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+{'path': 'c:\\proyecto_jose\\backend\\services\\clienteService.js'}

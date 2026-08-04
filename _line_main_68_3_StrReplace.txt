@@ -1,0 +1,12 @@
+LINE 68 TOOL StrReplace
+PATH: c:\proyecto_jose\frontend\src\pages\auth\LoginPage.jsx
+
+=== OLD ===
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+=== NEW ===
+  return (
+    <div className="auth-page">
+      <AuthBackground />
+      <div className="auth-card">

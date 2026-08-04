@@ -1,0 +1,4 @@
+LINE 10 TOOL Read
+PATH: c:\proyecto_jose\backend\services\configuracionService.js
+
+{'limit': 60, 'path': 'c:\\proyecto_jose\\backend\\services\\configuracionService.js'}

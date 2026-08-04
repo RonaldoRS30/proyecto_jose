@@ -1,0 +1,10 @@
+LINE 68 TOOL StrReplace
+PATH: c:\proyecto_jose\frontend\src\pages\auth\LoginPage.jsx
+
+=== OLD ===
+import { Shield, KeyRound } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+=== NEW ===
+import { Shield, KeyRound } from 'lucide-react';
+import AuthBackground from '../../components/AuthBackground';
+import { useAuth } from '../../contexts/AuthContext';

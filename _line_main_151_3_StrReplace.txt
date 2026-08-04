@@ -1,0 +1,12 @@
+LINE 151 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+=== OLD ===
+  toggleCliente,
+  getEstadisticasAdmin,
+};
+=== NEW ===
+  toggleCliente,
+  getEstadisticasAdmin,
+  obtenerClienteDetalleAdmin,
+};

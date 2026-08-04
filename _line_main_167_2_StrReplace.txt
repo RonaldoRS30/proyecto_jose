@@ -1,0 +1,77 @@
+LINE 167 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+=== OLD ===
+const getResumenExportClientes = async () => {
+  const clientes = await Cliente.findAll({
+    include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+    order: [['nombre', 'ASC'], ['apellido', 'ASC']],
+  });
+
+  const ultimosPorCliente = await getUltimosCalculosPorCliente();
+
+  return clientes.map((c) => {
+    const ultimo = ultimosPorCliente.get(c.id);
+    const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
+    return {
+      codigo_interno: c.codigo_interno,
+      nombre: c.nombre,
+      apellido: c.apellido || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      acceso: codigosActivos > 0 ? 'Habilitado' : 'Deshabilitado',
+      codigos_activos: codigosActivos,
+      ultimo_calculo: ultimo?.created_at || null,
+      consumo_mes_kwh: ultimo ? roundNum(ultimo.consumo_mes_total) : null,
+      gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
+      factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
+      total_calculos: ultimosPorCliente.has(c.id)
+        ? undefined
+        : 0,
+    };
+  }).map((row, _, arr) => {
+    const cliente = clientes[arr.indexOf(row)];
+    const countPromise = null;
+    return row;
+  });
+};
+=== NEW ===
+const getResumenExportClientes = async () => {
+  const [clientes, ultimosPorCliente, conteosRaw] = await Promise.all([
+    Cliente.findAll({
+      include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+      order: [['nombre', 'ASC'], ['apellido', 'ASC']],
+    }),
+    getUltimosCalculosPorCliente(),
+    Calculo.findAll({
+      attributes: ['cliente_id', [sequelize.fn('COUNT', sequelize.col('id')), 'total']],
+      group: ['cliente_id'],
+      raw: true,
+    }),
+  ]);
+
+  const conteos = new Map(
+    conteosRaw.map((row) => [row.cliente_id, parseInt(row.total, 10)]),
+  );
+
+  return clientes.map((c) => {
+    const ultimo = ultimosPorCliente.get(c.id);
+    const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
+    return {
+      codigo_interno: c.codigo_interno,
+      nombre: c.nombre,
+      apellido: c.apellido || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      acceso: codigosActivos > 0 ? 'Habilitado' : 'Deshabilitado',
+      codigos_activos: codigosActivos,
+      total_calculos: conteos.get(c.id) || 0,
+      ultimo_calculo: ultimo?.created_at || null,
+      consumo_mes_kwh: ultimo ? roundNum(ultimo.consumo_mes_total) : null,
+      gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
+      factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
+    };
+  });
+};

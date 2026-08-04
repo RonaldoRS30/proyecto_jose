@@ -1,0 +1,455 @@
+================================================================================
+TARGET: frontend/src/services/api.js
+EVENTS: 9
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:61 ---
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:119 ---
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:148 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:152 old=72 new=211 ---
+=== OLD ===
+export const getClientes = (params) => api.get('/clientes', { params });
+=== NEW ===
+export const getClientes = (params) => api.get('/clientes', { params });
+export const getCliente = (id) => api.get(`/clientes/${id}`);
+export const getClienteDetalle = (id) => api.get(`/clientes/${id}/detalle`);
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:152 old=54 new=72 ---
+=== OLD ===
+export const getCalculos = () => api.get('/calculos');
+=== NEW ===
+export const getCalculos = (params) => api.get('/calculos', { params });
+--- GREP C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:165 ---
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:166 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:167 old=71 new=154 ---
+=== OLD ===
+export const getEstadisticas = () => api.get('/clientes/estadisticas');
+=== NEW ===
+export const getEstadisticas = () => api.get('/clientes/estadisticas');
+export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\subagents\02162fc5-3d30-4906-a48a-7041df22e7bf.jsonl:5 ---
+================================================================================
+TARGET: frontend/src/pages/auth/LoginPage.jsx
+EVENTS: 3
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:66 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:68 old=104 new=164 ---
+=== OLD ===
+import { Shield, KeyRound } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+=== NEW ===
+import { Shield, KeyRound } from 'lucide-react';
+import AuthBackground from '../../components/AuthBackground';
+import { useAuth } from '../../contexts/AuthContext';
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:68 old=79 new=101 ---
+=== OLD ===
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+=== NEW ===
+  return (
+    <div className="auth-page">
+      <AuthBackground />
+      <div className="auth-card">
+================================================================================
+TARGET: backend/services/clienteService.js
+EVENTS: 15
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:51 ---
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:149 ---
+--- GREP C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:150 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:151 old=287 new=399 ---
+=== OLD ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+  CodigoAcceso,
+  Electrodomestico,
+  Calculo,
+  Reporte,
+  HistorialAcceso,
+} = require('../models');
+const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { roundNum } = require('../utils/format');
+=== NEW ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+  CodigoAcceso,
+  Electrodomestico,
+  Calculo,
+  Reporte,
+  HistorialAcceso,
+} = require('../models');
+const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { roundNum } = require('../utils/format');
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:151 old=746 new=2507 ---
+=== OLD ===
+const getEstadisticasAdmin = async () => {
+  const [totalClientes, clientesActivos, totalCalculos, totalReportes] = await Promise.all([
+    Cliente.count(),
+    Cliente.count({ where: { activo: true } }),
+    Calculo.count(),
+    Reporte.count(),
+  ]);
+
+  const calculos = await Calculo.findAll({
+    attributes: ['consumo_mes_total', 'gasto_mensual_total'],
+  });
+
+  const consumoPromedio =
+    calculos.length > 0
+      ? calculos.reduce((s, c) => s + parseFloat(c.consumo_mes_total), 0) / calculos.length
+      : 0;
+
+  return {
+    totalClientes,
+    clientesActivos,
+    clientesInactivos: totalClientes - clientesActivos,
+    totalCalculos,
+    totalReportes,
+    consumoPromedio: roundNum(consumoPromedio),
+  };
+};
+=== NEW ===
+const getEstadisticasAdmin = async () => {
+  const [totalClientes, clientesActivos, totalCalculos, totalReportes] = await Promise.all([
+    Cliente.count(),
+    Cliente.count({ where: { activo: true } }),
+    Calculo.count(),
+    Reporte.count(),
+  ]);
+
+  const calculos = await Calculo.findAll({
+    attributes: ['consumo_mes_total', 'gasto_mensual_total'],
+  });
+
+  const consumoPromedio =
+    calculos.length > 0
+      ? calculos.reduce((s, c) => s + parseFloat(c.consumo_mes_total), 0) / calculos.length
+      : 0;
+
+  const actividadReciente = await Calculo.findAll({
+    limit: 8,
+    order: [['created_at', 'DESC']],
+    include: [
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido'] },
+    ],
+  });
+
+  return {
+    totalClientes,
+    clientesActivos,
+    clientesInactivos: totalClientes - clientesActivos,
+    totalCalculos,
+    totalReportes,
+    consumoPromedio: roundNum(consumoPromedio),
+    actividadReciente: enrichCalculos(actividadReciente),
+  };
+};
+
+const obtenerClienteDetalleAdmin = async (id) => {
+  const cliente = await Cliente.findByPk(id, {
+    include: [{ model: CodigoAcceso, as: 'codigos' }],
+  });
+  if (!cliente) throw new AppError('Cliente no encontrado', 404);
+
+  const [electrodomesticos, calculos, accesos, totalReportes] = await Promise.all([
+    Electrodomestico.findAll({
+      where: { cliente_id: id, activo: true },
+      order: [['modulo', 'ASC'], ['nombre', 'ASC']],
+    }),
+    Calculo.findAll({
+      where: { cliente_id: id },
+      order: [['created_at', 'DESC']],
+      limit: 20,
+    }),
+    HistorialAcceso.findAll({
+      where: { cliente_id: id, exitoso: true },
+      order: [['created_at', 'DESC']],
+      limit: 10,
+    }),
+    Reporte.count({ where: { cliente_id: id } }),
+  ]);
+
+  const equiposPorModulo = {
+    aparato: electrodomesticos.filter((e) => e.modulo === 'aparato').length,
+    fantasma: electrodomesticos.filter((e) => e.modulo === 'fantasma').length,
+    iluminacion: electrodomesticos.filter((e) => e.modulo === 'iluminacion').length,
+  };
+
+  return {
+    cliente,
+    resumen: {
+      totalEquipos: electrodomesticos.length,
+      equiposPorModulo,
+      totalCalculos: calculos.length,
+      totalReportes,
+      codigosActivos: cliente.codigos?.filter((c) => c.activo).length || 0,
+      ultimoCalculo: calculos[0]?.created_at || null,
+    },
+    electrodomesticos,
+    calculos: enrichCalculos(calculos),
+    accesos,
+  };
+};
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:151 old=46 new=77 ---
+=== OLD ===
+  toggleCliente,
+  getEstadisticasAdmin,
+};
+=== NEW ===
+  toggleCliente,
+  getEstadisticasAdmin,
+  obtenerClienteDetalleAdmin,
+};
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:160 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:162 old=109 new=1440 ---
+=== OLD ===
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
+=== NEW ===
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
+
+const UMBRAL_ALERTA_CONSUMO = 1.3;
+
+const getUltimosCalculosPorCliente = async () => {
+  const calculos = await Calculo.findAll({
+    order: [['created_at', 'DESC']],
+    include: [
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido', 'documento', 'email'] },
+    ],
+  });
+
+  const map = new Map();
+  for (const calc of calculos) {
+    if (!map.has(calc.cliente_id)) map.set(calc.cliente_id, calc);
+  }
+  return map;
+};
+
+const buildAlertasConsumo = (ultimosMap, consumoPromedio) => {
+  if (!consumoPromedio || consumoPromedio <= 0) return [];
+
+  const umbral = consumoPromedio * UMBRAL_ALERTA_CONSUMO;
+  const alertas = [];
+
+  for (const calc of ultimosMap.values()) {
+    const consumo = parseFloat(calc.consumo_mes_total);
+    if (consumo <= umbral) continue;
+
+    const pct = Math.round(((consumo / consumoPromedio) - 1) * 100);
+    alertas.push({
+      clienteId: calc.cliente_id,
+      clienteNombre: calc.cliente
+        ? `${calc.cliente.nombre} ${calc.cliente.apellido || ''}`.trim()
+        : `Cliente #${calc.cliente_id}`,
+      consumoMes: roundNum(consumo),
+      consumoPromedio: roundNum(consumoPromedio),
+      porcentajeSobrePromedio: pct,
+      calculoId: calc.id,
+      fecha: calc.created_at,
+    });
+  }
+
+  return alertas.sort((a, b) => b.consumoMes - a.consumoMes).slice(0, 10);
+};
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:162 old=473 new=1975 ---
+=== OLD ===
+  const actividadReciente = await Calculo.findAll({
+    limit: 8,
+    order: [['created_at', 'DESC']],
+    include: [
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido'] },
+    ],
+  });
+
+  return {
+    totalClientes,
+    clientesActivos,
+    clientesInactivos: totalClientes - clientesActivos,
+    totalCalculos,
+    totalReportes,
+    consumoPromedio: roundNum(consumoPromedio),
+    actividadReciente: enrichCalculos(actividadReciente),
+  };
+};
+=== NEW ===
+  const actividadReciente = await Calculo.findAll({
+    limit: 8,
+    order: [['created_at', 'DESC']],
+    include: [
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido'] },
+    ],
+  });
+
+  const ultimosPorCliente = await getUltimosCalculosPorCliente();
+  const alertasConsumo = buildAlertasConsumo(ultimosPorCliente, consumoPromedio);
+
+  return {
+    totalClientes,
+    clientesActivos,
+    clientesInactivos: totalClientes - clientesActivos,
+    totalCalculos,
+    totalReportes,
+    consumoPromedio: roundNum(consumoPromedio),
+    umbralAlertaConsumo: roundNum(consumoPromedio * UMBRAL_ALERTA_CONSUMO),
+    actividadReciente: enrichCalculos(actividadReciente),
+    alertasConsumo,
+  };
+};
+
+const getResumenExportClientes = async () => {
+  const clientes = await Cliente.findAll({
+    include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+    order: [['nombre', 'ASC'], ['apellido', 'ASC']],
+  });
+
+  const ultimosPorCliente = await getUltimosCalculosPorCliente();
+
+  return clientes.map((c) => {
+    const ultimo = ultimosPorCliente.get(c.id);
+    const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
+    return {
+      codigo_interno: c.codigo_interno,
+      nombre: c.nombre,
+      apellido: c.apellido || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      acceso: codigosActivos > 0 ? 'Habilitado' : 'Deshabilitado',
+      codigos_activos: codigosActivos,
+      ultimo_calculo: ultimo?.created_at || null,
+      consumo_mes_kwh: ultimo ? roundNum(ultimo.consumo_mes_total) : null,
+      gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
+      factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
+      total_calculos: ultimosPorCliente.has(c.id)
+        ? undefined
+        : 0,
+    };
+  }).map((row, _, arr) => {
+    const cliente = clientes[arr.indexOf(row)];
+    const countPromise = null;
+    return row;
+  });
+};
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:163 ---
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:166 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:167 old=55 new=68 ---
+=== OLD ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+=== NEW ===
+const { Op } = require('sequelize');
+const {
+  sequelize,
+  Cliente,
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:167 old=1255 new=1397 ---
+=== OLD ===
+const getResumenExportClientes = async () => {
+  const clientes = await Cliente.findAll({
+    include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+    order: [['nombre', 'ASC'], ['apellido', 'ASC']],
+  });
+
+  const ultimosPorCliente = await getUltimosCalculosPorCliente();
+
+  return clientes.map((c) => {
+    const ultimo = ultimosPorCliente.get(c.id);
+    const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
+    return {
+      codigo_interno: c.codigo_interno,
+      nombre: c.nombre,
+      apellido: c.apellido || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      acceso: codigosActivos > 0 ? 'Habilitado' : 'Deshabilitado',
+      codigos_activos: codigosActivos,
+      ultimo_calculo: ultimo?.created_at || null,
+      consumo_mes_kwh: ultimo ? roundNum(ultimo.consumo_mes_total) : null,
+      gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
+      factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
+      total_calculos: ultimosPorCliente.has(c.id)
+        ? undefined
+        : 0,
+    };
+  }).map((row, _, arr) => {
+    const cliente = clientes[arr.indexOf(row)];
+    const countPromise = null;
+    return row;
+  });
+};
+=== NEW ===
+const getResumenExportClientes = async () => {
+  const [clientes, ultimosPorCliente, conteosRaw] = await Promise.all([
+    Cliente.findAll({
+      include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
+      order: [['nombre', 'ASC'], ['apellido', 'ASC']],
+    }),
+    getUltimosCalculosPorCliente(),
+    Calculo.findAll({
+      attributes: ['cliente_id', [sequelize.fn('COUNT', sequelize.col('id')), 'total']],
+      group: ['cliente_id'],
+      raw: true,
+    }),
+  ]);
+
+  const conteos = new Map(
+    conteosRaw.map((row) => [row.cliente_id, parseInt(row.total, 10)]),
+  );
+
+  return clientes.map((c) => {
+    const ultimo = ultimosPorCliente.get(c.id);
+    const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
+    return {
+      codigo_interno: c.codigo_interno,
+      nombre: c.nombre,
+      apellido: c.apellido || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefono: c.telefono || '',
+      acceso: codigosActivos > 0 ? 'Habilitado' : 'Deshabilitado',
+      codigos_activos: codigosActivos,
+      total_calculos: conteos.get(c.id) || 0,
+      ultimo_calculo: ultimo?.created_at || null,
+      consumo_mes_kwh: ultimo ? roundNum(ultimo.consumo_mes_total) : null,
+      gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
+      factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
+    };
+  });
+};
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:167 old=56 new=84 ---
+=== OLD ===
+  getEstadisticasAdmin,
+  obtenerClienteDetalleAdmin,
+};
+=== NEW ===
+  getEstadisticasAdmin,
+  obtenerClienteDetalleAdmin,
+  getResumenExportClientes,
+};
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\subagents\02162fc5-3d30-4906-a48a-7041df22e7bf.jsonl:5 ---
+================================================================================
+TARGET: backend/services/codigoLoginService.js
+EVENTS: 3
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:50 ---
+--- STRREPLACE C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\c047038e-12b8-45aa-9fc0-1e777d9e84a0.jsonl:54 old=142 new=105 ---
+=== OLD ===
+  if (!codigoAcceso.cliente || !codigoAcceso.cliente.activo) {
+    throw new AppError('Cliente inactivo. Contacte al administrador', 403);
+  }
+=== NEW ===
+  if (!codigoAcceso.cliente) {
+    throw new AppError('Cliente no encontrado para este código', 403);
+  }
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\subagents\02162fc5-3d30-4906-a48a-7041df22e7bf.jsonl:11 ---
+================================================================================
+TARGET: backend/helpers/codigoHelper.js
+EVENTS: 0
+================================================================================
+TARGET: backend/services/configuracionService.js
+EVENTS: 1
+--- READ_REQUEST C:\Users\Ronaldo\.cursor\projects\c-proyecto-jose\agent-transcripts\c047038e-12b8-45aa-9fc0-1e777d9e84a0\subagents\02162fc5-3d30-4906-a48a-7041df22e7bf.jsonl:10 ---
+================================================================================
+TARGET: backend/routes/recomendacionRoutes.js
+EVENTS: 0

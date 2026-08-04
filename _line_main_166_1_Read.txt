@@ -1,0 +1,4 @@
+LINE 166 TOOL Read
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+{'limit': 15, 'path': 'c:\\proyecto_jose\\backend\\services\\clienteService.js'}

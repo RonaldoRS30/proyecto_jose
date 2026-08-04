@@ -1,0 +1,4 @@
+LINE 50 TOOL Read
+PATH: c:\proyecto_jose\backend\services\codigoLoginService.js
+
+{'path': 'c:\\proyecto_jose\\backend\\services\\codigoLoginService.js'}

@@ -1,0 +1,12 @@
+LINE 167 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+=== OLD ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+=== NEW ===
+const { Op } = require('sequelize');
+const {
+  sequelize,
+  Cliente,

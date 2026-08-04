@@ -1,0 +1,4 @@
+LINE 119 TOOL Read
+PATH: c:\proyecto_jose\frontend\src\services\api.js
+
+{'path': 'c:\\proyecto_jose\\frontend\\src\\services\\api.js', 'offset': 50, 'limit': 30}

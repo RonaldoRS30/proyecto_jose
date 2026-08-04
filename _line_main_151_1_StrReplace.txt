@@ -1,0 +1,29 @@
+LINE 151 TOOL StrReplace
+PATH: c:\proyecto_jose\backend\services\clienteService.js
+
+=== OLD ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+  CodigoAcceso,
+  Electrodomestico,
+  Calculo,
+  Reporte,
+  HistorialAcceso,
+} = require('../models');
+const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { roundNum } = require('../utils/format');
+=== NEW ===
+const { Op } = require('sequelize');
+const {
+  Cliente,
+  CodigoAcceso,
+  Electrodomestico,
+  Calculo,
+  Reporte,
+  HistorialAcceso,
+} = require('../models');
+const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { roundNum } = require('../utils/format');
+const { enrichCalculos } = require('./facturaHelper');
+const { AppError } = require('../utils/errorHandler');
