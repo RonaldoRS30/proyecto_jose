@@ -197,7 +197,9 @@ export default function ClientDashboard() {
       {/* Stats actuales */}
       <div className="cards-grid">
         <StatCard icon={Plug} label="Electrodomésticos" value={rg.cantidadEquipos ?? 0} color="#1A4AB0" />
+        <StatCard icon={Zap} label="Consumo Diario" value={`${formatNumber(rg.consumoDia ?? 0)} kWh`} color="#3b82f6" />
         <StatCard icon={Zap} label="Consumo Mensual" value={`${formatNumber(rg.consumoMes ?? 0)} kWh`} color="#10b981" />
+        <StatCard icon={Zap} label="Consumo Anual" value={`${formatNumber(rg.consumoAnio ?? 0)} kWh`} color="#8b5cf6" />
         <StatCard icon={DollarSign} label="Gasto Diario" value={formatCurrency(rg.gastoDiario ?? 0)} color="#2563d4" />
         <StatCard icon={DollarSign} label="Gasto Mensual" value={formatCurrency(rg.gastoMensual ?? 0)} color="#f59e0b" />
         <StatCard icon={DollarSign} label="Gasto Anual" value={formatCurrency(rg.gastoAnual ?? 0)} color="#10b981" />

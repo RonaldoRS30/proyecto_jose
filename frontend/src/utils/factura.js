@@ -33,10 +33,9 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
 
   const consumoKwh = roundNumber(
     Number(
-      factura?.consumoEnergiaLinea
-      ?? factura?.consumoEnergiaKwh
-      ?? factura?.consumoEnergia
+      factura?.consumoEnergiaKwh
       ?? consumoMesFallback
+      ?? factura?.consumoEnergia // fallback para registros legacy muy antiguos
       ?? 0
     )
   );
@@ -50,7 +49,7 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
   const gastoEnergia = roundNumber(factura?.gastoEnergiaMensual ?? consumoKwh * precio);
 
   const subtotal = roundNumber(
-    consumoKwh + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
+    gastoEnergia + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
   );
   const igv = roundNumber(subtotal * igvRate);
   const totalMes = roundNumber(subtotal + igv + electrificacionRural);
@@ -58,6 +57,8 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
   return {
     consumoKwh,
     gastoEnergia,
+    gastoEnergiaMensual: gastoEnergia,
+    consumoEnergiaLinea: gastoEnergia,
     cargoFijo,
     mantReposicion,
     alumbradoPublico,

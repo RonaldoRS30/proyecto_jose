@@ -133,17 +133,16 @@ function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
   const t = { ...DEFAULT_TARIFF, ...tariff };
   const kwhMes = round(Number(consumoMensualTotal));
 
-  // C43 = G41 → kWh mensual (se suma al subtotal como en Excel)
-  const consumoEnergiaLinea = kwhMes;
-  // J41 = precio × G41 → gasto energía en soles (solo informativo)
   const gastoEnergiaMensual = round(kwhMes * t.precioKwh);
+  // El usuario confirmó que la línea de Consumo de Energía en la factura debe ser en Soles
+  const consumoEnergiaLinea = gastoEnergiaMensual;
 
   const cargoFijo = t.cargoFijo;
   const mantReposicion = t.mantReposicion;
   const alumbradoPublico = t.alumbradoPublico;
   const interesCompensatorio = t.interesCompensatorio;
 
-  // C48 = C43+C44+C45+C46+C47
+  // C48 = Gasto en Soles + cargos fijos
   const subtotal = round(
     consumoEnergiaLinea + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
   );
@@ -154,6 +153,7 @@ function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
   const totalMes = round(igv + electrificacionRural + subtotal);
 
   return {
+    precioKwh: t.precioKwh,
     consumoEnergiaKwh: kwhMes,
     consumoEnergiaLinea,
     gastoEnergiaMensual,

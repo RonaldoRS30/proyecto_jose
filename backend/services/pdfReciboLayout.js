@@ -33,7 +33,7 @@ function formatDatePE(date) {
 }
 
 function ensureSpace(doc, needed) {
-  const bottom = doc.page.height - MARGIN;
+  const bottom = doc.page.height - MARGIN - 55;
   if (doc.y + needed > bottom) {
     doc.addPage();
     doc.y = MARGIN;
@@ -194,7 +194,10 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   let y = boxY + 50;
 
   const lineas = [
-    { label: 'Consumo de energía', value: `${formatNum(factura.consumoEnergiaLinea)} kWh` },
+    { 
+      label: `Consumo de energía (${formatNum(factura.consumoEnergiaKwh)} kWh × S/ ${formatNum(factura.precioKwh || 0.613)})`, 
+      value: `S/ ${formatNum(factura.consumoEnergiaLinea || factura.gastoEnergiaMensual)}` 
+    },
     { label: 'Cargo fijo', value: `S/ ${formatNum(factura.cargoFijo)}` },
     { label: 'Mantenimiento y reposición de conexión', value: `S/ ${formatNum(factura.mantReposicion)}` },
     { label: 'Alumbrado público', value: `S/ ${formatNum(factura.alumbradoPublico)}` },
@@ -343,24 +346,60 @@ function drawRecomendacionesPanel(doc, recomendaciones) {
 }
 
 function drawFooter(doc) {
-  ensureSpace(doc, 50);
-  const y = doc.page.height - MARGIN - 36;
+  const pages = doc.bufferedPageRange();
+  
+  for (let i = pages.start; i < pages.start + pages.count; i++) {
+    doc.switchToPage(i);
+    doc.save();
 
-  doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).strokeColor(COLORS.border).lineWidth(0.5).stroke();
+    const bannerH = 44;
+    const bannerY = doc.page.height - MARGIN - bannerH;
 
-  doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
-    .text(
-      'Documento generado automáticamente por ElectrixStudio. Estimación informativa de consumo y facturación eléctrica.',
-      MARGIN,
-      y + 8,
-      { width: CONTENT_W, align: 'center', lineGap: 2 }
-    )
-    .text(
-      'Los importes pueden variar según la empresa distribuidora y el periodo de facturación.',
-      MARGIN,
-      y + 22,
-      { width: CONTENT_W, align: 'center' }
-    );
+    // Fondo oscuro elegante para la publicidad/branding
+    doc.roundedRect(MARGIN, bannerY, CONTENT_W, bannerH, 6)
+       .fill('#0f172a');
+
+    // Tira lateral azul eléctrico de acento
+    doc.roundedRect(MARGIN, bannerY, 5, bannerH, 2)
+       .fill('#2563eb');
+
+    // Columna Izquierda: Branding & Eslogan
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff')
+       .text('ELECTRIXSTUDIO', MARGIN + 14, bannerY + 8);
+    doc.font('Helvetica').fontSize(7).fillColor('#94a3b8')
+       .text('Auditoría & Soluciones de Eficiencia Energética', MARGIN + 14, bannerY + 23);
+
+    // Columna Derecha: Datos de Contacto bien estructurados
+    const contactX = MARGIN + 210;
+    const contactW = CONTENT_W - 220;
+
+    // Fila 1: Web y Correo
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#38bdf8')
+       .text('WEB: ', contactX, bannerY + 9, { continued: true, width: contactW, align: 'right' })
+       .font('Helvetica').fillColor('#f8fafc')
+       .text('electrixstudio.com', { continued: true })
+       .font('Helvetica-Bold').fillColor('#38bdf8')
+       .text('   |   CORREO: ', { continued: true })
+       .font('Helvetica').fillColor('#f8fafc')
+       .text('contacto@electrixstudio.com');
+
+    // Fila 2: Teléfono / WhatsApp
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#38bdf8')
+       .text('TEL / WHATSAPP: ', contactX, bannerY + 23, { width: contactW, align: 'right', continued: true })
+       .font('Helvetica').fillColor('#f8fafc')
+       .text('+51 987 654 321  ·  Atención a Nivel Nacional');
+
+    // Pie de página inferior fuera del banner (Número de página)
+    doc.font('Helvetica').fontSize(6.5).fillColor(COLORS.muted)
+       .text(
+         `Página ${i + 1} de ${pages.count}  ·  Documento informativo generado por ElectrixStudio`,
+         MARGIN,
+         bannerY + bannerH + 3,
+         { width: CONTENT_W, align: 'center' }
+       );
+
+    doc.restore();
+  }
 }
 
 module.exports = {

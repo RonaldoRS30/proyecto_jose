@@ -36,11 +36,11 @@ assertEqual(ref.gastoAnual, 0.613 * 1752, 'Refrigerador gasto anual');
 
 // Factura Excel solo refrigerador (144 kWh/mes)
 const facturaRef = calcularFacturaMensual(144);
-assertEqual(facturaRef.consumoEnergiaLinea, 144, 'Factura línea consumo (kWh en subtotal)');
+assertEqual(facturaRef.consumoEnergiaLinea, 88.272, 'Factura línea consumo (Soles en subtotal)');
 assertEqual(facturaRef.gastoEnergiaMensual, 88.272, 'Gasto energía mensual S/');
-assertEqual(facturaRef.subtotal, 166.4, 'Subtotal factura');
-assertEqual(facturaRef.igv, 29.952, 'IGV 18%');
-assertEqual(facturaRef.totalMes, 201.362, 'Total del mes');
+assertEqual(facturaRef.subtotal, 110.672, 'Subtotal factura');
+assertEqual(facturaRef.igv, 19.921, 'IGV 18%');
+assertEqual(facturaRef.totalMes, 135.603, 'Total del mes');
 
 // Cálculo completo multi-equipo
 const resultado = calcularCompleto({
@@ -53,7 +53,7 @@ const resultado = calcularCompleto({
 
 assertEqual(resultado.resumenGeneral.gastoDiario, 2.9424, 'Resumen gasto diario');
 assertEqual(resultado.resumenGeneral.gastoMensual, 88.272, 'Resumen gasto mensual');
-assertEqual(resultado.factura.totalMes, 201.362, 'Total factura refrigerador');
+assertEqual(resultado.factura.totalMes, 135.603, 'Total factura refrigerador');
 
 const vacio = calcularCompleto({ aparatos: [], fantasma: [], iluminacion: [] });
 assertEqual(vacio.resumenGeneral.cantidadEquipos, 0, 'Sin equipos cantidad');
