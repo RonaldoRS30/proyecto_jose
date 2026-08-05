@@ -11,19 +11,13 @@ import { formatDate } from '../../utils/helpers';
 export default function CodigosPage() {
   const alert = useAlert();
   const [codigos, setCodigos] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [clienteId, setClienteId] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [codRes, cliRes] = await Promise.all([
-        getCodigos(),
-        getClientes({ limit: 100 }),
-      ]);
-      setCodigos(codRes.data.data);
-      setClientes(cliRes.data.data);
+      const { data } = await getCodigos();
+      setCodigos(data.data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -33,27 +27,6 @@ export default function CodigosPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleGenerar = async () => {
-    if (!clienteId) {
-      await alert({
-        title: 'Cliente requerido',
-        message: 'Seleccione un cliente antes de generar el código.',
-        variant: 'warning',
-      });
-      return;
-    }
-    try {
-      await generarCodigo({ cliente_id: parseInt(clienteId) });
-      setClienteId('');
-      load();
-    } catch (e) {
-      await alert({
-        title: 'No se puede generar',
-        message: e.response?.data?.message || 'Este cliente ya tiene un código de acceso.',
-        variant: 'warning',
-      });
-    }
-  };
 
   const handleToggle = async (id, activo) => {
     await updateCodigo(id, { activo: !activo });
@@ -69,15 +42,6 @@ export default function CodigosPage() {
     });
   };
 
-  const clientesConCodigo = new Set(codigos.map((c) => c.cliente_id));
-  const clientesSinCodigo = clientes.filter((c) => !clientesConCodigo.has(c.id));
-
-  const clienteOptions = clientesSinCodigo.map((c) => ({
-    value: String(c.id),
-    label: `${c.nombre} ${c.apellido || ''}`.trim(),
-  }));
-
-  const clienteYaTieneCodigo = clienteId && clientesConCodigo.has(parseInt(clienteId, 10));
 
   const renderActions = (c) => (
     <>
@@ -97,38 +61,6 @@ export default function CodigosPage() {
         subtitle="Un código por cliente. Para cortar o restaurar el acceso use Habilitar/Deshabilitar."
       />
 
-      <div className="card card-form-block">
-        <div className="card-body generate-code-form">
-          <div className="form-group" style={{ margin: 0, flex: 1 }}>
-            <label>Cliente sin código</label>
-            <SearchableSelect
-              options={clienteOptions}
-              value={clienteId}
-              placeholder={
-                clientesSinCodigo.length
-                  ? 'Buscar cliente...'
-                  : 'Todos los clientes ya tienen código'
-              }
-              onChange={(val) => setClienteId(val)}
-              getOptionLabel={(o) => o.label}
-              getOptionValue={(o) => o.value}
-            />
-            {clientesSinCodigo.length === 0 && !loading && (
-              <p className="form-hint" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
-                No hay clientes pendientes de código. Al crear un cliente nuevo se genera automáticamente.
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary generate-code-btn"
-            onClick={handleGenerar}
-            disabled={!clienteId || clienteYaTieneCodigo || clientesSinCodigo.length === 0}
-          >
-            <Key size={16} /> Generar Código
-          </button>
-        </div>
-      </div>
 
       <div className="card">
         <PaginatedResponsiveList

@@ -9,6 +9,11 @@ export default defineConfig({
     host: true,
     allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io', '.loca.lt'],
     proxy: {
+      '/sistema/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sistema\/api/, '/api'),
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,

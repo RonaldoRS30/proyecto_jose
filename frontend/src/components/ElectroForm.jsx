@@ -8,11 +8,13 @@ export default function ElectroForm({
 }) {
   const [presetKey, setPresetKey] = useState('');
   const [selectedConsejo, setSelectedConsejo] = useState('');
+  const [isManual, setIsManual] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setPresetKey('');
       setSelectedConsejo('');
+      setIsManual(!!editId);
     }
   }, [isOpen, editId]);
 
@@ -28,6 +30,7 @@ export default function ElectroForm({
     });
     setPresetKey(preset.nombre);
     setSelectedConsejo(preset.texto || '');
+    setIsManual(true);
   };
 
   const presetOptions = tiposPreset.map((t) => ({
@@ -48,16 +51,23 @@ export default function ElectroForm({
         </>
       }
     >
-      {tiposPreset.length > 0 && (
+      {!editId && tiposPreset.length > 0 && (
         <div className="form-group">
           <label>{catalogLabel}</label>
           <SearchableSelect
             options={presetOptions}
             value={presetKey}
             placeholder="Escriba para buscar: lavadora, tv, refrigeradora..."
-            onChange={(_, opt) => applyPreset(opt)}
+            onChange={(_, opt) => {
+              if (!opt) { setPresetKey(''); setSelectedConsejo(''); return; }
+              applyPreset(opt);
+            }}
             getOptionLabel={(opt) => opt.label}
             getOptionValue={(opt) => opt.nombre}
+            onNotFound={(searchQuery) => {
+              setIsManual(true);
+              setForm({ ...form, nombre: searchQuery });
+            }}
             renderOption={(opt) => (
               <span className="searchable-option-content">
                 <span className="searchable-option-name">{opt.nombre}</span>
@@ -65,19 +75,21 @@ export default function ElectroForm({
               </span>
             )}
           />
-          <small className="form-hint">Seleccione un equipo del catálogo para completar potencia y horas sugeridas.</small>
+          <small className="form-hint">Seleccione un equipo del catálogo para autocompletar la potencia y horas sugeridas.</small>
           {selectedConsejo && (
-            <div className="recomendacion-preview">
+            <div className="recomendacion-preview" style={{ marginTop: '0.5rem' }}>
               <strong>Consejo de ahorro:</strong> {selectedConsejo}
             </div>
           )}
         </div>
       )}
 
-      <div className="form-group">
-        <label>Nombre *</label>
-        <input className="form-control" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-      </div>
+      {isManual && (
+        <>
+          <div className="form-group">
+            <label>Nombre *</label>
+            <input className="form-control" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+          </div>
 
       <div className="form-row">
         <div className="form-group">
@@ -130,6 +142,7 @@ export default function ElectroForm({
         <label>Observaciones</label>
         <textarea className="form-control" rows={2} value={form.observaciones || ''} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
       </div>
+      </>)}
 
       <input type="hidden" value={modulo} />
     </Modal>

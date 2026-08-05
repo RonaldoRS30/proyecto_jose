@@ -14,6 +14,7 @@ export default function SearchableSelect({
   renderOption,
   disabled = false,
   clearable = true,
+  onNotFound,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -129,7 +130,19 @@ export default function SearchableSelect({
       {open && (
         <ul className="searchable-select-dropdown" role="listbox">
           {filtered.length === 0 ? (
-            <li className="searchable-select-empty">No se encontraron resultados</li>
+            <li className="searchable-select-empty">
+              No se encontraron resultados
+              {onNotFound && (
+                <button 
+                  type="button" 
+                  className="btn btn-primary btn-sm" 
+                  style={{ display: 'block', margin: '0.75rem auto 0', width: 'auto' }}
+                  onClick={() => { onNotFound(query); setOpen(false); setQuery(''); }}
+                >
+                  + Agregar manualmente
+                </button>
+              )}
+            </li>
           ) : (
             filtered.map((opt, index) => (
               <li
