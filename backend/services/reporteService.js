@@ -104,6 +104,7 @@ const generarReportePDF = async (calculoId, clienteId) => {
     });
 
     drawRecomendacionesPanel(doc, recomendaciones);
+
     drawFacturaRecibo(doc, factura, formatNum);
     drawFooter(doc);
 

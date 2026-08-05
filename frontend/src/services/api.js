@@ -50,7 +50,7 @@ export const createCliente = (data) => api.post('/clientes', data);
 export const updateCliente = (id, data) => api.put(`/clientes/${id}`, data);
 export const deleteCliente = (id) => api.delete(`/clientes/${id}`);
 export const toggleCliente = (id) => api.patch(`/clientes/${id}/toggle`);
-export const getEstadisticas = () => api.get('/clientes/estadisticas');
+export const getEstadisticas = (params) => api.get('/clientes/estadisticas', { params });
 export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
 export const getMiPerfil = () => api.get('/clientes/mi-perfil');
 
@@ -82,6 +82,8 @@ export const getCalculo = (id) => api.get(`/calculos/${id}`);
 export const generarPDF = (calculoId) => api.post('/reportes/pdf', { calculo_id: calculoId });
 export const downloadReporte = (id) =>
   api.get(`/reportes/${id}/download`, { responseType: 'blob' });
+export const downloadExcelReporte = (calculoId) =>
+  api.get(`/reportes/${calculoId}/excel`, { responseType: 'blob' });
 
 // Configuración
 export const getConfiguraciones = () => api.get('/configuraciones');

@@ -40,7 +40,11 @@ const toggle = asyncHandler(async (req, res) => {
 });
 
 const estadisticas = asyncHandler(async (req, res) => {
-  const stats = await clienteService.getEstadisticasAdmin();
+  const { fecha_desde, fecha_hasta } = req.query;
+  const stats = await clienteService.getEstadisticasAdmin({
+    fechaDesde: fecha_desde || null,
+    fechaHasta: fecha_hasta || null,
+  });
   res.json({ success: true, data: stats });
 });
 

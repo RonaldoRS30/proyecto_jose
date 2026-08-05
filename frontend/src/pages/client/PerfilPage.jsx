@@ -63,8 +63,12 @@ export default function PerfilPage() {
               <span>{cliente.empresa_distribuidora}</span>
             </div>
             <div className="profile-field">
-              <span className="profile-field-label">Tarifa</span>
+              <span className="profile-field-label">Tarifa (Tipo)</span>
               <span>{cliente.tarifa}</span>
+            </div>
+            <div className="profile-field">
+              <span className="profile-field-label">Tarifa Personalizada (S/)</span>
+              <span>{cliente.tarifa_kwh ? `S/ ${cliente.tarifa_kwh} por kWh` : 'No asignada (Usa global)'}</span>
             </div>
             <div className="profile-field">
               <span className="profile-field-label">Potencia</span>

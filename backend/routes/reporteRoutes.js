@@ -6,6 +6,7 @@ const { authorizeRoles } = require('../middlewares/roleMiddleware');
 const router = express.Router();
 
 router.post('/pdf', authenticate, authorizeRoles('admin', 'cliente'), reporteController.generarPDF);
+router.get('/:calculoId/excel', authenticate, authorizeRoles('admin', 'cliente'), reporteController.generarExcel);
 router.get('/:id/download', authenticate, authorizeRoles('admin', 'cliente'), reporteController.descargar);
 router.get('/:id', authenticate, authorizeRoles('admin', 'cliente'), async (req, res, next) => {
   req.params.id = req.params.id;

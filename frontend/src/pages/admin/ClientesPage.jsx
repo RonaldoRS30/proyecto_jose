@@ -392,9 +392,23 @@ export default function ClientesPage() {
               />
             </div>
           </div>
-          <div className="form-group">
-            <label>Dirección *</label>
-            <input className="form-control" value={form.direccion || ''} onChange={(e) => setForm({ ...form, direccion: e.target.value })} required />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Tarifa Eléctrica (S/ por kWh)</label>
+              <input 
+                className="form-control" 
+                type="number" 
+                step="0.0001" 
+                min="0"
+                value={form.tarifa_kwh || ''} 
+                onChange={(e) => setForm({ ...form, tarifa_kwh: e.target.value ? parseFloat(e.target.value) : null })} 
+                placeholder="Ej. 1.25"
+              />
+            </div>
+            <div className="form-group">
+              <label>Dirección *</label>
+              <input className="form-control" value={form.direccion || ''} onChange={(e) => setForm({ ...form, direccion: e.target.value })} required />
+            </div>
           </div>
         </form>
       </Modal>

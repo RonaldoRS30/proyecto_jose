@@ -51,7 +51,8 @@ export default function ElectroForm({
         </>
       }
     >
-      {!editId && tiposPreset.length > 0 && (
+      <div style={{ minHeight: isManual ? 'auto' : '320px', display: 'flex', flexDirection: 'column' }}>
+        {!editId && tiposPreset.length > 0 && (
         <div className="form-group">
           <label>{catalogLabel}</label>
           <SearchableSelect
@@ -135,7 +136,6 @@ export default function ElectroForm({
       <div className="form-group">
         <label>Días de uso por mes</label>
         <input className="form-control" type="number" min="1" max="31" value={form.dias_uso_mes || 30} onChange={(e) => setForm({ ...form, dias_uso_mes: e.target.value })} />
-        <small style={{ color: 'var(--text-muted)' }}>Nota: El cálculo mensual usa 30 días según fórmula Excel (G = F × 30)</small>
       </div>
 
       <div className="form-group">
@@ -144,7 +144,8 @@ export default function ElectroForm({
       </div>
       </>)}
 
-      <input type="hidden" value={modulo} />
+        <input type="hidden" value={modulo} />
+      </div>
     </Modal>
   );
 }

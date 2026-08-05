@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, Download, Search } from 'lucide-react';
+import { FileText, Download, Search, FileSpreadsheet } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import SearchableSelect from '../../components/SearchableSelect';
@@ -8,9 +8,8 @@ import ServerPaginatedResponsiveList from '../../components/ServerPaginatedRespo
 import { ListCard } from '../../components/ResponsiveList';
 import { useCalculo } from '../../contexts/CalculoContext';
 import { useAlert } from '../../contexts/ConfirmContext';
-import { getCalculos, getClientes, generarPDF, downloadReporte } from '../../services/api';
+import { getCalculos, generarPDF, downloadReporte, downloadExcelReporte, getClientes } from '../../services/api';
 import { formatDate, formatNumber, formatCurrency } from '../../utils/helpers';
-import { exportToCsv, formatCsvDate } from '../../utils/exportCsv';
 import { buildFacturaFromCalculo } from '../../utils/factura';
 import { useServerCalculosList, PAGE_SIZE } from '../../hooks/useServerCalculosList';
 
@@ -33,7 +32,9 @@ function ReportesList({
   calculos,
   ultimoCalculo,
   generating,
+  exportingExcel,
   onPDF,
+  onExcel,
   admin = false,
   serverPage,
   serverTotal,
@@ -66,15 +67,26 @@ function ReportesList({
           <td>{formatNumber(c.consumo_mes_total)} kWh</td>
           <td>{formatCurrency(getFacturaTotal(c))}</td>
           <td>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => onPDF(c.id)}
-              disabled={generating === c.id}
-            >
-              <Download size={14} />
-              {generating === c.id ? 'Generando...' : 'PDF'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => onPDF(c.id)}
+                disabled={generating === c.id || exportingExcel === c.id}
+              >
+                <Download size={14} />
+                {generating === c.id ? 'Gen...' : 'PDF'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => onExcel(c.id)}
+                disabled={exportingExcel === c.id || generating === c.id}
+              >
+                <FileSpreadsheet size={14} />
+                {exportingExcel === c.id ? 'Gen...' : 'Excel'}
+              </button>
+            </div>
           </td>
         </tr>
       ) : (
@@ -92,15 +104,26 @@ function ReportesList({
           <td>{formatCurrency(c.gasto_anual_total)}</td>
           <td>{formatCurrency(getFacturaTotal(c))}</td>
           <td>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => onPDF(c.id)}
-              disabled={generating === c.id}
-            >
-              <Download size={14} />
-              {generating === c.id ? 'Generando...' : 'Descargar PDF'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => onPDF(c.id)}
+                disabled={generating === c.id || exportingExcel === c.id}
+              >
+                <Download size={14} />
+                {generating === c.id ? 'Generando...' : 'Descargar PDF'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => onExcel(c.id)}
+                disabled={exportingExcel === c.id || generating === c.id}
+              >
+                <FileSpreadsheet size={14} />
+                {exportingExcel === c.id ? 'Exportando...' : 'Excel'}
+              </button>
+            </div>
           </td>
         </tr>
       )
@@ -117,14 +140,26 @@ function ReportesList({
             { label: 'Total', value: formatCurrency(getFacturaTotal(c)), highlight: true },
           ]}
           actions={
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => onPDF(c.id)}
-              disabled={generating === c.id}
-            >
-              <Download size={14} /> PDF
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => onPDF(c.id)}
+                disabled={generating === c.id || exportingExcel === c.id}
+              >
+                <Download size={14} /> PDF
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => onExcel(c.id)}
+                disabled={exportingExcel === c.id || generating === c.id}
+              >
+                <FileSpreadsheet size={14} /> Excel
+              </button>
+            </div>
           }
         />
       ) : (
@@ -145,16 +180,28 @@ function ReportesList({
             { label: 'Total factura', value: formatCurrency(getFacturaTotal(c)), highlight: true },
           ]}
           actions={
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => onPDF(c.id)}
-              disabled={generating === c.id}
-              style={{ flex: 1, justifyContent: 'center' }}
-            >
-              <Download size={14} />
-              {generating === c.id ? 'Generando...' : 'Descargar PDF'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => onPDF(c.id)}
+                disabled={generating === c.id || exportingExcel === c.id}
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                <Download size={14} />
+                {generating === c.id ? 'Gen...' : 'PDF'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => onExcel(c.id)}
+                disabled={exportingExcel === c.id || generating === c.id}
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                <FileSpreadsheet size={14} />
+                {exportingExcel === c.id ? 'Exp...' : 'Excel'}
+              </button>
+            </div>
           }
         />
       )
@@ -185,11 +232,32 @@ function ClientReportesPage() {
   const { loading: contextLoading, ultimoCalculo } = useCalculo();
   const alert = useAlert();
   const [generating, setGenerating] = useState(null);
+  const [exportingExcel, setExportingExcel] = useState(null);
+  const [calculos, setCalculos] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [listLoading, setListLoading] = useState(true);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
-  const syncKey = ultimoCalculo?.id;
-  const {
-    calculos, total, page, setPage, loading: listLoading,
-  } = useServerCalculosList({ syncKey });
+  useEffect(() => { setPage(1); }, [fechaDesde, fechaHasta, ultimoCalculo?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setListLoading(true);
+    const params = { page, limit: PAGE_SIZE };
+    if (fechaDesde) params.fecha_desde = fechaDesde;
+    if (fechaHasta) params.fecha_hasta = fechaHasta;
+    getCalculos(params)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCalculos(data.data ?? []);
+        setTotal(data.total ?? data.data?.length ?? 0);
+      })
+      .catch(() => { if (!cancelled) { setCalculos([]); setTotal(0); } })
+      .finally(() => { if (!cancelled) setListLoading(false); });
+    return () => { cancelled = true; };
+  }, [page, fechaDesde, fechaHasta, ultimoCalculo?.id]);
 
   const handlePDF = async (calculoId) => {
     setGenerating(calculoId);
@@ -213,9 +281,32 @@ function ClientReportesPage() {
     }
   };
 
+  const handleExcel = async (calculoId) => {
+    setExportingExcel(calculoId);
+    try {
+      const response = await downloadExcelReporte(calculoId);
+      const url = window.URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calculo_${calculoId}_detalles_graficos.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      await alert({
+        title: 'Error al exportar',
+        message: 'No se pudo generar el Excel. Verifica que el servidor esté activo.',
+        variant: 'error',
+      });
+    } finally {
+      setExportingExcel(null);
+    }
+  };
+
   if (contextLoading && total === 0 && listLoading) {
     return <div className="loading">Cargando reportes...</div>;
   }
+
+  const hasFilters = Boolean(fechaDesde || fechaHasta);
 
   return (
     <div>
@@ -224,13 +315,44 @@ function ClientReportesPage() {
         subtitle="Descargue reportes de los cálculos guardados desde Inicio"
       />
 
+      {/* Filtros de fecha */}
+      <div className="card filters-card" style={{ marginBottom: '1rem' }}>
+        <div className="card-body filters-panel">
+          <div className="filters-grid reportes-filters-grid" style={{ gridTemplateColumns: 'auto auto auto auto', alignItems: 'end' }}>
+            <div className="filter-field filter-field-dates">
+              <label className="filter-label">Desde</label>
+              <input type="date" className="form-control" value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)} />
+            </div>
+            <div className="filter-field filter-field-dates">
+              <label className="filter-label">Hasta</label>
+              <input type="date" className="form-control" value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)} />
+            </div>
+            <div className="filter-field filter-actions">
+              <label className="filter-label filter-label-invisible">Acciones</label>
+              <div className="filter-actions-row">
+                {hasFilters && (
+                  <button type="button" className="btn btn-secondary btn-filter"
+                    onClick={() => { setFechaDesde(''); setFechaHasta(''); }}>
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {total === 0 && !listLoading && (
         <div className="card" style={{ marginBottom: '1rem' }}>
           <div className="card-body" style={{ textAlign: 'center', padding: '2rem' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              No hay cálculos guardados. Vaya a Inicio y pulse «Ejecutar Cálculo».
+              {hasFilters
+                ? 'No hay cálculos en el período seleccionado. Prueba con otro rango de fechas.'
+                : 'No hay cálculos guardados. Vaya a Inicio y pulse «Ejecutar Cálculo».'}
             </p>
-            <Link to="/cliente" className="btn btn-primary">Ir a Inicio</Link>
+            {!hasFilters && <Link to="/cliente" className="btn btn-primary">Ir a Inicio</Link>}
           </div>
         </div>
       )}
@@ -243,7 +365,9 @@ function ClientReportesPage() {
           calculos={calculos}
           ultimoCalculo={ultimoCalculo}
           generating={generating}
+          exportingExcel={exportingExcel}
           onPDF={handlePDF}
+          onExcel={handleExcel}
           serverPage={page}
           serverTotal={total}
           onServerPageChange={setPage}
@@ -264,6 +388,7 @@ function AdminReportesPage() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(null);
+  const [exportingExcel, setExportingExcel] = useState(null);
   const [search, setSearch] = useState('');
   const [clienteId, setClienteId] = useState(searchParams.get('cliente_id') || '');
   const [fechaDesde, setFechaDesde] = useState('');
@@ -323,6 +448,27 @@ function AdminReportesPage() {
       });
     } finally {
       setGenerating(null);
+    }
+  };
+
+  const handleExcel = async (calculoId) => {
+    setExportingExcel(calculoId);
+    try {
+      const response = await downloadExcelReporte(calculoId);
+      const url = window.URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calculo_${calculoId}_detalles_graficos.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      await alert({
+        title: 'Error al exportar',
+        message: 'No se pudo generar el Excel. Verifica que el servidor esté activo.',
+        variant: 'error',
+      });
+    } finally {
+      setExportingExcel(null);
     }
   };
 
@@ -488,7 +634,9 @@ function AdminReportesPage() {
         <ReportesList
           calculos={calculos}
           generating={generating}
+          exportingExcel={exportingExcel}
           onPDF={handlePDF}
+          onExcel={handleExcel}
           admin
           serverPage={page}
           serverTotal={total}

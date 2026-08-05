@@ -26,6 +26,7 @@ const Cliente = sequelize.define(
     direccion: { type: DataTypes.STRING(255), allowNull: true },
     empresa_distribuidora: { type: DataTypes.STRING(100), defaultValue: 'Luz del Sur' },
     tarifa: { type: DataTypes.STRING(50), defaultValue: 'BT5B residencial' },
+    tarifa_kwh: { type: DataTypes.DECIMAL(10, 4), allowNull: true },
     potencia_contratada: { type: DataTypes.STRING(20), defaultValue: '10 KW' },
     medidor: { type: DataTypes.STRING(50), defaultValue: '3φ - 3 hilos' },
     activo: { type: DataTypes.BOOLEAN, defaultValue: true },

@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const reporteService = require('../services/reporteService');
+const excelService = require('../services/excelService');
 const configuracionService = require('../services/configuracionService');
 const { asyncHandler } = require('../utils/errorHandler');
 
@@ -34,4 +35,15 @@ const actualizarConfig = asyncHandler(async (req, res) => {
   res.json({ success: true, data: config });
 });
 
-module.exports = { generarPDF, descargar, listarConfig, actualizarConfig };
+const generarExcel = asyncHandler(async (req, res) => {
+  const { calculoId } = req.params;
+  const excelPath = await excelService.generarExcel(calculoId);
+  res.download(excelPath, `calculo_${calculoId}_detalles_graficos.xlsx`, (err) => {
+    if (!err) {
+      // Optional: Delete file after download
+      try { fs.unlinkSync(excelPath); } catch (e) {}
+    }
+  });
+});
+
+module.exports = { generarPDF, descargar, listarConfig, actualizarConfig, generarExcel };

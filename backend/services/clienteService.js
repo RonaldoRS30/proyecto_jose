@@ -134,18 +134,31 @@ const toggleCliente = async (id) => {
   return cliente;
 };
 
-const getEstadisticasAdmin = async () => {
+const getEstadisticasAdmin = async ({ fechaDesde, fechaHasta } = {}) => {
   const config = await getConfigMap();
   const umbralPct = config.umbralAlertaConsumoPct || 30;
+
+  // Build date filter for calculos
+  const calculoWhere = {};
+  if (fechaDesde || fechaHasta) {
+    calculoWhere.created_at = {};
+    if (fechaDesde) calculoWhere.created_at[Op.gte] = new Date(fechaDesde);
+    if (fechaHasta) {
+      const hasta = new Date(fechaHasta);
+      hasta.setHours(23, 59, 59, 999);
+      calculoWhere.created_at[Op.lte] = hasta;
+    }
+  }
 
   const [totalClientes, clientesActivos, totalCalculos, totalReportes] = await Promise.all([
     Cliente.count(),
     Cliente.count({ where: { activo: true } }),
-    Calculo.count(),
+    Calculo.count({ where: calculoWhere }),
     Reporte.count(),
   ]);
 
   const calculos = await Calculo.findAll({
+    where: calculoWhere,
     attributes: ['consumo_mes_total', 'gasto_mensual_total'],
   });
 
@@ -155,12 +168,34 @@ const getEstadisticasAdmin = async () => {
       : 0;
 
   const actividadReciente = await Calculo.findAll({
+    where: calculoWhere,
     limit: 8,
     order: [['created_at', 'DESC']],
     include: [
       { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido'] },
     ],
   });
+
+  // Monthly trend data (last 6 months or within filter range)
+  const consumoPorMesRaw = await Calculo.findAll({
+    where: calculoWhere,
+    attributes: [
+      [sequelize.fn('DATE_FORMAT', sequelize.col('created_at'), '%Y-%m'), 'mes'],
+      [sequelize.fn('AVG', sequelize.col('consumo_mes_total')), 'consumo_promedio'],
+      [sequelize.fn('AVG', sequelize.col('gasto_mensual_total')), 'gasto_promedio'],
+      [sequelize.fn('COUNT', sequelize.col('id')), 'total_calculos'],
+    ],
+    group: [sequelize.fn('DATE_FORMAT', sequelize.col('created_at'), '%Y-%m')],
+    order: [[sequelize.fn('DATE_FORMAT', sequelize.col('created_at'), '%Y-%m'), 'ASC']],
+    raw: true,
+  });
+
+  const consumoPorMes = consumoPorMesRaw.map((row) => ({
+    mes: row.mes,
+    consumoPromedio: roundNum(parseFloat(row.consumo_promedio) || 0),
+    gastoPromedio: roundNum(parseFloat(row.gasto_promedio) || 0),
+    totalCalculos: parseInt(row.total_calculos, 10),
+  }));
 
   const ultimosPorCliente = await getUltimosCalculosPorCliente();
   const alertasConsumo = buildAlertasConsumo(ultimosPorCliente, consumoPromedio, umbralPct);
@@ -176,6 +211,8 @@ const getEstadisticasAdmin = async () => {
     umbralAlertaConsumoPct: umbralPct,
     actividadReciente: enrichCalculos(actividadReciente),
     alertasConsumo,
+    consumoPorMes,
+    filtrosAplicados: { fechaDesde: fechaDesde || null, fechaHasta: fechaHasta || null },
   };
 };
 

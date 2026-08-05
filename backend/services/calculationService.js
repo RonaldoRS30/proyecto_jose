@@ -11,6 +11,10 @@ const ejecutarCalculo = async (clienteId) => {
   if (!cliente) throw new AppError('Cliente no encontrado', 404);
 
   const config = await getConfigMap();
+  if (cliente.tarifa_kwh) {
+    config.precioKwh = parseFloat(cliente.tarifa_kwh);
+  }
+  
   const electrodomesticos = await listarPorCliente(clienteId);
 
   if (electrodomesticos.length === 0) {
@@ -71,6 +75,11 @@ const ejecutarCalculo = async (clienteId) => {
 
 const previewCalculo = async (clienteId) => {
   const config = await getConfigMap();
+  const cliente = await Cliente.findByPk(clienteId);
+  if (cliente && cliente.tarifa_kwh) {
+    config.precioKwh = parseFloat(cliente.tarifa_kwh);
+  }
+
   const electrodomesticos = await listarPorCliente(clienteId);
 
   const aparatos = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'aparato'));
