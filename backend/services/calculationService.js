@@ -4,6 +4,7 @@ const { calcularCompleto } = require('./calculationEngine');
 const { getConfigMap } = require('./configuracionService');
 const { listarPorCliente, toCalcInput } = require('./electrodomesticoService');
 const { buildFacturaParaCalculo, enrichCalculo, enrichCalculos } = require('./facturaHelper');
+const { applyConfigTarifa } = require('./tarifaService');
 const { AppError } = require('../utils/errorHandler');
 
 const ejecutarCalculo = async (clienteId) => {
@@ -11,10 +12,8 @@ const ejecutarCalculo = async (clienteId) => {
   if (!cliente) throw new AppError('Cliente no encontrado', 404);
 
   const config = await getConfigMap();
-  if (cliente.tarifa_kwh) {
-    config.precioKwh = parseFloat(cliente.tarifa_kwh);
-  }
-  
+  const { config: configConTarifa, tarifa } = await applyConfigTarifa(config, clienteId);
+
   const electrodomesticos = await listarPorCliente(clienteId);
 
   if (electrodomesticos.length === 0) {
@@ -25,11 +24,11 @@ const ejecutarCalculo = async (clienteId) => {
   const fantasma = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'fantasma'));
   const iluminacion = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'iluminacion'));
 
-  const resultado = calcularCompleto({ aparatos, fantasma, iluminacion }, config);
+  const resultado = calcularCompleto({ aparatos, fantasma, iluminacion }, configConTarifa);
 
   const calculo = await Calculo.create({
     cliente_id: clienteId,
-    precio_kwh: config.precioKwh,
+    precio_kwh: configConTarifa.precioKwh,
     consumo_dia_total: resultado.resumenGeneral.consumoDia,
     consumo_mes_total: resultado.resumenGeneral.consumoMes,
     consumo_anio_total: resultado.resumenGeneral.consumoAnio,
@@ -38,13 +37,13 @@ const ejecutarCalculo = async (clienteId) => {
     gasto_anual_total: resultado.resumenGeneral.gastoAnual,
     demanda_total: resultado.resumenGeneral.demandaTotal,
     factura_total_mes: resultado.factura.totalMes,
-    resumen_json: resultado,
+    resumen_json: { ...resultado, tarifa },
   });
 
   const facturaFinal = buildFacturaParaCalculo(calculo);
   await calculo.update({
     factura_total_mes: facturaFinal.totalMes,
-    resumen_json: { ...resultado, factura: facturaFinal },
+    resumen_json: { ...resultado, factura: facturaFinal, tarifa },
   });
 
   const detalles = resultado.dispositivos.map((d) => ({
@@ -69,16 +68,13 @@ const ejecutarCalculo = async (clienteId) => {
 
   return {
     calculo,
-    resultado,
+    resultado: { ...resultado, tarifa },
   };
 };
 
 const previewCalculo = async (clienteId) => {
   const config = await getConfigMap();
-  const cliente = await Cliente.findByPk(clienteId);
-  if (cliente && cliente.tarifa_kwh) {
-    config.precioKwh = parseFloat(cliente.tarifa_kwh);
-  }
+  const { config: configConTarifa, tarifa } = await applyConfigTarifa(config, clienteId);
 
   const electrodomesticos = await listarPorCliente(clienteId);
 
@@ -86,7 +82,8 @@ const previewCalculo = async (clienteId) => {
   const fantasma = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'fantasma'));
   const iluminacion = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'iluminacion'));
 
-  return calcularCompleto({ aparatos, fantasma, iluminacion }, config);
+  const resultado = calcularCompleto({ aparatos, fantasma, iluminacion }, configConTarifa);
+  return { ...resultado, tarifa };
 };
 
 const listarCalculos = async (filters = {}) => {
@@ -113,7 +110,7 @@ const listarCalculos = async (filters = {}) => {
   const clienteInclude = {
     model: Cliente,
     as: 'cliente',
-    attributes: ['id', 'nombre', 'apellido', 'documento'],
+    attributes: ['id', 'nombre', 'apellido', 'documento', 'tarifa_kwh'],
     required: false,
   };
 
@@ -134,6 +131,8 @@ const listarCalculos = async (filters = {}) => {
     order: [['created_at', 'DESC']],
   };
 
+  const configMap = await getConfigMap();
+
   if (page != null || limit != null) {
     const p = parseInt(page, 10) || 1;
     const l = parseInt(limit, 10) || 8;
@@ -147,12 +146,12 @@ const listarCalculos = async (filters = {}) => {
       total: count,
       page: p,
       limit: l,
-      data: enrichCalculos(rows),
+      data: enrichCalculos(rows, configMap),
     };
   }
 
   const rows = await Calculo.findAll(query);
-  return enrichCalculos(rows);
+  return enrichCalculos(rows, configMap);
 };
 
 const obtenerCalculo = async (id, clienteId = null) => {
@@ -163,12 +162,13 @@ const obtenerCalculo = async (id, clienteId = null) => {
     where,
     include: [
       { model: DetalleCalculo, as: 'detalles' },
-      { model: Cliente, as: 'cliente' },
+      { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'apellido', 'tarifa_kwh'] },
     ],
   });
 
   if (!calculo) throw new AppError('Cálculo no encontrado', 404);
-  return enrichCalculo(calculo);
+  const configMap = await getConfigMap();
+  return enrichCalculo(calculo, { configMap });
 };
 
 module.exports = { ejecutarCalculo, previewCalculo, listarCalculos, obtenerCalculo };

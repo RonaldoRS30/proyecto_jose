@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
-const { Calculo, DetalleCalculo } = require('../models');
+const { Calculo, DetalleCalculo, Cliente } = require('../models');
+const { getConfigMap } = require('./configuracionService');
+const { aplicarTarifaDinamica, getPrecioKwhParaCalculo } = require('./facturaHelper');
 
 const EXCEL_UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'excel');
 
@@ -29,13 +31,19 @@ const resolvePythonCommand = () => {
 };
 
 const generarExcel = async (calculoId) => {
+  const configMap = await getConfigMap();
   const calculo = await Calculo.findByPk(calculoId, {
-    include: [{ model: DetalleCalculo, as: 'detalles' }],
+    include: [
+      { model: DetalleCalculo, as: 'detalles' },
+      { model: Cliente, as: 'cliente', attributes: ['id', 'tarifa_kwh'] },
+    ],
   });
 
   if (!calculo) throw new Error('Cálculo no encontrado');
 
-  const detalles = calculo.detalles.map((d) => ({
+  const precioKwh = getPrecioKwhParaCalculo(calculo, configMap);
+  const calculoConTarifa = aplicarTarifaDinamica(calculo, precioKwh);
+  const detalles = (calculoConTarifa.detalles || []).map((d) => ({
     nombre: d.nombre,
     modulo: d.modulo,
     categoria: d.categoria,

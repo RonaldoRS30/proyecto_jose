@@ -18,9 +18,8 @@ function assertEqual(actual, expected, label) {
   }
 }
 
-console.log('\n=== Test Factura Reportes (subtotal Excel) ===\n');
+console.log('\n=== Test Factura Reportes (Excel C43 = G41) ===\n');
 
-// Simula cálculo guardado con resumen_json VIEJO (subtotal incorrecto en JSON)
 const calculoLegacy = {
   consumo_mes_total: 144,
   consumo_dia_total: 4.8,
@@ -39,7 +38,7 @@ const calculoLegacy = {
 const factura = buildFacturaParaCalculo(calculoLegacy);
 
 assertEqual(factura.consumoEnergiaLinea, 144, 'Línea consumo kWh (C43)');
-assertEqual(factura.gastoEnergiaMensual, 88.272, 'Gasto energía referencia');
+assertEqual(factura.gastoEnergiaMensual, 88.272, 'Gasto energía referencia (J)');
 assertEqual(
   factura.subtotal,
   144 + 2.26 + 1.68 + 17.64 + 0.82,

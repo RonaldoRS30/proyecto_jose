@@ -36,7 +36,7 @@ assertEqual(ref.gastoAnual, 0.613 * 1752, 'Refrigerador gasto anual');
 
 // Factura Excel solo refrigerador (144 kWh/mes)
 const facturaRef = calcularFacturaMensual(144);
-assertEqual(facturaRef.consumoEnergiaLinea, 144, 'Factura línea consumo (kWh)');
+assertEqual(facturaRef.consumoEnergiaKwh, 144, 'Factura consumo kWh mes');
 assertEqual(facturaRef.gastoEnergiaMensual, 88.272, 'Gasto energía mensual S/');
 assertEqual(facturaRef.subtotal, 166.4, 'Subtotal factura');
 assertEqual(facturaRef.igv, 29.952, 'IGV 18%');
@@ -54,6 +54,23 @@ const resultado = calcularCompleto({
 assertEqual(resultado.resumenGeneral.gastoDiario, 2.9424, 'Resumen gasto diario');
 assertEqual(resultado.resumenGeneral.gastoMensual, 88.272, 'Resumen gasto mensual');
 assertEqual(resultado.factura.totalMes, 201.362, 'Total factura refrigerador');
+
+// 3 equipos activos hoja CALCULADORA (Refrigerador + Lavadora + Secadora)
+const tresEquipos = calcularCompleto({
+  aparatos: [
+    { nombre: 'Refrigerador', cantidad: 1, horasDiarias: 24, potenciaW: 200, categoria: 'Cocina' },
+    { nombre: 'Lavadora', cantidad: 1, horasDiarias: 1, potenciaW: 1500, categoria: 'Lavado' },
+    { nombre: 'Secadora', cantidad: 1, horasDiarias: 1, potenciaW: 2000, categoria: 'Lavado' },
+  ],
+  fantasma: [],
+  iluminacion: [],
+});
+assertEqual(tresEquipos.resumenGeneral.consumoMes, 249, 'Excel G41 kWh/mes');
+assertEqual(tresEquipos.resumenGeneral.gastoMensual, 152.637, 'Excel J41 gasto/mes (× tarifa)');
+assertEqual(tresEquipos.resumenGeneral.consumoDia, 8.3, 'Excel F total día');
+assertEqual(tresEquipos.factura.subtotal, 271.4, 'Excel C48 subtotal');
+assertEqual(tresEquipos.factura.igv, 48.852, 'Excel C49 IGV');
+assertEqual(tresEquipos.factura.totalMes, 325.262, 'Excel C51 total mes');
 
 const vacio = calcularCompleto({ aparatos: [], fantasma: [], iluminacion: [] });
 assertEqual(vacio.resumenGeneral.cantidadEquipos, 0, 'Sin equipos cantidad');

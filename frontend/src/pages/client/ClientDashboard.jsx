@@ -82,6 +82,7 @@ export default function ClientDashboard() {
     modulos,
     factura,
     precioKwh,
+    tarifaFuente,
     dispositivos,
     ultimoCalculo,
   } = useCalculo();
@@ -130,7 +131,7 @@ export default function ClientDashboard() {
     }
   }, [preset, isCustom, customDesde, customHasta]);
 
-  useEffect(() => { fetchHistorial(); }, [fetchHistorial]);
+  useEffect(() => { fetchHistorial(); }, [fetchHistorial, precioKwh]);
 
   const handleCalcular = async () => {
     try {
@@ -205,12 +206,13 @@ export default function ClientDashboard() {
             <div style={{ fontSize: '24px', fontWeight: 700, color: '#e11d48', letterSpacing: '-0.5px' }}>
               S/ {precioKwh ?? 0.613}
             </div>
+            <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
+              {tarifaFuente === 'cliente' ? 'Tarifa personalizada' : 'Tarifa global del sistema'}
+            </div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <span style={{ fontSize: '11px', color: '#718096', display: 'block', lineHeight: '1.4' }}>
-            Este valor se multiplica por el consumo (día/mes/año)
-          </span>
+
           <span style={{ fontSize: '11px', color: '#718096', display: 'block', lineHeight: '1.4' }}>
             para obtener el gasto diario, mensual y anual
           </span>

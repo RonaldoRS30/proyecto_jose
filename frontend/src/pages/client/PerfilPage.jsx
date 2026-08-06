@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { User, Building, Zap, Save, Check } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { getMiPerfil, updateMiTarifa } from '../../services/api';
+import { useCalculo } from '../../contexts/CalculoContext';
 
 export default function PerfilPage() {
+  const { refreshPreview, refreshCalculos } = useCalculo();
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tarifaInput, setTarifaInput] = useState('');
@@ -30,6 +32,7 @@ export default function PerfilPage() {
       const val = tarifaInput === '' ? null : parseFloat(tarifaInput);
       const { data } = await updateMiTarifa(val);
       setCliente(data.data);
+      await Promise.all([refreshPreview(), refreshCalculos()]);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
@@ -57,9 +60,7 @@ export default function PerfilPage() {
         <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Zap size={18} style={{ color: '#e11d48' }} />
           <h3 style={{ margin: 0 }}>Tarifa kWh (S/)</h3>
-          <span style={{ fontSize: '11px', color: '#718096', marginLeft: 'auto' }}>
-            Este valor se multiplica por el consumo para calcular los gastos
-          </span>
+ 
         </div>
         <div className="card-body">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -109,8 +110,9 @@ export default function PerfilPage() {
             </div>
           </div>
           <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
-            <strong>⚡ Importante:</strong> Al cambiar la tarifa, los cálculos de gasto diario, mensual y anual se actualizarán
-            automáticamente al ejecutar un nuevo cálculo.
+            <strong>⚡ Importante:</strong> Al guardar la tarifa, los gastos en Inicio, Dashboard y Reportes
+            se actualizan al instante según la fórmula Consumo (kWh) × Tarifa.
+            Para registrar la nueva tarifa en el historial, ejecute un cálculo desde Inicio.
             <br />
             <strong>Fórmula:</strong> Gasto = Consumo (kWh) × Tarifa (S/ {tarifaInput || '0.613'})
           </div>

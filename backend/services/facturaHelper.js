@@ -1,4 +1,5 @@
 const { calcularFacturaMensual, crearFacturaVacia, DEFAULT_TARIFF } = require('./calculationEngine');
+const { resolveTarifaFromCliente } = require('./tarifaService');
 const { roundNum } = require('../utils/format');
 
 /**
@@ -49,23 +50,132 @@ function buildFacturaParaCalculo(calculo) {
 }
 
 /**
- * Enriquece un cálculo con factura recalculada (subtotal = kWh + cargos).
+ * Enriquece un cálculo con factura recalculada (subtotal = kWh × tarifa + cargos).
  */
-function enrichCalculo(calculo) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : { ...calculo };
+function enrichCalculo(calculo, options = {}) {
+  const configMap = options.configMap || {};
+  const precioKwhActual = options.precioKwhActual ?? getPrecioKwhParaCalculo(calculo, configMap);
+  const plain = aplicarTarifaDinamica(calculo, precioKwhActual);
   const factura = buildFacturaParaCalculo(plain);
+  const tarifa = resolveTarifaFromCliente(plain.cliente, configMap);
+
   return {
     ...plain,
     factura_total_mes: factura.totalMes,
     resumen_json: {
       ...(plain.resumen_json || {}),
       factura,
+      precioKwh: precioKwhActual,
+    },
+    tarifa: {
+      precioKwh: precioKwhActual,
+      fuente: tarifa.fuente,
+      globalPrecio: tarifa.globalPrecio,
     },
   };
 }
 
-function enrichCalculos(calculos) {
-  return calculos.map((c) => enrichCalculo(c));
+function enrichCalculos(calculos, configMap = {}) {
+  return calculos.map((c) => enrichCalculo(c, { configMap }));
+}
+
+function recalcGasto(consumo, precioKwh) {
+  return roundNum(parseFloat(consumo || 0) * parseFloat(precioKwh));
+}
+
+function recalcTotalesGasto(totales, precioKwh) {
+  if (!totales) return totales;
+  return {
+    ...totales,
+    gastoDiario: recalcGasto(totales.consumoDia, precioKwh),
+    gastoMensual: recalcGasto(totales.consumoMes, precioKwh),
+    gastoAnual: recalcGasto(totales.consumoAnio, precioKwh),
+  };
+}
+
+/**
+ * Recalcula gastos en S/ usando la tarifa actual (consumo kWh × precio).
+ * No modifica la base de datos; solo la respuesta API.
+ */
+function aplicarTarifaDinamica(calculo, precioKwh) {
+  const plain = calculo?.toJSON ? calculo.toJSON() : { ...calculo };
+  const storedPrecio = parseFloat(plain.precio_kwh);
+  const p = parseFloat(precioKwh);
+
+  if (!p || (storedPrecio === p && !plain.tarifa_dinamica)) {
+    return plain;
+  }
+
+  const out = {
+    ...plain,
+    precio_kwh: p,
+    precio_kwh_guardado: plain.precio_kwh_guardado ?? plain.precio_kwh,
+    tarifa_dinamica: storedPrecio !== p,
+    gasto_diario_total: recalcGasto(plain.consumo_dia_total, p),
+    gasto_mensual_total: recalcGasto(plain.consumo_mes_total, p),
+    gasto_anual_total: recalcGasto(plain.consumo_anio_total, p),
+  };
+
+  if (out.detalles?.length) {
+    out.detalles = out.detalles.map((d) => ({
+      ...d,
+      gasto_diario: recalcGasto(d.consumo_dia, p),
+      gasto_mensual: recalcGasto(d.consumo_mes, p),
+      gasto_anual: recalcGasto(d.consumo_anio, p),
+    }));
+  }
+
+  if (out.resumen_json) {
+    const rj = { ...out.resumen_json, precioKwh: p };
+    const rg = rj.resumenGeneral || {};
+
+    rj.resumenGeneral = {
+      ...rg,
+      gastoDiario: recalcGasto(rg.consumoDia ?? plain.consumo_dia_total, p),
+      gastoMensual: recalcGasto(rg.consumoMes ?? plain.consumo_mes_total, p),
+      gastoAnual: recalcGasto(rg.consumoAnio ?? plain.consumo_anio_total, p),
+    };
+
+    if (Array.isArray(rj.dispositivos)) {
+      rj.dispositivos = rj.dispositivos.map((d) => ({
+        ...d,
+        gastoDiario: recalcGasto(d.consumoDia, p),
+        gastoMensual: recalcGasto(d.consumoMes, p),
+        gastoAnual: recalcGasto(d.consumoAnio, p),
+      }));
+    }
+
+    if (rj.modulos) {
+      const modulos = { ...rj.modulos };
+      ['aparatos', 'fantasma', 'iluminacion'].forEach((key) => {
+        if (modulos[key]?.totales) {
+          modulos[key] = {
+            ...modulos[key],
+            totales: recalcTotalesGasto(modulos[key].totales, p),
+            detalles: modulos[key].detalles?.map((d) => ({
+              ...d,
+              gastoDiario: recalcGasto(d.consumoDia, p),
+              gastoMensual: recalcGasto(d.consumoMes, p),
+              gastoAnual: recalcGasto(d.consumoAnio, p),
+            })),
+          };
+        }
+      });
+      rj.modulos = modulos;
+    }
+
+    out.resumen_json = rj;
+  }
+
+  return out;
+}
+
+function getPrecioKwhParaCalculo(calculo, configMap = {}) {
+  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  if (plain.cliente) {
+    return resolveTarifaFromCliente(plain.cliente, configMap).precioKwh;
+  }
+  return parseFloat(plain.precio_kwh) || parseFloat(configMap.precioKwh) || DEFAULT_TARIFF.precioKwh;
 }
 
 /**
@@ -135,9 +245,11 @@ function getTotalesPorModulo(calculo) {
 }
 
 module.exports = {
+  aplicarTarifaDinamica,
   buildFacturaParaCalculo,
   enrichCalculo,
   enrichCalculos,
+  getPrecioKwhParaCalculo,
   getResumenParaCalculo,
   getTotalesPorModulo,
   MOD_LABELS,

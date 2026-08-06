@@ -11,6 +11,7 @@ export default function CalculoStatusBanner() {
     ultimoCalculo,
     hasEquipos,
     hasCambiosSinGuardar,
+    tarifaCambiada,
     calculating,
     loading,
   } = useCalculo();
@@ -24,11 +25,13 @@ export default function CalculoStatusBanner() {
       <div className="calculo-status-banner calculo-status-pending">
         <AlertTriangle size={18} />
         <div className="calculo-status-text">
-          <strong>Hay cambios sin guardar en sus equipos.</strong>
+          <strong>
+            {tarifaCambiada ? 'Tarifa kWh actualizada — gastos recalculados.' : 'Hay cambios sin guardar en sus equipos.'}
+          </strong>
           <span>
             Vista actual: {formatNumber(resumenGeneral.consumoMes ?? 0)} kWh/mes ·{' '}
             {formatCurrency(resumenGeneral.gastoMensual ?? 0)}/mes.
-            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Cálculo» para sincronizar historial y reportes.'}
+            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Cálculo» para guardar en historial y reportes.'}
           </span>
         </div>
         {!isInicio && (

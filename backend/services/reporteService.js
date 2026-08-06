@@ -6,10 +6,12 @@ const { AppError } = require('../utils/errorHandler');
 const { formatNum } = require('../utils/format');
 const {
   buildFacturaParaCalculo,
+  enrichCalculo,
   getResumenParaCalculo,
   getTotalesPorModulo,
   MOD_LABELS,
 } = require('./facturaHelper');
+const { getConfigMap } = require('./configuracionService');
 const {
   drawHeaderBand,
   drawClientePanel,
@@ -48,12 +50,15 @@ const generarReportePDF = async (calculoId, clienteId) => {
 
   if (!calculo) throw new AppError('Cálculo no encontrado', 404);
 
-  const clienteIdReporte = calculo.cliente_id;
-  const cliente = calculo.cliente;
-  const resumen = getResumenParaCalculo(calculo);
-  const factura = buildFacturaParaCalculo(calculo);
-  const totalesModulos = getTotalesPorModulo(calculo);
-  const detalles = calculo.detalles || [];
+  const configMap = await getConfigMap();
+  const calculoEnriquecido = enrichCalculo(calculo, { configMap });
+
+  const clienteIdReporte = calculoEnriquecido.cliente_id;
+  const cliente = calculoEnriquecido.cliente;
+  const resumen = getResumenParaCalculo(calculoEnriquecido);
+  const factura = buildFacturaParaCalculo(calculoEnriquecido);
+  const totalesModulos = getTotalesPorModulo(calculoEnriquecido);
+  const detalles = calculoEnriquecido.detalles || [];
   const electroIds = detalles
     .filter((d) => d.electrodomestico_id)
     .map((d) => d.electrodomestico_id);
@@ -87,8 +92,8 @@ const generarReportePDF = async (calculoId, clienteId) => {
 
     drawHeaderBand(doc, {
       calculoId,
-      fecha: calculo.created_at,
-      precioKwh: formatNum(calculo.precio_kwh),
+      fecha: calculoEnriquecido.created_at,
+      precioKwh: formatNum(calculoEnriquecido.precio_kwh),
     });
 
     drawClientePanel(doc, cliente);
@@ -97,7 +102,7 @@ const generarReportePDF = async (calculoId, clienteId) => {
 
     const modulos = ['aparato', 'fantasma', 'iluminacion'];
     modulos.forEach((mod) => {
-      const items = (calculo.detalles || []).filter((d) => d.modulo === mod);
+      const items = (calculoEnriquecido.detalles || []).filter((d) => d.modulo === mod);
       if (items.length > 0) {
         drawEquiposTable(doc, MOD_LABELS[mod], items, formatNum);
       }

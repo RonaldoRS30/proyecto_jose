@@ -11,15 +11,15 @@
  *   K = precioKwh * H               → Gasto anual
  *
  * Hoja CALCULADORA - Facturación mensual (C43-C51):
- *   C43 = G41 → Consumo Energía (kWh mensual, valor numérico usado en suma)
+ *   C43 = G41 → kWh mensual (valor numérico en la suma del subtotal)
  *   C44-C47 → cargos fijos en S/
  *   C48 = C43+C44+C45+C46+C47 → SUBTOTAL
  *   C49 = C48*0.18 → IGV
  *   C50 → Electrificación Rural
  *   C51 = C49+C50+C48 → TOTAL DEL MES
  *
- * Nota: En columnas I,J,K el gasto en S/ = precioKwh × consumo (I=F*precio, J=G*precio, K=H*precio)
- *       La fila "Consumo de Energía" del recibo usa kWh (G41), no el gasto en soles (J41).
+ * Tarifa J1: multiplica columnas I,J,K (gastos por equipo). La fila C43 del recibo
+ * usa G41 (kWh), no J41 — réplica exacta del Excel.
  */
 
 const DEFAULT_TARIFF = {
@@ -134,7 +134,7 @@ function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
   const kwhMes = round(Number(consumoMensualTotal));
 
   const gastoEnergiaMensual = round(kwhMes * t.precioKwh);
-  // Representado en kWh (Fórmula idéntica a tu Excel)
+  // C43 = G41 (Excel): kWh mensual entra al subtotal como valor numérico
   const consumoEnergiaLinea = kwhMes;
 
   const cargoFijo = t.cargoFijo;
@@ -142,7 +142,7 @@ function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
   const alumbradoPublico = t.alumbradoPublico;
   const interesCompensatorio = t.interesCompensatorio;
 
-  // C48 = Gasto en Soles + cargos fijos
+  // C48 = C43 + cargos fijos (réplica Excel)
   const subtotal = round(
     consumoEnergiaLinea + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
   );

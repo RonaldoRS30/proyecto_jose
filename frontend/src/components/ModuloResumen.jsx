@@ -25,6 +25,8 @@ export function getEquipoListFields(calc) {
   if (!calc) {
     return [
       { label: 'Consumo/día', value: '-' },
+      { label: 'Consumo/mes', value: '-' },
+      { label: 'Consumo/año', value: '-' },
       { label: 'Gasto/día', value: '-' },
       { label: 'Gasto/mes', value: '-' },
       { label: 'Gasto/año', value: '-' },
@@ -33,6 +35,7 @@ export function getEquipoListFields(calc) {
   return [
     { label: 'Consumo/día', value: `${formatNumber(calc.consumoDia)} kWh` },
     { label: 'Consumo/mes', value: `${formatNumber(calc.consumoMes)} kWh` },
+    { label: 'Consumo/año', value: `${formatNumber(calc.consumoAnio)} kWh` },
     { label: 'Gasto/día', value: formatCurrency(calc.gastoDiario) },
     { label: 'Gasto/mes', value: formatCurrency(calc.gastoMensual), highlight: true },
     { label: 'Gasto/año', value: formatCurrency(calc.gastoAnual) },
@@ -44,7 +47,7 @@ export function renderEquipoDataCells(calc) {
   if (!calc) {
     return (
       <>
-        <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+        <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
       </>
     );
   }
@@ -52,6 +55,7 @@ export function renderEquipoDataCells(calc) {
     <>
       <td>{formatNumber(calc.consumoDia)} kWh</td>
       <td>{formatNumber(calc.consumoMes)} kWh</td>
+      <td>{formatNumber(calc.consumoAnio)} kWh</td>
       <td>{formatCurrency(calc.gastoDiario)}</td>
       <td>{formatCurrency(calc.gastoMensual)}</td>
       <td>{formatCurrency(calc.gastoAnual)}</td>
@@ -63,6 +67,7 @@ export const EQUIPO_TABLE_HEADERS = (
   <>
     <th>Cons. día</th>
     <th>Cons. mes</th>
+    <th>Cons. año</th>
     <th>Gasto/día</th>
     <th>Gasto/mes</th>
     <th>Gasto/año</th>

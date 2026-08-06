@@ -79,11 +79,12 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
   if (!factura && !consumoMesFallback) return null;
 
   const subtotalItems = [
-    { 
-      icon: Zap, 
-      label: 'Consumo de Energía', 
-      value: data.consumoKwh, 
+    {
+      icon: Zap,
+      label: 'Consumo de Energía',
+      value: data.consumoKwh,
       unit: 'currency',
+      subtext: `${formatNumber(data.consumoKwh)} kWh`,
     },
     { icon: Receipt, label: 'Cargo Fijo', value: data.cargoFijo },
     { icon: Receipt, label: 'Mant. y Reposición de Conexión', value: data.mantReposicion },
@@ -136,7 +137,7 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           <span className="factura-bar-cargos" style={{ width: `${pctCargos}%` }} />
         </div>
         <div className="factura-composition-legend">
-          <span><i className="dot dot-energia" /> Consumo (kWh)</span>
+          <span><i className="dot dot-energia" /> Consumo kWh (C43)</span>
           <span><i className="dot dot-cargos" /> Cargos fijos</span>
         </div>
       </div>
@@ -162,15 +163,8 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           ))}
           <div className="factura-subtotal-box">
             <SubtotalLine icon={Equal} label="Subtotal" value={data.subtotal} operator="equal" />
-            <small className="factura-formula">
-              S/ {formatNumber(data.consumoEnergiaLinea)} + S/ {formatNumber(data.cargoFijo)}
-              {' + '}S/ {formatNumber(data.mantReposicion)}
-              {' + '}S/ {formatNumber(data.alumbradoPublico)}
-              {' + '}S/ {formatNumber(data.interesCompensatorio)}
-            </small>
-            <div style={{ fontSize: '10.5px', color: '#a0aec0', marginTop: '8px', lineHeight: '1.4', background: 'rgba(255, 255, 255, 0.02)', padding: '8px', borderRadius: '4px', borderLeft: '3px solid #1A4AB0' }}>
-              💡 <strong>Fórmula del Excel:</strong> Para calcular el subtotal se suma el valor numérico del consumo (<strong>{formatNumber(data.consumoKwh, 0)} kWh</strong> tratado como Soles) más los cargos fijos regulados.
-            </div>
+      
+      
           </div>
         </div>
       </section>

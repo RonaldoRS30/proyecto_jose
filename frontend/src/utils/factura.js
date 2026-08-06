@@ -7,11 +7,13 @@ const DEFAULT_TARIFF = {
   interesCompensatorio: 0.82,
   igvRate: 0.18,
   electrificacionRural: 5.01,
+  precioKwh: 0.613,
 };
 
 /**
  * Recalcula subtotal, IGV y total según Excel (C43–C51).
- * Subtotal = kWh mensual + cargo fijo + mant. + alumbrado + interés.
+ * C43 = kWh mes; subtotal = kWh + cargos fijos.
+ * gastoEnergia = kWh × tarifa (columnas J del Excel, referencia tarifaria).
  */
 export function buildFactura(factura, precioKwh, consumoMesFallback, options = {}) {
   const cantidadEquipos = options.cantidadEquipos ?? null;
@@ -27,6 +29,7 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
       igv: 0,
       electrificacionRural: 0,
       totalMes: 0,
+      precioKwh: parseFloat(precioKwh) || DEFAULT_TARIFF.precioKwh,
       igvRate: factura?.igvRate ?? DEFAULT_TARIFF.igvRate,
     };
   }
@@ -35,7 +38,7 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
     Number(
       factura?.consumoEnergiaKwh
       ?? consumoMesFallback
-      ?? factura?.consumoEnergia // fallback para registros legacy muy antiguos
+      ?? factura?.consumoEnergia
       ?? 0
     )
   );
@@ -45,8 +48,8 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
   const interesCompensatorio = factura?.interesCompensatorio ?? DEFAULT_TARIFF.interesCompensatorio;
   const igvRate = factura?.igvRate ?? DEFAULT_TARIFF.igvRate;
   const electrificacionRural = factura?.electrificacionRural ?? DEFAULT_TARIFF.electrificacionRural;
-  const precio = parseFloat(precioKwh) || 0.613;
-  const gastoEnergia = roundNumber(factura?.gastoEnergiaMensual ?? consumoKwh * precio);
+  const precio = parseFloat(precioKwh ?? factura?.precioKwh) || DEFAULT_TARIFF.precioKwh;
+  const gastoEnergia = roundNumber(consumoKwh * precio);
 
   const subtotal = roundNumber(
     consumoKwh + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
@@ -56,6 +59,7 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
 
   return {
     consumoKwh,
+    precioKwh: precio,
     gastoEnergia,
     gastoEnergiaMensual: gastoEnergia,
     consumoEnergiaLinea: consumoKwh,
@@ -79,9 +83,14 @@ export function buildFacturaFromCalculo(calculo) {
     ?? calculo.detalles?.length
     ?? 0
   );
+  const precioKwh = (
+    calculo.tarifa?.precioKwh
+    ?? calculo.resumen_json?.precioKwh
+    ?? calculo.precio_kwh
+  );
   return buildFactura(
     calculo.resumen_json?.factura,
-    calculo.precio_kwh,
+    precioKwh,
     calculo.consumo_mes_total,
     { cantidadEquipos }
   );

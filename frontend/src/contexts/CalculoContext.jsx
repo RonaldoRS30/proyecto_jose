@@ -61,7 +61,13 @@ export function CalculoProvider({ children }) {
       diff(ultimoCalculo.consumo_mes_total, preview.resumenGeneral.consumoMes)
       || diff(ultimoCalculo.gasto_mensual_total, preview.resumenGeneral.gastoMensual)
       || diff(ultimoCalculo.factura_total_mes, preview.factura?.totalMes)
+      || diff(ultimoCalculo.precio_kwh, preview.precioKwh)
     );
+  }, [preview, ultimoCalculo]);
+
+  const tarifaCambiada = useMemo(() => {
+    if (!preview?.precioKwh || !ultimoCalculo?.precio_kwh) return false;
+    return Math.abs(parseFloat(preview.precioKwh) - parseFloat(ultimoCalculo.precio_kwh)) > 0.0001;
   }, [preview, ultimoCalculo]);
 
   const hasEquipos = (preview?.resumenGeneral?.cantidadEquipos ?? 0) > 0;
@@ -73,6 +79,7 @@ export function CalculoProvider({ children }) {
     calculating,
     hasEquipos,
     hasCambiosSinGuardar,
+    tarifaCambiada,
     refreshPreview,
     refreshCalculos,
     refreshAll,
@@ -80,11 +87,13 @@ export function CalculoProvider({ children }) {
     resumenGeneral: preview?.resumenGeneral ?? {},
     modulos: preview?.modulos ?? {},
     factura: preview?.factura,
-    precioKwh: preview?.precioKwh,
+    precioKwh: preview?.precioKwh ?? preview?.tarifa?.precioKwh,
+    tarifaFuente: preview?.tarifa?.fuente ?? 'global',
+    tarifaGlobal: preview?.tarifa?.globalPrecio,
     dispositivos: preview?.dispositivos ?? [],
   }), [
     preview, ultimoCalculo, loading, calculating, hasEquipos, hasCambiosSinGuardar,
-    refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
+    tarifaCambiada, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
   ]);
 
   return (
