@@ -25,6 +25,7 @@ const {
   PDF_BOTTOM_MARGIN,
   MARGIN,
 } = require('./pdfReciboLayout');
+const { drawChartsSection } = require('./pdfChartsLayout');
 const recomendacionService = require('./recomendacionService');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'reportes');
@@ -126,6 +127,13 @@ const generarReportePDF = async (calculoId, clienteId) => {
     drawRecomendacionesPanel(doc, recomendaciones);
 
     drawFacturaRecibo(doc, factura, formatNum);
+
+    drawChartsSection(doc, {
+      detalles,
+      totalesModulos,
+      resumen,
+    });
+
     drawFooter(doc, contactoPdf);
 
     doc.end();
