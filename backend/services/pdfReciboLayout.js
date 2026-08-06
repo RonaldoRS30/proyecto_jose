@@ -25,7 +25,7 @@ const COLORS = {
 const MARGIN = 42;
 const PAGE_WIDTH = 595.28;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
-const FOOTER_HEIGHT = 80;
+const FOOTER_HEIGHT = 94;
 const FOOTER_RESERVE = FOOTER_HEIGHT + 10;
 
 function formatDatePE(date) {

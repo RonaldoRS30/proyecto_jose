@@ -328,8 +328,8 @@ export default function ConfigPage() {
             <div className="contact-config-social-block">
               <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                Correo, teléfono y web se muestran con iconos simples. Instagram, Facebook y TikTok
-                usan sus logos con nombre visible en login y PDF.
+                Correo, teléfono y web se muestran con iconos simples. Instagram, Facebook, TikTok
+                y WhatsApp usan sus logos con nombre visible en login y PDF.
               </p>
               {SOCIAL_NETWORKS.map(({ id, label, logo }) => (
                 <div key={id} className="contact-config-social-row">
@@ -358,7 +358,7 @@ export default function ConfigPage() {
                       className="form-control"
                       value={contacto.social[id].url}
                       onChange={(e) => updateSocial(id, 'url', e.target.value)}
-                      placeholder={`https://${id}.com/...`}
+                      placeholder={id === 'whatsapp' ? 'https://wa.me/51967860043' : `https://${id}.com/...`}
                     />
                   </div>
                 </div>

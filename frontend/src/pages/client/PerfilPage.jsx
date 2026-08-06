@@ -302,7 +302,7 @@ export default function PerfilPage() {
                       className="form-control"
                       value={contacto.social[id].url}
                       onChange={(e) => updateSocial(id, 'url', e.target.value)}
-                      placeholder={`https://${id}.com/...`}
+                      placeholder={id === 'whatsapp' ? 'https://wa.me/51967860043' : `https://${id}.com/...`}
                     />
                   </div>
                 </div>

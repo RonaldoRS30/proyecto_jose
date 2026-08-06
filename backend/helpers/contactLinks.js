@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { onlyDigits } = require('./contactoValidation');
 
-const SOCIAL_DISPLAY_ORDER = ['instagram', 'facebook', 'tiktok'];
+const SOCIAL_DISPLAY_ORDER = ['instagram', 'facebook', 'tiktok', 'whatsapp'];
 
 const CONTACT_LINK_ORDER = [
   'instagram',
@@ -37,8 +37,16 @@ function linkHref(url) {
 }
 
 function whatsappHref(telefono, customUrl) {
-  const custom = linkHref(customUrl);
-  if (custom) return custom;
+  const raw = String(customUrl || '').trim();
+  if (raw) {
+    if (/^https?:\/\//i.test(raw) || /wa\.me|whatsapp\.com/i.test(raw)) {
+      return linkHref(raw);
+    }
+    const urlDigits = onlyDigits(raw);
+    if (urlDigits.length === 9) return `https://wa.me/51${urlDigits}`;
+    if (urlDigits.length === 11 && urlDigits.startsWith('51')) return `https://wa.me/${urlDigits}`;
+    return linkHref(raw);
+  }
   const digits = onlyDigits(telefono);
   if (digits.length === 9) return `https://wa.me/51${digits}`;
   return '';

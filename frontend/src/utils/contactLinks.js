@@ -1,5 +1,7 @@
 /** Redes que se muestran como iconos en login y PDF */
-export const SOCIAL_DISPLAY_ORDER = ['instagram', 'facebook', 'tiktok'];
+import { onlyDigits } from './contactoValidation';
+
+export const SOCIAL_DISPLAY_ORDER = ['instagram', 'facebook', 'tiktok', 'whatsapp'];
 
 /** Orden completo (contacto extendido; no usado en promo/PDF) */
 export const CONTACT_LINK_ORDER = [
@@ -47,9 +49,17 @@ export function linkHref(url) {
 }
 
 export function whatsappHref(telefono, customUrl) {
-  const custom = linkHref(customUrl);
-  if (custom) return custom;
-  const digits = String(telefono || '').replace(/\D/g, '');
+  const raw = String(customUrl || '').trim();
+  if (raw) {
+    if (/^https?:\/\//i.test(raw) || /wa\.me|whatsapp\.com/i.test(raw)) {
+      return linkHref(raw);
+    }
+    const urlDigits = onlyDigits(raw);
+    if (urlDigits.length === 9) return `https://wa.me/51${urlDigits}`;
+    if (urlDigits.length === 11 && urlDigits.startsWith('51')) return `https://wa.me/${urlDigits}`;
+    return linkHref(raw);
+  }
+  const digits = onlyDigits(telefono);
   if (digits.length === 9) return `https://wa.me/51${digits}`;
   return '';
 }
