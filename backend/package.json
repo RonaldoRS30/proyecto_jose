@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "description": "API REST - Sistema de Cálculo de Consumo Eléctrico",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "ensure-db": "node scripts/ensureDb.js",
-    "ensure-schema": "node scripts/ensureSchema.js",
-    "db:reset-prod": "node scripts/resetProd.js",
-    "test:calc": "node tests/calculationEngine.test.js",
-    "test:recibo": "node tests/reciboTarifaExtractor.test.js",
-  },
+"scripts": {
+  "start": "node server.js",
+  "dev": "nodemon server.js",
+  "ensure-db": "node scripts/ensureDb.js",
+  "ensure-schema": "node scripts/ensureSchema.js",
+  "db:reset-prod": "node scripts/resetProd.js",
+  "test:calc": "node tests/calculationEngine.test.js",
+  "test:recibo": "node tests/reciboTarifaExtractor.test.js"
+},
   "keywords": [
     "consumo",
     "electrico",
