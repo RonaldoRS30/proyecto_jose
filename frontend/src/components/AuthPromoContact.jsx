@@ -16,7 +16,7 @@ function ContactInfoRow({ id, label, value, href }) {
         <ContactInfoIcon type={id} size={11} />
         {label}
       </span>
-      <span className="auth-promo-contact-value">{value}</span>
+      <span className={`auth-promo-contact-value auth-promo-contact-value--${id}`}>{value}</span>
     </>
   );
 
