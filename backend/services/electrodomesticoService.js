@@ -1,6 +1,31 @@
 const { Electrodomestico } = require('../models');
 const { AppError } = require('../utils/errorHandler');
 
+function normalizeNombreEquipo(nombre) {
+  return String(nombre || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+async function findDuplicadoPorNombre(clienteId, modulo, nombre, excludeId = null) {
+  const buscado = normalizeNombreEquipo(nombre);
+  if (!buscado) return null;
+
+  const items = await Electrodomestico.findAll({
+    where: { cliente_id: clienteId, modulo, activo: true },
+    attributes: ['id', 'nombre'],
+  });
+
+  return items.find(
+    (item) => item.id !== excludeId && normalizeNombreEquipo(item.nombre) === buscado,
+  ) || null;
+}
+
+function errorNombreDuplicado(duplicado) {
+  throw new AppError(
+    `Ya existe un equipo llamado «${duplicado.nombre}». Puede editarlo desde la lista en lugar de agregar uno nuevo.`,
+    409,
+  );
+}
+
 const listarPorCliente = async (clienteId, modulo = null) => {
   const where = { cliente_id: clienteId, activo: true };
   if (modulo) where.modulo = modulo;
@@ -22,12 +47,18 @@ const listarPaginado = async (clienteId, { modulo = null, page = 1, limit = 8 } 
 };
 
 const crear = async (clienteId, data) => {
+  const duplicado = await findDuplicadoPorNombre(clienteId, data.modulo, data.nombre);
+  if (duplicado) errorNombreDuplicado(duplicado);
   return Electrodomestico.create({ ...data, cliente_id: clienteId });
 };
 
 const actualizar = async (id, clienteId, data) => {
   const item = await Electrodomestico.findOne({ where: { id, cliente_id: clienteId } });
   if (!item) throw new AppError('Electrodoméstico no encontrado', 404);
+  if (data.nombre !== undefined) {
+    const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, data.nombre, id);
+    if (duplicado) errorNombreDuplicado(duplicado);
+  }
   await item.update(data);
   return item;
 };

@@ -25,8 +25,48 @@ const COLORS = {
 const MARGIN = 42;
 const PAGE_WIDTH = 595.28;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
-const FOOTER_HEIGHT = 94;
-const FOOTER_RESERVE = FOOTER_HEIGHT + 10;
+
+/** Pie de página fijo — compacto, anclado al borde inferior */
+const FOOTER_FROM_BOTTOM = 14;
+const FOOTER_HEIGHT = 76;
+const FOOTER_CONTENT_GAP = 8;
+const PDF_BOTTOM_MARGIN = FOOTER_FROM_BOTTOM + FOOTER_HEIGHT + FOOTER_CONTENT_GAP;
+const FOOTER_RESERVE = PDF_BOTTOM_MARGIN - MARGIN;
+
+function applyPdfPageMargins(doc) {
+  if (!doc.page) return;
+  doc.page.margins = {
+    top: MARGIN,
+    bottom: PDF_BOTTOM_MARGIN,
+    left: MARGIN,
+    right: MARGIN,
+  };
+}
+
+function getMaxContentY(doc) {
+  const bottom = doc.page?.margins?.bottom ?? PDF_BOTTOM_MARGIN;
+  return doc.page.height - bottom;
+}
+
+const SOCIAL_PLATFORM_LABELS = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  tiktok: 'TikTok',
+  whatsapp: 'WhatsApp',
+};
+
+function drawFooterBar(doc, x, y, w, h, radius, fillColor) {
+  doc.save();
+  doc.moveTo(x, y + h)
+    .lineTo(x, y + radius)
+    .quadraticCurveTo(x, y, x + radius, y)
+    .lineTo(x + w - radius, y)
+    .quadraticCurveTo(x + w, y, x + w, y + radius)
+    .lineTo(x + w, y + h)
+    .closePath()
+    .fill(fillColor);
+  doc.restore();
+}
 
 function formatDatePE(date) {
   return new Date(date).toLocaleDateString('es-PE', {
@@ -37,11 +77,74 @@ function formatDatePE(date) {
 }
 
 function ensureSpace(doc, needed) {
-  const bottom = doc.page.height - MARGIN - FOOTER_RESERVE;
+  const bottom = getMaxContentY(doc);
   if (doc.y + needed > bottom) {
     doc.addPage();
+    applyPdfPageMargins(doc);
     doc.y = MARGIN;
   }
+}
+
+function drawFixedText(doc, text, x, y, opts = {}) {
+  const {
+    font = 'Helvetica',
+    size = 8,
+    color = '#ffffff',
+    width,
+    align,
+    ellipsis = false,
+  } = opts;
+
+  doc.font(font).fontSize(size).fillColor(color);
+  const options = { lineBreak: false, ellipsis };
+  if (width != null) options.width = width;
+  if (align) options.align = align;
+  doc.text(String(text || ''), x, y, options);
+}
+
+function wrapTextLines(doc, text, maxWidth) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+
+  const lines = [];
+  let current = words[0];
+  for (let i = 1; i < words.length; i += 1) {
+    const candidate = `${current} ${words[i]}`;
+    if (doc.widthOfString(candidate) <= maxWidth) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = words[i];
+    }
+  }
+  lines.push(current);
+  return lines;
+}
+
+/** Escribe texto multilínea sin provocar saltos automáticos de PDFKit */
+function drawTextBlock(doc, text, x, w, opts = {}) {
+  const {
+    font = 'Helvetica',
+    size = 8,
+    color = COLORS.text,
+    lineGap = 1.5,
+  } = opts;
+
+  doc.font(font).fontSize(size).fillColor(color);
+  const lineStep = size + lineGap;
+  const lines = wrapTextLines(doc, text, w);
+
+  lines.forEach((line) => {
+    if (doc.y + lineStep > getMaxContentY(doc)) {
+      doc.addPage();
+      applyPdfPageMargins(doc);
+      doc.y = MARGIN;
+    }
+    doc.text(line, x, doc.y, { lineBreak: false, width: w });
+    doc.y += lineStep;
+  });
+
+  return doc.y;
 }
 
 function drawHeaderBand(doc, { calculoId, fecha, precioKwh }) {
@@ -171,7 +274,8 @@ function drawResumenPanel(doc, resumen, formatNum) {
 }
 
 function drawFacturaRecibo(doc, factura, formatNum) {
-  ensureSpace(doc, 220);
+  const boxContentH = 210;
+  ensureSpace(doc, boxContentH + 8);
   const startY = doc.y;
   const pad = 14;
 
@@ -252,7 +356,7 @@ function drawFacturaRecibo(doc, factura, formatNum) {
       `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (precio unitario × kWh mensual).`,
       colDesc,
       y,
-      { width: rowW, lineGap: 1 }
+      { width: rowW, lineGap: 1, lineBreak: false, ellipsis: true },
     );
 
   doc.restore();
@@ -262,13 +366,6 @@ function drawFacturaRecibo(doc, factura, formatNum) {
 function drawEquiposTable(doc, title, items, formatNum) {
   if (!items.length) return;
 
-  ensureSpace(doc, 40 + items.length * 14);
-  const startY = doc.y;
-
-  doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.primary)
-    .text(title.toUpperCase(), MARGIN, startY);
-
-  const tableY = startY + 18;
   const cols = {
     nombre: { x: MARGIN + 8, w: 130 },
     potencia: { x: MARGIN + 142, w: 48 },
@@ -278,18 +375,47 @@ function drawEquiposTable(doc, title, items, formatNum) {
   };
 
   const headerH = 20;
-  doc.roundedRect(MARGIN, tableY, CONTENT_W, headerH, 3).fill(COLORS.bgPanel);
+  const rowH = 18;
 
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(COLORS.muted)
-    .text('EQUIPO', cols.nombre.x, tableY + 6, { width: cols.nombre.w })
-    .text('POT.', cols.potencia.x, tableY + 6, { width: cols.potencia.w })
-    .text('kWh/MES', cols.consumo.x, tableY + 6, { width: cols.consumo.w })
-    .text('S/ MES', cols.gasto.x, tableY + 6, { width: cols.gasto.w })
-    .text('S/ AÑO', cols.anual.x, tableY + 6, { width: cols.anual.w, align: 'right' });
+  const drawTableHeader = (tableY) => {
+    doc.roundedRect(MARGIN, tableY, CONTENT_W, headerH, 3).fill(COLORS.bgPanel);
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(COLORS.muted)
+      .text('EQUIPO', cols.nombre.x, tableY + 6, { width: cols.nombre.w })
+      .text('POT.', cols.potencia.x, tableY + 6, { width: cols.potencia.w })
+      .text('kWh/MES', cols.consumo.x, tableY + 6, { width: cols.consumo.w })
+      .text('S/ MES', cols.gasto.x, tableY + 6, { width: cols.gasto.w })
+      .text('S/ AÑO', cols.anual.x, tableY + 6, { width: cols.anual.w, align: 'right' });
+    return tableY + headerH;
+  };
 
-  let rowY = tableY + headerH;
+  ensureSpace(doc, 36 + headerH + rowH);
+  let startY = doc.y;
+
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.primary)
+    .text(title.toUpperCase(), MARGIN, startY);
+
+  let tableY = startY + 18;
+  let tableStartY = tableY;
+  let rowY = drawTableHeader(tableY);
+
   items.forEach((item, i) => {
-    const rowH = 18;
+    if (rowY + rowH > getMaxContentY(doc)) {
+      doc.roundedRect(MARGIN, tableStartY, CONTENT_W, rowY - tableStartY, 3)
+        .lineWidth(0.75)
+        .strokeColor(COLORS.border)
+        .stroke();
+
+      doc.addPage();
+      applyPdfPageMargins(doc);
+      doc.y = MARGIN;
+      startY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.primary)
+        .text(title.toUpperCase(), MARGIN, startY);
+      tableY = startY + 18;
+      tableStartY = tableY;
+      rowY = drawTableHeader(tableY);
+    }
+
     if (i % 2 === 0) {
       doc.rect(MARGIN, rowY, CONTENT_W, rowH).fill('#fafbfc');
     }
@@ -333,96 +459,184 @@ function drawModuloResumen(doc, totalesModulos, formatNum) {
 function drawRecomendacionesPanel(doc, recomendaciones) {
   if (!recomendaciones?.length) return;
 
-  drawPanel(doc, 'Datos técnicos y consejos para ahorrar energía', (x, w) => {
-    let y = doc.y;
+  ensureSpace(doc, 44);
+  const pad = 12;
+  const textW = CONTENT_W - pad * 2;
+  let y = doc.y;
 
-    recomendaciones.forEach((rec, index) => {
-      if (index > 0) y += 6;
-      doc.y = y;
-      ensureSpace(doc, 40);
-      y = doc.y;
-
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.primary)
-        .text(rec.nombre.toUpperCase(), x, y, { width: w });
-      y = doc.y + 2;
-
-      doc.font('Helvetica').fontSize(8).fillColor(COLORS.text)
-        .text(rec.texto, x, y, { width: w, lineGap: 1.5, align: 'justify' });
-      y = doc.y + 8;
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.primary)
+    .text('DATOS TÉCNICOS Y CONSEJOS PARA AHORRAR ENERGÍA', MARGIN + pad, y + 4, {
+      width: textW,
+      lineBreak: false,
     });
+  y = doc.y + 10;
 
-    return y;
+  recomendaciones.forEach((rec, index) => {
+    if (index > 0) y += 4;
+
+    doc.font('Helvetica-Bold').fontSize(8.5);
+    const titleH = doc.heightOfString(rec.nombre.toUpperCase(), { width: textW });
+    doc.font('Helvetica').fontSize(8);
+    const lines = wrapTextLines(doc, rec.texto, textW);
+    const lineStep = 8 + 1.5;
+    const blockH = titleH + lines.length * lineStep + 12;
+
+    ensureSpace(doc, blockH);
+    y = doc.y;
+
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.primary)
+      .text(rec.nombre.toUpperCase(), MARGIN + pad, y, { width: textW, lineBreak: false, ellipsis: true });
+    doc.y = doc.y + 2;
+
+    drawTextBlock(doc, rec.texto, MARGIN + pad, textW, {
+      size: 8,
+      lineGap: 1.5,
+    });
+    y = doc.y + 6;
+    doc.y = y;
   });
+
+  doc.y = y + 8;
 }
 
 const FOOTER_HEIGHT_BASE = FOOTER_HEIGHT;
+
+const FOOTER_SOCIAL_ORDER = ['instagram', 'facebook', 'tiktok', 'whatsapp'];
 
 function drawFooter(doc, contacto = {}) {
   const empresaNombre = contacto.empresaNombre || 'ELECTRIXSTUDIO';
   const empresaTagline = contacto.empresaTagline || 'Auditoría & Soluciones de Eficiencia Energética';
   const socialLinks = buildSocialLinks(contacto);
+  const socialById = Object.fromEntries(socialLinks.map((link) => [link.id, link]));
   const contactInfo = buildContactInfoItems(contacto);
-  const footerHeight = FOOTER_HEIGHT_BASE;
 
   const pages = doc.bufferedPageRange();
-  const padX = 14;
+  const padX = 10;
   const innerLeft = MARGIN + padX;
-  const splitX = MARGIN + Math.round(CONTENT_W * 0.58);
-  const rightX = splitX + 12;
-  const leftW = splitX - innerLeft - 8;
-  const rightW = MARGIN + CONTENT_W - padX - rightX;
-  const iconSize = 13;
-  const rowH = 14;
+  const innerW = CONTENT_W - padX * 2;
+  const footerHeight = FOOTER_HEIGHT_BASE;
+  const footerBottom = (pageH) => pageH - FOOTER_FROM_BOTTOM;
+  const bannerY = (pageH) => footerBottom(pageH) - footerHeight;
 
   for (let i = pages.start; i < pages.start + pages.count; i++) {
     doc.switchToPage(i);
 
-    const bannerY = doc.page.height - MARGIN - footerHeight;
+    const savedMargins = { ...doc.page.margins };
+    const savedY = doc.y;
+    const pageH = doc.page.height;
+    const footY = bannerY(pageH);
+
+    doc.page.margins.bottom = FOOTER_FROM_BOTTOM;
 
     doc.save();
 
-    doc.roundedRect(MARGIN, bannerY, CONTENT_W, footerHeight, 5).fill('#0f172a');
-    doc.rect(MARGIN, bannerY, 4, footerHeight).fill('#2563eb');
+    drawFooterBar(doc, MARGIN, footY, CONTENT_W, footerHeight, 7, '#0f172a');
 
-    doc.lineWidth(0.5);
-    doc.strokeColor('#334155');
-    doc.moveTo(splitX, bannerY + 8).lineTo(splitX, bannerY + footerHeight - 8).stroke();
+    doc.save();
+    doc.moveTo(MARGIN, footY + footerHeight)
+      .lineTo(MARGIN, footY + 7)
+      .quadraticCurveTo(MARGIN, footY, MARGIN + 7, footY)
+      .lineTo(MARGIN + 3, footY)
+      .lineTo(MARGIN + 3, footY + footerHeight)
+      .closePath()
+      .fill('#2563eb');
+    doc.restore();
 
-    const brandY = bannerY + 10;
-    doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff')
-      .text(empresaNombre, innerLeft, brandY, { width: leftW, lineBreak: false });
+    doc.moveTo(MARGIN, footY)
+      .lineTo(MARGIN + CONTENT_W, footY)
+      .lineWidth(0.6)
+      .strokeColor('#334155')
+      .stroke();
 
-    doc.font('Helvetica').fontSize(7).fillColor('#94a3b8')
-      .text(empresaTagline, innerLeft, brandY + 13, { width: leftW, lineGap: 0 });
-
-    const rowsStartY = brandY + 26;
-
-    contactInfo.forEach((item, index) => {
-      const rowY = rowsStartY + index * rowH;
-      drawContactIcon(doc, item.id, innerLeft, rowY + 2, 8);
-      doc.font('Helvetica').fontSize(6.5).fillColor('#64748b')
-        .text(`${item.label}:`, innerLeft + 14, rowY + 1, { width: 44, lineBreak: false });
-      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#e2e8f0')
-        .text(item.value, innerLeft + 58, rowY + 1, { width: leftW - 58, lineBreak: false, ellipsis: true });
+    drawFixedText(doc, empresaNombre, innerLeft, footY + 7, {
+      font: 'Helvetica-Bold',
+      size: 8.5,
+      color: '#ffffff',
+      width: innerW,
     });
 
-    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#64748b')
-      .text('Redes sociales', rightX, brandY + 1, { width: rightW, lineBreak: false });
+    drawFixedText(doc, empresaTagline, innerLeft, footY + 17, {
+      size: 6.5,
+      color: '#94a3b8',
+      width: innerW,
+    });
 
-    socialLinks.forEach((link, index) => {
-      const rowY = rowsStartY + index * rowH;
-      if (link.hasLogo) {
-        doc.image(link.logoPath, rightX, rowY, { width: iconSize, height: iconSize });
+    let contactX = innerLeft;
+    const contactY = footY + 28;
+    contactInfo.forEach((item, idx) => {
+      if (idx > 0) {
+        drawFixedText(doc, '·', contactX, contactY, { size: 6, color: '#475569' });
+        contactX += 8;
       }
-      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#e2e8f0')
-        .text(link.nombre, rightX + iconSize + 6, rowY + 2, {
-          width: rightW - iconSize - 8,
-          lineBreak: false,
-          ellipsis: true,
-        });
+      drawContactIcon(doc, item.id, contactX, contactY + 1, 6);
+      contactX += 9;
+      drawFixedText(doc, item.value, contactX, contactY, {
+        size: 6.2,
+        color: '#e2e8f0',
+      });
+      contactX += doc.widthOfString(item.value) + 8;
+    });
+
+    const dividerY = footY + 40;
+    doc.moveTo(innerLeft, dividerY)
+      .lineTo(innerLeft + innerW, dividerY)
+      .lineWidth(0.4)
+      .strokeColor('#334155')
+      .stroke();
+
+    drawFixedText(doc, 'REDES SOCIALES', innerLeft, dividerY + 4, {
+      font: 'Helvetica-Bold',
+      size: 6,
+      color: '#64748b',
+    });
+
+    const socialY = dividerY + 9;
+    const socialH = 24;
+    const colCount = FOOTER_SOCIAL_ORDER.length;
+    const colGap = 4;
+    const colW = (innerW - colGap * (colCount - 1)) / colCount;
+    const iconSize = 11;
+
+    FOOTER_SOCIAL_ORDER.forEach((id, index) => {
+      const link = socialById[id] || {
+        id,
+        nombre: SOCIAL_PLATFORM_LABELS[id],
+        hasLogo: false,
+      };
+      const colX = innerLeft + index * (colW + colGap);
+      const textX = colX + iconSize + 6;
+      const textW = colW - iconSize - 9;
+
+      doc.roundedRect(colX, socialY, colW, socialH, 3).fill('#1e293b');
+      doc.roundedRect(colX, socialY, colW, socialH, 3)
+        .lineWidth(0.35)
+        .strokeColor('#475569')
+        .stroke();
+
+      if (link.hasLogo) {
+        doc.image(link.logoPath, colX + 4, socialY + 6, { width: iconSize, height: iconSize });
+      }
+
+      drawFixedText(doc, link.nombre, textX, socialY + 5, {
+        font: 'Helvetica-Bold',
+        size: 6,
+        color: '#f8fafc',
+        width: textW,
+        ellipsis: true,
+      });
+
+      drawFixedText(doc, SOCIAL_PLATFORM_LABELS[id], textX, socialY + 14, {
+        size: 5.6,
+        color: '#94a3b8',
+        width: textW,
+        ellipsis: true,
+      });
     });
 
     doc.restore();
+
+    doc.page.margins.bottom = savedMargins.bottom;
+    doc.y = savedY;
   }
 
   doc.switchToPage(pages.start + pages.count - 1);
@@ -437,5 +651,8 @@ module.exports = {
   drawRecomendacionesPanel,
   drawFacturaRecibo,
   drawFooter,
+  applyPdfPageMargins,
+  PDF_BOTTOM_MARGIN,
+  MARGIN,
   COLORS,
 };

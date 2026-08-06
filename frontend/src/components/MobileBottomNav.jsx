@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
 import { Menu } from 'lucide-react';
+import GuardedNavLink from './GuardedNavLink';
 
 export default function MobileBottomNav({ items, onOpenMenu }) {
   const primaryItems = items.slice(0, 4);
@@ -7,7 +7,7 @@ export default function MobileBottomNav({ items, onOpenMenu }) {
   return (
     <nav className="mobile-bottom-nav" aria-label="Navegación principal">
       {primaryItems.map((item) => (
-        <NavLink
+        <GuardedNavLink
           key={item.path}
           to={item.path}
           end={item.exact ?? false}
@@ -19,7 +19,7 @@ export default function MobileBottomNav({ items, onOpenMenu }) {
               <span>{item.shortLabel || item.label.split(' ')[0]}</span>
             </>
           )}
-        </NavLink>
+        </GuardedNavLink>
       ))}
       <button type="button" className="bottom-nav-item" onClick={onOpenMenu} aria-label="Más opciones">
         <Menu size={20} />

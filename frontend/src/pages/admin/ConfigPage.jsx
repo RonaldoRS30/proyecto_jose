@@ -237,8 +237,8 @@ export default function ConfigPage() {
         <div className="card-header"><h3>Contacto, publicidad y reportes PDF</h3></div>
         <div className="card-body">
           <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-            Estos datos aparecen en el login (publicidad), en el pie de página de los PDF y también
-            son editables desde Mi Perfil (cliente).
+            Estos datos aparecen en el login (publicidad) y en el pie de página de los PDF.
+            Solo el administrador puede editarlos desde esta pantalla.
           </p>
 
           <div className="contact-config-grid">

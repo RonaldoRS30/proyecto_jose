@@ -89,14 +89,14 @@ export default function AuthPromoContact({ contacto, featured = false }) {
           )}
         </div>
 
-        <aside className="auth-promo-contact-aside" aria-label="Redes sociales">
+        <section className="auth-promo-contact-social" aria-label="Redes sociales">
           <span className="auth-promo-social-heading">Redes sociales</span>
           <div className="auth-promo-social-links">
             {socialLinks.map((item) => (
               <SocialLinkItem key={item.id} {...item} />
             ))}
           </div>
-        </aside>
+        </section>
       </div>
     </footer>
   );

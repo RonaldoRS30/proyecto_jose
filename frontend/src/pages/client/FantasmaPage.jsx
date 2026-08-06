@@ -6,13 +6,14 @@ import ModuloResumen, { EQUIPO_TABLE_HEADERS, getEquipoListFields, renderEquipoD
 import ServerPaginatedResponsiveList from '../../components/ServerPaginatedResponsiveList';
 import { ListCard } from '../../components/ResponsiveList';
 import { useCalculo } from '../../contexts/CalculoContext';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
 import { useServerElectrodomesticosList, PAGE_SIZE } from '../../hooks/useServerCalculosList';
 import { useRecomendacionesCatalog } from '../../hooks/useRecomendacionesCatalog';
 import {
   createElectrodomestico, updateElectrodomestico,
   deleteElectrodomestico,
 } from '../../services/api';
+import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
 import { CATEGORIAS_FANTASMA, TIPOS_STANDBY } from '../../utils/helpers';
 
 const emptyForm = {
@@ -23,6 +24,7 @@ const emptyForm = {
 
 export default function FantasmaPage() {
   const confirm = useConfirm();
+  const alert = useAlert();
   const { modulos, refreshPreview, loading: calcLoading } = useCalculo();
   const {
     items, total, page, setPage, loading, reload,
@@ -49,8 +51,14 @@ export default function FantasmaPage() {
 
   const handleSubmit = async () => {
     const payload = { ...form, modulo: 'fantasma' };
-    if (editId) await updateElectrodomestico(editId, payload);
-    else await createElectrodomestico(payload);
+    const ok = await saveElectrodomestico({
+      editId,
+      payload,
+      createElectrodomestico,
+      updateElectrodomestico,
+      alert,
+    });
+    if (!ok) return;
     setModalOpen(false);
     await afterMutation();
   };

@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
-import { User, Building, Zap, Save, Check, Mail, Phone, Globe } from 'lucide-react';
+import { User, Building, Zap, Save, Check, Loader2, AlertTriangle } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
-import { getMiPerfil, updateMiTarifa, getContactoReporte, updateContactoReporte } from '../../services/api';
+import ReciboTarifaUploader from '../../components/ReciboTarifaUploader';
+import { getMiPerfil, updateMiTarifa } from '../../services/api';
 import { useCalculo } from '../../contexts/CalculoContext';
-import { validateContactoFields, formatTelefonoInput } from '../../utils/contactoValidation';
-import { mapContactoFromApi, SOCIAL_NETWORKS, contactLogoUrl } from '../../utils/contactLinks';
-
-const EMPTY_SOCIAL = {
-  instagram: { url: '', nombre: 'Instagram' },
-  facebook: { url: '', nombre: 'Facebook' },
-  tiktok: { url: '', nombre: 'TikTok' },
-  whatsapp: { url: '', nombre: 'WhatsApp' },
-};
-
-const iconBase = import.meta.env.BASE_URL || '/';
+import { useUnsavedTarifaGuard } from '../../hooks/useUnsavedTarifaGuard';
+import { tarifaValuesDiffer } from '../../utils/tarifaCompare';
 
 export default function PerfilPage() {
   const { refreshPreview, refreshCalculos } = useCalculo();
@@ -22,17 +14,8 @@ export default function PerfilPage() {
   const [tarifaInput, setTarifaInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [contacto, setContacto] = useState({
-    email: '', telefono: '', web: '', emailNombre: '', webNombre: '',
-    empresaNombre: '', empresaTagline: '', social: EMPTY_SOCIAL,
-  });
-  const [contactoOriginal, setContactoOriginal] = useState({
-    email: '', telefono: '', web: '', emailNombre: '', webNombre: '',
-    empresaNombre: '', empresaTagline: '', social: EMPTY_SOCIAL,
-  });
-  const [savingContacto, setSavingContacto] = useState(false);
-  const [savedContacto, setSavedContacto] = useState(false);
-  const [contactoErrors, setContactoErrors] = useState({});
+  const [extractingTarifa, setExtractingTarifa] = useState(false);
+  const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
 
   const fetchPerfil = () => {
     getMiPerfil()
@@ -41,14 +24,6 @@ export default function PerfilPage() {
         setTarifaInput(data.data.tarifa_kwh ?? '');
       })
       .finally(() => setLoading(false));
-
-    getContactoReporte()
-      .then(({ data }) => {
-        const c = mapContactoFromApi(data.data);
-        setContacto(c);
-        setContactoOriginal(c);
-      })
-      .catch(() => {});
   };
 
   useEffect(() => {
@@ -56,12 +31,14 @@ export default function PerfilPage() {
   }, []);
 
   const handleSaveTarifa = async () => {
+    if (extractingTarifa) return;
     setSaving(true);
     setSaved(false);
     try {
       const val = tarifaInput === '' ? null : parseFloat(tarifaInput);
       const { data } = await updateMiTarifa(val);
       setCliente(data.data);
+      setTarifaDesdeRecibo(false);
       await Promise.all([refreshPreview(), refreshCalculos()]);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -72,48 +49,15 @@ export default function PerfilPage() {
     }
   };
 
-  const tarifaChanged = (() => {
-    const current = cliente?.tarifa_kwh ?? '';
-    const input = tarifaInput === '' ? '' : parseFloat(tarifaInput);
-    return String(current) !== String(input);
-  })();
+  const tarifaChanged = cliente
+    ? tarifaValuesDiffer(cliente.tarifa_kwh, tarifaInput)
+    : false;
 
-  const contactoChanged = JSON.stringify(contacto) !== JSON.stringify(contactoOriginal);
+  const tarifaPendiente = tarifaChanged && !extractingTarifa && !saving;
 
-  const updateSocial = (network, field, value) => {
-    setContacto((prev) => ({
-      ...prev,
-      social: {
-        ...prev.social,
-        [network]: { ...prev.social[network], [field]: value },
-      },
-    }));
-  };
-
-  const handleSaveContacto = async () => {
-    const validation = validateContactoFields(contacto);
-    if (!validation.ok) {
-      setContactoErrors(validation.errors);
-      return;
-    }
-
-    setContactoErrors({});
-    setSavingContacto(true);
-    setSavedContacto(false);
-    try {
-      const payload = { ...contacto, ...validation.data };
-      const { data } = await updateContactoReporte(payload);
-      const c = mapContactoFromApi(data.data);
-      setContacto(c);
-      setContactoOriginal(c);
-      setSavedContacto(true);
-      setTimeout(() => setSavedContacto(false), 3000);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSavingContacto(false);
-    }
-  };
+  useUnsavedTarifaGuard(tarifaPendiente, {
+    detail: 'Pulse «Guardar Tarifa» para aplicarla antes de cambiar de módulo.',
+  });
 
   if (loading) return <div className="loading">Cargando perfil...</div>;
   if (!cliente) return <div className="empty-state">No se pudo cargar el perfil</div>;
@@ -146,6 +90,7 @@ export default function PerfilPage() {
                   value={tarifaInput}
                   onChange={(e) => setTarifaInput(e.target.value)}
                   placeholder="0.613"
+                  disabled={extractingTarifa}
                 />
               </div>
             </div>
@@ -153,9 +98,9 @@ export default function PerfilPage() {
               <button
                 className="btn btn-primary"
                 onClick={handleSaveTarifa}
-                disabled={saving || !tarifaChanged}
+                disabled={saving || extractingTarifa || !tarifaChanged}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
                   padding: '8px 20px', fontSize: '14px',
                   background: saved ? '#10b981' : undefined,
                   borderColor: saved ? '#10b981' : undefined,
@@ -163,6 +108,8 @@ export default function PerfilPage() {
               >
                 {saving ? (
                   <>Guardando...</>
+                ) : extractingTarifa ? (
+                  <><Loader2 size={16} className="spin" /> Analizando recibo...</>
                 ) : saved ? (
                   <><Check size={16} /> Guardado</>
                 ) : (
@@ -176,159 +123,47 @@ export default function PerfilPage() {
               )}
             </div>
           </div>
-          <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
-            <strong>⚡ Importante:</strong> Al guardar la tarifa, los gastos en Inicio, Dashboard y Reportes
-            se actualizan al instante según la fórmula Consumo (kWh) × Tarifa.
-            Para registrar la nueva tarifa en el historial, ejecute un cálculo desde Inicio.
-            <br />
-            <strong>Fórmula:</strong> Gasto = Consumo (kWh) × Tarifa (S/ {tarifaInput || '0.613'})
-          </div>
-        </div>
-      </div>
 
-      <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #2563eb' }}>
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Globe size={18} style={{ color: '#2563eb' }} />
-          <h3 style={{ margin: 0 }}>Contacto y redes (PDF + publicidad)</h3>
-        </div>
-        <div className="card-body">
-          <p style={{ fontSize: '13px', color: '#718096', marginBottom: '1rem', lineHeight: 1.5 }}>
-            Estos datos aparecen en el pie de página de los reportes PDF y en la publicidad del login.
-          </p>
-          <div className="contact-config-grid">
-            <div className="form-group" style={{ margin: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Mail size={14} /> Correo electrónico *
-              </label>
-              <input
-                type="email"
-                className="form-control"
-                value={contacto.email}
-                onChange={(e) => {
-                  setContacto((prev) => ({ ...prev, email: e.target.value }));
-                  if (contactoErrors.email) setContactoErrors((p) => ({ ...p, email: '' }));
-                }}
-                placeholder="contacto@electrixstudio.com"
-              />
-              <small style={{ color: contactoErrors.email ? '#ef4444' : '#718096', fontSize: '0.75rem' }}>
-                {contactoErrors.email || 'Debe contener @'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Nombre visible — icono correo</label>
-              <input
-                className="form-control"
-                value={contacto.emailNombre}
-                onChange={(e) => setContacto((prev) => ({ ...prev, emailNombre: e.target.value }))}
-                placeholder="Opcional — si está vacío usa el correo"
-              />
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Phone size={14} /> Teléfono / WhatsApp *
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                inputMode="numeric"
-                maxLength={9}
-                value={contacto.telefono}
-                onChange={(e) => {
-                  setContacto((prev) => ({ ...prev, telefono: formatTelefonoInput(e.target.value) }));
-                  if (contactoErrors.telefono) setContactoErrors((p) => ({ ...p, telefono: '' }));
-                }}
-                placeholder="987654321"
-              />
-              <small style={{ color: contactoErrors.telefono ? '#ef4444' : '#718096', fontSize: '0.75rem' }}>
-                {contactoErrors.telefono || '9 dígitos — se muestra como +51 XXX XXX XXX'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Globe size={14} /> Página web *
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                value={contacto.web}
-                onChange={(e) => {
-                  setContacto((prev) => ({ ...prev, web: e.target.value }));
-                  if (contactoErrors.web) setContactoErrors((p) => ({ ...p, web: '' }));
-                }}
-                placeholder="www.electrixstudio.com"
-              />
-              <small style={{ color: contactoErrors.web ? '#ef4444' : '#718096', fontSize: '0.75rem' }}>
-                {contactoErrors.web || 'Debe incluir .com'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-              <label>Nombre visible — icono página web</label>
-              <input
-                className="form-control"
-                value={contacto.webNombre}
-                onChange={(e) => setContacto((prev) => ({ ...prev, webNombre: e.target.value }))}
-                placeholder="Opcional — si está vacío usa la URL del sitio"
-              />
-            </div>
-
-            <div className="contact-config-social-block">
-              <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
-              <p style={{ color: '#718096', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                Correo, teléfono y web con iconos simples; redes sociales con logo y nombre.
-              </p>
-              {SOCIAL_NETWORKS.map(({ id, label, logo }) => (
-                <div key={id} className="contact-config-social-row">
-                  <div className="contact-config-social-label">
-                    <img
-                      src={contactLogoUrl(id, iconBase)}
-                      alt=""
-                      width={22}
-                      height={22}
-                      style={{ borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-                    />
-                    {label}
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label>Nombre visible</label>
-                    <input
-                      className="form-control"
-                      value={contacto.social[id].nombre}
-                      onChange={(e) => updateSocial(id, 'nombre', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label>Enlace (URL)</label>
-                    <input
-                      className="form-control"
-                      value={contacto.social[id].url}
-                      onChange={(e) => updateSocial(id, 'url', e.target.value)}
-                      placeholder={id === 'whatsapp' ? 'https://wa.me/51967860043' : `https://${id}.com/...`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <ReciboTarifaUploader
+              onTarifaDetected={(tarifa) => {
+                setTarifaInput(String(tarifa));
+                setTarifaDesdeRecibo(true);
+              }}
+              onExtractingChange={setExtractingTarifa}
+            />
           </div>
-          <div style={{ marginTop: '1rem' }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSaveContacto}
-              disabled={savingContacto || !contactoChanged}
+
+          {tarifaPendiente && (
+            <div
+              role="alert"
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: savedContacto ? '#10b981' : undefined,
-                borderColor: savedContacto ? '#10b981' : undefined,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                marginTop: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: '#fbbf24',
+                fontSize: '0.8rem',
+                lineHeight: 1.5,
               }}
             >
-              {savingContacto ? (
-                <>Guardando...</>
-              ) : savedContacto ? (
-                <><Check size={16} /> Guardado</>
-              ) : (
-                <><Save size={16} /> Guardar contacto y redes</>
-              )}
-            </button>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <span>
+                {tarifaDesdeRecibo
+                  ? 'Subió un recibo y la tarifa fue detectada, pero aún no la ha guardado. Pulse «Guardar Tarifa» antes de salir de este módulo.'
+                  : 'Tiene cambios en la tarifa sin guardar. Pulse «Guardar Tarifa» antes de cambiar de módulo.'}
+              </span>
+            </div>
+          )}
+
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
+            <strong>⚡ Importante:</strong> Al guardar la tarifa, los gastos en Inicio, Dashboard y Reportes
+            se actualizan al instante.
+            <br />
           </div>
         </div>
       </div>

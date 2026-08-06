@@ -1,8 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, LogOut, Menu, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import GuardedNavLink from './GuardedNavLink';
 import MobileBottomNav from './MobileBottomNav';
 
 export default function Sidebar({ items }) {
@@ -64,16 +65,16 @@ export default function Sidebar({ items }) {
 
         <nav className="sidebar-nav">
           {items.map((item) => (
-            <NavLink
+            <GuardedNavLink
               key={item.path}
               to={item.path}
               end={item.exact}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setMobileOpen(false)}
+              onAfterNavigate={() => setMobileOpen(false)}
             >
               <item.icon size={18} />
               {item.label}
-            </NavLink>
+            </GuardedNavLink>
           ))}
         </nav>
 

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, Users, Eye, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, Eye, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import PageHeader from '../../components/PageHeader';
+import ReciboTarifaUploader from '../../components/ReciboTarifaUploader';
 import ServerPaginatedResponsiveList from '../../components/ServerPaginatedResponsiveList';
 import { ListCard } from '../../components/ResponsiveList';
 import {
@@ -10,6 +11,8 @@ import {
 } from '../../services/api';
 import { exportToCsv, formatCsvDate } from '../../utils/exportCsv';
 import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
+import { useUnsavedTarifaGuard } from '../../hooks/useUnsavedTarifaGuard';
+import { tarifaValuesDiffer } from '../../utils/tarifaCompare';
 
 const PAGE_SIZE = 8;
 
@@ -89,6 +92,9 @@ export default function ClientesPage() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [tipoCliente, setTipoCliente] = useState('natural');
+  const [extractingTarifa, setExtractingTarifa] = useState(false);
+  const [tarifaGuardada, setTarifaGuardada] = useState('');
+  const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -115,6 +121,8 @@ export default function ClientesPage() {
     setEditId(null);
     setForm(emptyForm);
     setTipoCliente('natural');
+    setTarifaGuardada('');
+    setTarifaDesdeRecibo(false);
     setModalOpen(true);
     setError('');
   };
@@ -128,8 +136,24 @@ export default function ClientesPage() {
       tipo_cliente: tipo,
     });
     setTipoCliente(tipo);
+    setTarifaGuardada(c.tarifa_kwh ?? '');
+    setTarifaDesdeRecibo(false);
     setModalOpen(true);
     setError('');
+  };
+
+  const tarifaPendiente = modalOpen && tarifaValuesDiffer(tarifaGuardada, form.tarifa_kwh);
+  const tarifaPendienteGuard = tarifaPendiente && !extractingTarifa;
+
+  const confirmLeaveModal = useUnsavedTarifaGuard(tarifaPendienteGuard, {
+    message: 'Detectó una tarifa desde el recibo pero aún no la ha guardado en el cliente.',
+    detail: 'Pulse «Guardar» para registrar la tarifa antes de cerrar o cambiar de módulo.',
+  });
+
+  const closeModal = async () => {
+    if (extractingTarifa) return;
+    const canLeave = await confirmLeaveModal();
+    if (canLeave) setModalOpen(false);
   };
 
   const handleTipoChange = (tipo) => {
@@ -152,6 +176,7 @@ export default function ClientesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (extractingTarifa) return;
     setError('');
 
     const payload = buildClientePayload(form, tipoCliente);
@@ -374,12 +399,29 @@ export default function ClientesPage() {
       </div>
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editId ? 'Editar Cliente' : 'Nuevo Cliente'}
         footer={
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
-            <button type="submit" form="cliente-form" className="btn btn-primary">Guardar</button>
+            <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={extractingTarifa}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="cliente-form"
+              className="btn btn-primary"
+              disabled={extractingTarifa}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              {extractingTarifa ? (
+                <>
+                  <Loader2 size={16} className="spin" />
+                  Analizando recibo...
+                </>
+              ) : (
+                'Guardar'
+              )}
+            </button>
           </>
         }
       >
@@ -493,6 +535,43 @@ export default function ClientesPage() {
             </div>
           </div>
           <div className="form-row">
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <ReciboTarifaUploader
+                key={editId ?? 'new'}
+                onTarifaDetected={(tarifa) => {
+                  setForm((prev) => ({ ...prev, tarifa_kwh: tarifa }));
+                  setTarifaDesdeRecibo(true);
+                }}
+                onExtractingChange={setExtractingTarifa}
+              />
+              {tarifaPendiente && (
+                <div
+                  role="alert"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    marginTop: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    color: '#fbbf24',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>
+                    {tarifaDesdeRecibo
+                      ? 'Subió un recibo y la tarifa fue detectada, pero aún no la ha guardado. Pulse «Guardar» antes de cerrar o cambiar de módulo.'
+                      : 'Tiene cambios en la tarifa sin guardar. Pulse «Guardar» antes de cerrar o cambiar de módulo.'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="form-row">
             <div className="form-group">
               <label>Tarifa Eléctrica (S/ por kWh) *</label>
               <input
@@ -507,6 +586,7 @@ export default function ClientesPage() {
                 })}
                 placeholder="Ej. 0.613"
                 required
+                disabled={extractingTarifa}
               />
             </div>
             <div className="form-group">

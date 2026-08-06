@@ -21,6 +21,9 @@ const {
   drawRecomendacionesPanel,
   drawFacturaRecibo,
   drawFooter,
+  applyPdfPageMargins,
+  PDF_BOTTOM_MARGIN,
+  MARGIN,
 } = require('./pdfReciboLayout');
 const recomendacionService = require('./recomendacionService');
 
@@ -85,11 +88,22 @@ const generarReportePDF = async (calculoId, clienteId) => {
   const filepath = path.join(UPLOADS_DIR, filename);
 
   await new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 42, size: 'A4', bufferPages: true });
+    const doc = new PDFDocument({
+      size: 'A4',
+      bufferPages: true,
+      margins: {
+        top: MARGIN,
+        bottom: PDF_BOTTOM_MARGIN,
+        left: MARGIN,
+        right: MARGIN,
+      },
+    });
     const stream = fs.createWriteStream(filepath);
     doc.pipe(stream);
 
-    doc.y = 42;
+    doc.on('pageAdded', () => applyPdfPageMargins(doc));
+    applyPdfPageMargins(doc);
+    doc.y = MARGIN;
 
     drawHeaderBand(doc, {
       calculoId,

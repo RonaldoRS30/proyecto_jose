@@ -47,6 +47,14 @@ export const getClientes = (params) => api.get('/clientes', { params });
 export const getCliente = (id) => api.get(`/clientes/${id}`);
 export const getClienteDetalle = (id) => api.get(`/clientes/${id}/detalle`);
 export const createCliente = (data) => api.post('/clientes', data);
+
+export const extraerTarifaRecibo = (file) => {
+  const formData = new FormData();
+  formData.append('recibo', file);
+  return api.post('/clientes/extraer-tarifa-recibo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const updateCliente = (id, data) => api.put(`/clientes/${id}`, data);
 export const deleteCliente = (id) => api.delete(`/clientes/${id}`);
 export const toggleCliente = (id) => api.patch(`/clientes/${id}/toggle`);
@@ -54,8 +62,6 @@ export const getEstadisticas = (params) => api.get('/clientes/estadisticas', { p
 export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
 export const getMiPerfil = () => api.get('/clientes/mi-perfil');
 export const updateMiTarifa = (tarifa_kwh) => api.put('/clientes/mi-perfil/tarifa', { tarifa_kwh });
-export const getContactoReporte = () => api.get('/clientes/mi-perfil/contacto-reporte');
-export const updateContactoReporte = (data) => api.put('/clientes/mi-perfil/contacto-reporte', data);
 export const getContactoPublico = () => api.get('/reportes/contacto-publico');
 
 // Códigos
