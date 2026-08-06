@@ -213,9 +213,7 @@ export default function ClientDashboard() {
         </div>
         <div style={{ textAlign: 'right' }}>
 
-          <span style={{ fontSize: '11px', color: '#718096', display: 'block', lineHeight: '1.4' }}>
-            para obtener el gasto diario, mensual y anual
-          </span>
+
           <Link to="/cliente/perfil" style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px', display: 'inline-block' }}>
             Editar desde Mi Perfil →
           </Link>
