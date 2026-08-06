@@ -18,6 +18,21 @@ const samples = [
     expected: 0.613,
   },
   {
+    name: 'Luz del Sur formula antes del encabezado',
+    text: '55050.40 - 54827.50 = 222.90 X 1.0000 = 222.90 X 0.6130 Última lectura Precio kWh (S/.)',
+    expected: 0.613,
+  },
+  {
+    name: 'Luz del Sur columnas PDF',
+    text: 'Última lectura Lectura anterior Energía Precio kWh (S/.) 55050.40 54827.50 222.90 1.0000 222.90 0.6130',
+    expected: 0.613,
+  },
+  {
+    name: 'Luz del Sur encabezado lejos del valor',
+    text: 'Precio kWh (S/.) Importe Consumo de energía 136.64 datos 55050.40 54827.50 222.90 1.0000 222.90 0.6130',
+    expected: 0.613,
+  },
+  {
     name: 'HIDRANDINA Ene.Activa',
     text: 'Ene.Activa(S/ 0.6894 x 23.0000 kWh) 15.86',
     expected: 0.6894,

@@ -6,6 +6,10 @@ const TARIFA_PATTERNS = [
     re: /PRECIO\s+UNIT\.?\s*S\/\.?\s*\/?\s*kW\.?\s*h\s*:?\s*([\d.,]+)/gi,
   },
   {
+    id: 'luz_del_sur_formula',
+    re: /[\d.,]+\s*-\s*[\d.,]+\s*=\s*[\d.,]+\s*[xX×]\s*[\d.,]+\s*=\s*[\d.,]+\s*[xX×]\s*([\d.,]+)/gi,
+  },
+  {
     id: 'precio_kwh_soles_paren',
     re: /Precio\s+kWh\s*\(\s*S\/\.?\s*\)\s*:?\s*([\d.,]+)/gi,
   },
@@ -27,7 +31,7 @@ const TARIFA_PATTERNS = [
   },
   {
     id: 'precio_kwh_paren',
-    re: /precio\s+KWH\s*\(\s*S\/\.?\s*\)\s*([\d.,]+)/gi,
+    re: /precio\s+KWH\s*\(\s*S\/\.?\s*\)\s*:?\s*([\d.,]+)/gi,
   },
   {
     id: 'precio_kwh',
@@ -53,28 +57,53 @@ function parseTarifaNumber(raw) {
   return Math.round(n * 10000) / 10000;
 }
 
-/** Luz del Sur: etiqueta "Precio kWh (S/.)" — el monto puede ir junto o en "consumo X tarifa". */
+/** Luz del Sur: etiqueta "Precio kWh (S/.)" — valor en columna o en "… = kWh X factor = kWh X tarifa". */
 function extractLuzDelSurTarifa(source) {
   const marker = /Precio\s+kWh\s*\(\s*S\/\.?\s*\)/i.exec(source);
   if (!marker) return null;
 
-  const start = Math.max(0, marker.index - 120);
-  const chunk = source.slice(start, marker.index + 80);
-
-  const direct = /Precio\s+kWh\s*\(\s*S\/\.?\s*\)\s*:?\s*([\d.,]+)/i.exec(chunk);
-  if (direct) return parseTarifaNumber(direct[1]);
-
-  const afterLabel = /Precio\s+kWh\s*\(\s*S\/\.?\s*\)[^0-9]{0,50}([\d.,]{4,6})/i.exec(chunk);
-  if (afterLabel) return parseTarifaNumber(afterLabel[1]);
-
-  const multiplyRe = /\bX\s*([\d.,]{4,6})\b/gi;
-  let lastTarifa = null;
-  let multiplyMatch;
-  while ((multiplyMatch = multiplyRe.exec(chunk)) !== null) {
-    const val = parseTarifaNumber(multiplyMatch[1]);
-    if (val != null) lastTarifa = val;
+  const formulaRe = /[\d.,]+\s*-\s*[\d.,]+\s*=\s*[\d.,]+\s*[xX×]\s*[\d.,]+\s*=\s*[\d.,]+\s*[xX×]\s*([\d.,]+)/gi;
+  let formulaMatch;
+  while ((formulaMatch = formulaRe.exec(source)) !== null) {
+    const val = parseTarifaNumber(formulaMatch[1]);
+    if (val != null) return val;
   }
-  return lastTarifa;
+
+  const direct = /Precio\s+kWh\s*\(\s*S\/\.?\s*\)\s*:?\s*([\d.,]+)/i.exec(source);
+  if (direct) {
+    const val = parseTarifaNumber(direct[1]);
+    if (val != null) return val;
+  }
+
+  const searchWindows = [
+    source.slice(Math.max(0, marker.index - 500), marker.index + 500),
+    source,
+  ];
+
+  for (const chunk of searchWindows) {
+    const multiplyRe = /\b[xX×]\s*([\d.,]+)/gi;
+    let multiplyMatch;
+    let lastTarifa = null;
+    while ((multiplyMatch = multiplyRe.exec(chunk)) !== null) {
+      const val = parseTarifaNumber(multiplyMatch[1]);
+      if (val != null && val !== 1) lastTarifa = val;
+    }
+    if (lastTarifa != null) return lastTarifa;
+  }
+
+  const afterMarker = source.slice(marker.index, marker.index + 350);
+  const numberRe = /([\d.,]+)/g;
+  let numberMatch;
+  const tarifaCandidates = [];
+  while ((numberMatch = numberRe.exec(afterMarker)) !== null) {
+    const val = parseTarifaNumber(numberMatch[1]);
+    if (val != null && val !== 1) tarifaCandidates.push(val);
+  }
+  if (tarifaCandidates.length) {
+    return tarifaCandidates[tarifaCandidates.length - 1];
+  }
+
+  return null;
 }
 
 function extractTarifaFromText(text) {

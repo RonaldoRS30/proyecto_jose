@@ -19,7 +19,7 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
     if (!file || disabled) return;
 
     if (!isReciboFileAllowed(file)) {
-      setError('Formato no permitido. Use PDF, JPG o PNG.');
+      setError('Formato no permitido. Use PDF, JPEG, JPG o PNG.');
       setMessage('');
       return;
     }
@@ -66,7 +66,7 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
           }}
         >
           {extracting ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-          Subir PDF, JPG o PNG
+          Subir PDF, JPEG o PNG
           <input
             type="file"
             hidden
@@ -91,7 +91,7 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
           <input
             type="file"
             hidden
-            accept="image/jpeg,image/png,image/jpg,.jpg,.jpeg,.png"
+            accept="image/jpeg,image/jpg,image/pjpeg,image/jfif,image/png,.jpg,.jpeg,.png"
             capture="environment"
             disabled={isBusy}
             onChange={handleFile}
@@ -120,7 +120,7 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
         </div>
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
-        PDF, JPG o PNG. Compatible con PRECIO UNIT. S/. /kW.h, Precio kWh (S/.), Ene.Activa, etc.
+        PDF, JPEG, JPG o PNG. Compatible con PRECIO UNIT. S/. /kW.h, Precio kWh (S/.), Ene.Activa, etc.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

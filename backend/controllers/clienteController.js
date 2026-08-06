@@ -97,7 +97,11 @@ const extraerTarifaRecibo = [
     }
 
     try {
-      const result = await extractTarifaFromRecibo(req.file.buffer, req.file.mimetype);
+      const result = await extractTarifaFromRecibo(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname,
+      );
       if (result.tarifa_kwh == null) {
         return res.status(422).json({ success: false, ...result });
       }
