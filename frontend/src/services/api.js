@@ -54,6 +54,8 @@ export const getEstadisticas = (params) => api.get('/clientes/estadisticas', { p
 export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
 export const getMiPerfil = () => api.get('/clientes/mi-perfil');
 export const updateMiTarifa = (tarifa_kwh) => api.put('/clientes/mi-perfil/tarifa', { tarifa_kwh });
+export const getContactoReporte = () => api.get('/clientes/mi-perfil/contacto-reporte');
+export const updateContactoReporte = (data) => api.put('/clientes/mi-perfil/contacto-reporte', data);
 
 // Códigos
 export const generarCodigo = (data) => api.post('/codigos/generar', data);

@@ -85,6 +85,11 @@ export default function ConfigPage() {
     igv_rate: 'IGV (decimal, ej: 0.18)',
     electrificacion_rural: 'Electrificación Rural (S/)',
     umbral_alerta_consumo_pct: 'Alerta consumo alto (% sobre promedio)',
+    pdf_contacto_email: 'Correo en pie de página PDF',
+    pdf_contacto_telefono: 'Teléfono en pie de página PDF',
+    pdf_contacto_web: 'Sitio web en pie de página PDF',
+    pdf_empresa_nombre: 'Nombre empresa en PDF',
+    pdf_empresa_tagline: 'Eslogan en pie de página PDF',
   };
 
   const tarifaKeys = [
@@ -92,6 +97,10 @@ export default function ConfigPage() {
     'interes_compensatorio', 'igv_rate', 'electrificacion_rural',
   ];
   const alertaKeys = ['umbral_alerta_consumo_pct'];
+  const pdfContactoKeys = [
+    'pdf_contacto_email', 'pdf_contacto_telefono', 'pdf_contacto_web',
+    'pdf_empresa_nombre', 'pdf_empresa_tagline',
+  ];
 
   const renderConfigRow = (c) => (
     <div key={c.clave} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem' }}>
@@ -136,6 +145,17 @@ export default function ConfigPage() {
         <div className="card-header"><h3>Alertas administrativas</h3></div>
         <div className="card-body">
           {configs.filter((c) => alertaKeys.includes(c.clave)).map(renderConfigRow)}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '1.25rem' }}>
+        <div className="card-header"><h3>Pie de página — Reportes PDF</h3></div>
+        <div className="card-body">
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            Datos de contacto que aparecen en el pie de página de los reportes PDF.
+            También editables desde Mi Perfil (cliente).
+          </p>
+          {configs.filter((c) => pdfContactoKeys.includes(c.clave)).map(renderConfigRow)}
         </div>
       </div>
 

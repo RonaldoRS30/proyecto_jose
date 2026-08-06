@@ -11,7 +11,7 @@ const {
   getTotalesPorModulo,
   MOD_LABELS,
 } = require('./facturaHelper');
-const { getConfigMap } = require('./configuracionService');
+const { getConfigMap, getPdfContacto } = require('./configuracionService');
 const {
   drawHeaderBand,
   drawClientePanel,
@@ -51,6 +51,7 @@ const generarReportePDF = async (calculoId, clienteId) => {
   if (!calculo) throw new AppError('Cálculo no encontrado', 404);
 
   const configMap = await getConfigMap();
+  const contactoPdf = await getPdfContacto();
   const calculoEnriquecido = enrichCalculo(calculo, { configMap });
 
   const clienteIdReporte = calculoEnriquecido.cliente_id;
@@ -111,7 +112,7 @@ const generarReportePDF = async (calculoId, clienteId) => {
     drawRecomendacionesPanel(doc, recomendaciones);
 
     drawFacturaRecibo(doc, factura, formatNum);
-    drawFooter(doc);
+    drawFooter(doc, contactoPdf);
 
     doc.end();
     stream.on('finish', resolve);

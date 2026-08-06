@@ -23,6 +23,9 @@ const COLORS = {
 const MARGIN = 42;
 const PAGE_WIDTH = 595.28;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
+const FOOTER_HEIGHT = 52;
+const FOOTER_PAGE_NUM = 10;
+const FOOTER_RESERVE = FOOTER_HEIGHT + FOOTER_PAGE_NUM + 8;
 
 function formatDatePE(date) {
   return new Date(date).toLocaleDateString('es-PE', {
@@ -33,7 +36,7 @@ function formatDatePE(date) {
 }
 
 function ensureSpace(doc, needed) {
-  const bottom = doc.page.height - MARGIN - 55;
+  const bottom = doc.page.height - MARGIN - FOOTER_RESERVE;
   if (doc.y + needed > bottom) {
     doc.addPage();
     doc.y = MARGIN;
@@ -345,61 +348,63 @@ function drawRecomendacionesPanel(doc, recomendaciones) {
   });
 }
 
-function drawFooter(doc) {
+function drawFooter(doc, contacto = {}) {
+  const empresaNombre = contacto.empresaNombre || 'ELECTRIXSTUDIO';
+  const empresaTagline = contacto.empresaTagline || 'Auditoría & Soluciones de Eficiencia Energética';
+  const web = contacto.web || 'www.electrixstudio.com';
+  const email = contacto.email || 'contacto@electrixstudio.com';
+  const telefono = contacto.telefono || '+51 987 654 321';
+
   const pages = doc.bufferedPageRange();
-  
+
   for (let i = pages.start; i < pages.start + pages.count; i++) {
     doc.switchToPage(i);
+
+    const bannerY = doc.page.height - MARGIN - FOOTER_HEIGHT;
+    const rightColW = 248;
+    const rightColX = MARGIN + CONTENT_W - rightColW;
+    const labelW = 72;
+    const valueW = rightColW - labelW - 6;
+
     doc.save();
 
-    const bannerH = 44;
-    const bannerY = doc.page.height - MARGIN - bannerH;
+    doc.roundedRect(MARGIN, bannerY, CONTENT_W, FOOTER_HEIGHT, 5).fill('#0f172a');
+    doc.rect(MARGIN, bannerY, 4, FOOTER_HEIGHT).fill('#2563eb');
 
-    // Fondo oscuro elegante para la publicidad/branding
-    doc.roundedRect(MARGIN, bannerY, CONTENT_W, bannerH, 6)
-       .fill('#0f172a');
-
-    // Tira lateral azul eléctrico de acento
-    doc.roundedRect(MARGIN, bannerY, 5, bannerH, 2)
-       .fill('#2563eb');
-
-    // Columna Izquierda: Branding & Eslogan
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff')
-       .text('ELECTRIXSTUDIO', MARGIN + 14, bannerY + 8);
+      .text(empresaNombre, MARGIN + 14, bannerY + 10, { width: 210, lineBreak: false });
+
     doc.font('Helvetica').fontSize(7).fillColor('#94a3b8')
-       .text('Auditoría & Soluciones de Eficiencia Energética', MARGIN + 14, bannerY + 23);
+      .text(empresaTagline, MARGIN + 14, bannerY + 26, { width: 210, lineGap: 1 });
 
-    // Columna Derecha: Datos de Contacto bien estructurados
-    const contactX = MARGIN + 210;
-    const contactW = CONTENT_W - 220;
+    const contactRows = [
+      ['Sitio web', web],
+      ['Correo', email],
+      ['Teléfono', telefono],
+    ];
 
-    // Fila 1: Web y Correo
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#38bdf8')
-       .text('WEB: ', contactX, bannerY + 9, { continued: true, width: contactW, align: 'right' })
-       .font('Helvetica').fillColor('#f8fafc')
-       .text('electrixstudio.com', { continued: true })
-       .font('Helvetica-Bold').fillColor('#38bdf8')
-       .text('   |   CORREO: ', { continued: true })
-       .font('Helvetica').fillColor('#f8fafc')
-       .text('contacto@electrixstudio.com');
+    let rowY = bannerY + 9;
+    contactRows.forEach(([label, value]) => {
+      doc.font('Helvetica').fontSize(7).fillColor('#64748b')
+        .text(label, rightColX, rowY, { width: labelW, lineBreak: false });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#f1f5f9')
+        .text(value, rightColX + labelW, rowY, { width: valueW, align: 'right', lineBreak: false });
+      rowY += 12;
+    });
 
-    // Fila 2: Teléfono / WhatsApp
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#38bdf8')
-       .text('TEL / WHATSAPP: ', contactX, bannerY + 23, { width: contactW, align: 'right', continued: true })
-       .font('Helvetica').fillColor('#f8fafc')
-       .text('+51 987 654 321  ·  Atención a Nivel Nacional');
-
-    // Pie de página inferior fuera del banner (Número de página)
-    doc.font('Helvetica').fontSize(6.5).fillColor(COLORS.muted)
-       .text(
-         `Página ${i + 1} de ${pages.count}  ·  Documento informativo generado por ElectrixStudio`,
-         MARGIN,
-         bannerY + bannerH + 3,
-         { width: CONTENT_W, align: 'center' }
-       );
+    const pageNumY = bannerY - 9;
+    doc.font('Helvetica').fontSize(6.5).fillColor('#94a3b8')
+      .text(
+        `Página ${i + 1} de ${pages.count}  ·  Documento informativo generado por ${empresaNombre}`,
+        MARGIN,
+        pageNumY,
+        { width: CONTENT_W, align: 'center', lineBreak: false }
+      );
 
     doc.restore();
   }
+
+  doc.switchToPage(pages.start + pages.count - 1);
 }
 
 module.exports = {

@@ -1,5 +1,6 @@
 const { body } = require('express-validator');
 const clienteService = require('../services/clienteService');
+const { getPdfContacto, updatePdfContacto } = require('../services/configuracionService');
 const { asyncHandler } = require('../utils/errorHandler');
 
 const validateCliente = [
@@ -75,4 +76,39 @@ const exportResumen = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
-module.exports = { listar, crear, obtener, actualizar, eliminar, toggle, estadisticas, miPerfil, actualizarMiTarifa, detalleAdmin, exportResumen };
+const getContactoReporte = asyncHandler(async (req, res) => {
+  const data = await getPdfContacto();
+  res.json({ success: true, data });
+});
+
+const actualizarContactoReporte = asyncHandler(async (req, res) => {
+  const { email, telefono, web } = req.body;
+  if (!email?.trim() || !telefono?.trim() || !web?.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Correo, teléfono y página web son obligatorios',
+    });
+  }
+  const data = await updatePdfContacto({
+    email: email.trim(),
+    telefono: telefono.trim(),
+    web: web.trim(),
+  });
+  res.json({ success: true, data });
+});
+
+module.exports = {
+  listar,
+  crear,
+  obtener,
+  actualizar,
+  eliminar,
+  toggle,
+  estadisticas,
+  miPerfil,
+  actualizarMiTarifa,
+  detalleAdmin,
+  exportResumen,
+  getContactoReporte,
+  actualizarContactoReporte,
+};
