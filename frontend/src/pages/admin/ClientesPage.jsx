@@ -172,6 +172,14 @@ export default function ClientesPage() {
       setError('El DNI debe tener exactamente 8 dígitos.');
       return;
     }
+    if (form.tarifa_kwh === null || form.tarifa_kwh === undefined || form.tarifa_kwh === '') {
+      setError('La tarifa eléctrica (S/ por kWh) es obligatoria.');
+      return;
+    }
+    if (Number.isNaN(Number(form.tarifa_kwh)) || Number(form.tarifa_kwh) < 0) {
+      setError('La tarifa eléctrica debe ser un número válido mayor o igual a 0.');
+      return;
+    }
 
     try {
       if (editId) {
@@ -486,15 +494,19 @@ export default function ClientesPage() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Tarifa Eléctrica (S/ por kWh)</label>
-              <input 
-                className="form-control" 
-                type="number" 
-                step="0.0001" 
+              <label>Tarifa Eléctrica (S/ por kWh) *</label>
+              <input
+                className="form-control"
+                type="number"
+                step="0.0001"
                 min="0"
-                value={form.tarifa_kwh || ''} 
-                onChange={(e) => setForm({ ...form, tarifa_kwh: e.target.value ? parseFloat(e.target.value) : null })} 
-                placeholder="Ej. 1.25"
+                value={form.tarifa_kwh ?? ''}
+                onChange={(e) => setForm({
+                  ...form,
+                  tarifa_kwh: e.target.value === '' ? '' : parseFloat(e.target.value),
+                })}
+                placeholder="Ej. 0.613"
+                required
               />
             </div>
             <div className="form-group">

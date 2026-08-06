@@ -9,6 +9,11 @@ const validateCliente = [
     .optional()
     .isIn(['natural', 'empresa'])
     .withMessage('Tipo de cliente inválido'),
+  body('tarifa_kwh')
+    .notEmpty()
+    .withMessage('La tarifa eléctrica es obligatoria')
+    .isFloat({ min: 0 })
+    .withMessage('La tarifa eléctrica debe ser un número válido'),
 ];
 
 const listar = asyncHandler(async (req, res) => {

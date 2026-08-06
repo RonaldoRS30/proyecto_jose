@@ -17,6 +17,15 @@ function normalizeClientePayload(raw = {}) {
   const nombre = String(raw.nombre ?? '').trim();
   const apellidoRaw = raw.apellido == null ? '' : String(raw.apellido).trim();
   const documento = String(raw.documento ?? '').replace(/\D/g, '');
+  const tarifaRaw = raw.tarifa_kwh;
+
+  if (tarifaRaw === null || tarifaRaw === undefined || tarifaRaw === '') {
+    throw new AppError('La tarifa eléctrica (S/ por kWh) es obligatoria', 400);
+  }
+  const tarifaKwh = parseFloat(tarifaRaw);
+  if (Number.isNaN(tarifaKwh) || tarifaKwh < 0) {
+    throw new AppError('La tarifa eléctrica debe ser un número válido mayor o igual a 0', 400);
+  }
 
   if (!nombre) {
     throw new AppError(
@@ -39,6 +48,7 @@ function normalizeClientePayload(raw = {}) {
       nombre,
       apellido: null,
       documento,
+      tarifa_kwh: tarifaKwh,
     };
   }
 
@@ -55,6 +65,7 @@ function normalizeClientePayload(raw = {}) {
     nombre,
     apellido: apellidoRaw,
     documento,
+    tarifa_kwh: tarifaKwh,
   };
 }
 
