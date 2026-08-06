@@ -379,27 +379,40 @@ export default function ClientesPage() {
         <form id="cliente-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '8px' }}>Tipo de Cliente *</label>
-            <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.05)', padding: '5px', borderRadius: '8px', width: 'max-content' }}>
-              <button
-                type="button"
-                onClick={() => handleTipoChange('natural')}
-                style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'natural' ? '#4f46e5' : 'transparent', color: tipoCliente === 'natural' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'natural' ? '500' : 'normal' }}
-              >
-                Persona Natural
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTipoChange('empresa')}
-                style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'empresa' ? '#4f46e5' : 'transparent', color: tipoCliente === 'empresa' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'empresa' ? '500' : 'normal' }}
-              >
-                Empresa
-              </button>
-            </div>
-            <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-muted)' }}>
-              {tipoCliente === 'natural'
-                ? 'Persona natural: nombre, apellido y DNI (8 dígitos).'
-                : 'Empresa: solo razón social y RUC (11 dígitos), sin apellido.'}
-            </small>
+            {editId ? (
+              <div>
+                <span className={`badge ${tipoCliente === 'empresa' ? 'badge-info' : 'badge-secondary'}`} style={{ fontSize: '0.9rem', padding: '8px 14px' }}>
+                  {tipoCliente === 'empresa' ? 'Empresa' : 'Persona Natural'}
+                </span>
+                <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-muted)' }}>
+                  El tipo de cliente no se puede modificar después del registro.
+                </small>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.05)', padding: '5px', borderRadius: '8px', width: 'max-content' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleTipoChange('natural')}
+                    style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'natural' ? '#4f46e5' : 'transparent', color: tipoCliente === 'natural' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'natural' ? '500' : 'normal' }}
+                  >
+                    Persona Natural
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTipoChange('empresa')}
+                    style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'empresa' ? '#4f46e5' : 'transparent', color: tipoCliente === 'empresa' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'empresa' ? '500' : 'normal' }}
+                  >
+                    Empresa
+                  </button>
+                </div>
+                <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-muted)' }}>
+                  {tipoCliente === 'natural'
+                    ? 'Persona natural: nombre, apellido y DNI (8 dígitos).'
+                    : 'Empresa: solo razón social y RUC (11 dígitos), sin apellido.'}
+                </small>
+              </>
+            )}
           </div>
           <div className="form-row">
             <div className="form-group">

@@ -9,7 +9,7 @@ const {
   HistorialAcceso,
 } = require('../models');
 const { generarCodigoInterno } = require('../helpers/codigoHelper');
-const { normalizeClientePayload } = require('../helpers/clienteTipoHelper');
+const { normalizeClientePayload, inferTipoCliente } = require('../helpers/clienteTipoHelper');
 const { roundNum } = require('../utils/format');
 const { enrichCalculos } = require('./facturaHelper');
 const { getConfigMap } = require('./configuracionService');
@@ -120,7 +120,18 @@ const obtenerCliente = async (id) => {
 
 const actualizarCliente = async (id, data) => {
   const cliente = await obtenerCliente(id);
-  const payload = normalizeClientePayload({ ...cliente.toJSON(), ...data });
+  const existente = cliente.toJSON();
+  const tipoOriginal = inferTipoCliente(existente);
+
+  if (data.tipo_cliente && data.tipo_cliente !== tipoOriginal) {
+    throw new AppError('No se puede cambiar el tipo de cliente al editar', 400);
+  }
+
+  const payload = normalizeClientePayload({
+    ...existente,
+    ...data,
+    tipo_cliente: tipoOriginal,
+  });
   await cliente.update(payload);
   return cliente;
 };
