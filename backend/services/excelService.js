@@ -10,6 +10,11 @@ if (!fs.existsSync(EXCEL_UPLOADS_DIR)) {
   fs.mkdirSync(EXCEL_UPLOADS_DIR, { recursive: true });
 }
 
+const resolvePythonCommand = () => {
+  if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
+  return process.platform === 'win32' ? 'python' : 'python3';
+};
+
 const generarExcel = async (calculoId) => {
   const calculo = await Calculo.findByPk(calculoId, {
     include: [{ model: DetalleCalculo, as: 'detalles' }],
@@ -17,7 +22,7 @@ const generarExcel = async (calculoId) => {
 
   if (!calculo) throw new Error('Cálculo no encontrado');
 
-  const detalles = calculo.detalles.map(d => ({
+  const detalles = calculo.detalles.map((d) => ({
     nombre: d.nombre,
     modulo: d.modulo,
     categoria: d.categoria,
@@ -25,7 +30,7 @@ const generarExcel = async (calculoId) => {
     horas_uso_dia: parseFloat(d.horas_uso_dia),
     consumo_mes: parseFloat(d.consumo_mes),
     gasto_mensual: parseFloat(d.gasto_mensual),
-    gasto_anual: parseFloat(d.gasto_anual)
+    gasto_anual: parseFloat(d.gasto_anual),
   }));
 
   const data = { detalles };
@@ -37,15 +42,31 @@ const generarExcel = async (calculoId) => {
 
   return new Promise((resolve, reject) => {
     const pythonScript = path.join(__dirname, '..', 'scripts', 'generate_excel.py');
-    const child = spawn('python.exe', [pythonScript, inputJsonPath, outputExcelPath], { shell: true });
+    const pythonCmd = resolvePythonCommand();
+    const child = spawn(pythonCmd, [pythonScript, inputJsonPath, outputExcelPath]);
 
     let stderr = '';
-    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.stderr.on('data', (d) => {
+      stderr += d.toString();
+    });
+
+    child.on('error', (err) => {
+      try {
+        fs.unlinkSync(inputJsonPath);
+      } catch (e) {}
+      reject(
+        new Error(
+          `No se pudo ejecutar Python (${pythonCmd}). En el VPS instale: apt install python3 python3-pip && pip3 install xlsxwriter. Detalle: ${err.message}`
+        )
+      );
+    });
 
     child.on('close', (code) => {
-      try { fs.unlinkSync(inputJsonPath); } catch(e) {}
+      try {
+        fs.unlinkSync(inputJsonPath);
+      } catch (e) {}
       if (code !== 0) {
-        return reject(new Error(`Error al generar Excel: ${stderr}`));
+        return reject(new Error(`Error al generar Excel: ${stderr || `código ${code}`}`));
       }
       resolve(outputExcelPath);
     });

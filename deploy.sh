@@ -38,8 +38,19 @@ npm run ensure-db
 log "Backend: aplicando migraciones de esquema..."
 npm run ensure-schema
 
-log "Backend: carpeta de PDFs..."
-mkdir -p uploads/reportes
+log "Backend: carpeta de PDFs y Excel..."
+mkdir -p uploads/reportes uploads/excel
+
+if command -v python3 >/dev/null; then
+  log "Backend: dependencias Python (xlsxwriter)..."
+  if [[ -f "requirements.txt" ]]; then
+    python3 -m pip install -q -r requirements.txt || pip3 install -q xlsxwriter
+  else
+    pip3 install -q xlsxwriter || python3 -m pip install -q xlsxwriter
+  fi
+else
+  log "AVISO: python3 no encontrado. La exportación Excel no funcionará."
+fi
 
 log "Backend: reiniciando PM2 (${PM2_APP_NAME})..."
 if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
