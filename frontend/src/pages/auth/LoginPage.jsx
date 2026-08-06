@@ -1,9 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, KeyRound } from 'lucide-react';
+import { Shield, KeyRound, ChevronRight } from 'lucide-react';
 import AuthBackground from '../../components/AuthBackground';
+import AuthServicesPanel from '../../components/AuthServicesPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminLogin, clienteLogin } from '../../services/api';
+
+const MOBILE_AUTH_MQ = '(max-width: 900px)';
+
+function useMobileAuthIntro() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_AUTH_MQ).matches,
+  );
+  const [loginVisible, setLoginVisible] = useState(
+    () => typeof window === 'undefined' || !window.matchMedia(MOBILE_AUTH_MQ).matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_AUTH_MQ);
+    const sync = (mobile) => {
+      setIsMobile(mobile);
+      if (!mobile) setLoginVisible(true);
+    };
+    sync(mq.matches);
+    const onChange = (e) => sync(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return { isMobile, loginVisible, showLogin: () => setLoginVisible(true) };
+}
 
 export default function LoginPage() {
   const [tab, setTab] = useState('cliente');
@@ -14,6 +40,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { isMobile, loginVisible, showLogin } = useMobileAuthIntro();
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
@@ -49,7 +76,21 @@ export default function LoginPage() {
     <div className="auth-page">
       <AuthBackground />
 
-      <div className="auth-card">
+      <div className={`auth-layout ${loginVisible ? 'auth-layout--login-visible' : 'auth-layout--intro'}`}>
+        <AuthServicesPanel introActive={isMobile && !loginVisible} />
+
+        {isMobile && !loginVisible && (
+          <button
+            type="button"
+            className="auth-intro-cta"
+            onClick={showLogin}
+          >
+            Acceder al sistema
+            <ChevronRight size={18} />
+          </button>
+        )}
+
+        <div className="auth-card">
         <div className="auth-logo">
           <img src={`${import.meta.env.BASE_URL}logo-electrixstudio.png`} alt="ElectrixStudio" />
           <h1>Sistema de Consumo Eléctrico</h1>
@@ -92,7 +133,7 @@ export default function LoginPage() {
             <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
               {loading ? 'Validando...' : 'Ingresar'}
             </button>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '1rem', textAlign: 'center' }}>
+            <p className="auth-form-hint">
               Ingrese el código entregado por el administrador tras realizar el pago.
             </p>
           </form>
@@ -131,6 +172,7 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+        </div>
       </div>
     </div>
   );
