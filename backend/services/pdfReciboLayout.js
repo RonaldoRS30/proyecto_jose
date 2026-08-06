@@ -273,8 +273,35 @@ function drawResumenPanel(doc, resumen, formatNum) {
   });
 }
 
+function drawFacturaLineRow(doc, opts) {
+  const {
+    label,
+    sublabel = '',
+    value,
+    y,
+    colDesc,
+    colMonto,
+    descW,
+    bold = false,
+  } = opts;
+
+  const valueY = sublabel ? y + 2 : y;
+  doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(COLORS.text)
+    .text(label, colDesc, y, { width: descW, lineBreak: false });
+
+  if (sublabel) {
+    doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
+      .text(sublabel, colDesc, y + 12, { width: descW, lineBreak: false });
+  }
+
+  doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(COLORS.text)
+    .text(value, colMonto, valueY, { width: 110, align: 'right', lineBreak: false });
+
+  return y + (sublabel ? 28 : 17);
+}
+
 function drawFacturaRecibo(doc, factura, formatNum) {
-  const boxContentH = 210;
+  const boxContentH = 228;
   ensureSpace(doc, boxContentH + 8);
   const startY = doc.y;
   const pad = 14;
@@ -283,7 +310,7 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   doc.roundedRect(MARGIN, startY, CONTENT_W, 8, 2).fill(COLORS.primary);
 
   const boxY = startY + 8;
-  doc.roundedRect(MARGIN, boxY, CONTENT_W, 200, 4)
+  doc.roundedRect(MARGIN, boxY, CONTENT_W, 218, 4)
     .lineWidth(0.75)
     .strokeColor(COLORS.border)
     .stroke();
@@ -300,6 +327,7 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   const colDesc = MARGIN + pad;
   const colMonto = MARGIN + CONTENT_W - pad - 110;
   const rowW = CONTENT_W - pad * 2;
+  const descW = colMonto - colDesc - 12;
 
   doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.muted)
     .text('CONCEPTO', colDesc, boxY + 36)
@@ -307,11 +335,21 @@ function drawFacturaRecibo(doc, factura, formatNum) {
 
   let y = boxY + 50;
 
+  const kwh = factura.consumoEnergiaKwh ?? factura.consumoEnergiaLinea ?? 0;
+  const precio = factura.precioKwh ?? 0.613;
+  const importeEnergia = factura.consumoEnergiaLinea ?? kwh;
+
+  y = drawFacturaLineRow(doc, {
+    label: 'Consumo de energía',
+    sublabel: `${formatNum(kwh)} kWh`,
+    value: `S/ ${formatNum(importeEnergia)}`,
+    y,
+    colDesc,
+    colMonto,
+    descW,
+  });
+
   const lineas = [
-    { 
-      label: `Consumo de energía (${formatNum(factura.consumoEnergiaKwh)} kWh × S/ ${formatNum(factura.precioKwh || 0.613)})`, 
-      value: `S/ ${formatNum(factura.gastoEnergiaMensual)}` 
-    },
     { label: 'Cargo fijo', value: `S/ ${formatNum(factura.cargoFijo)}` },
     { label: 'Mantenimiento y reposición de conexión', value: `S/ ${formatNum(factura.mantReposicion)}` },
     { label: 'Alumbrado público', value: `S/ ${formatNum(factura.alumbradoPublico)}` },
@@ -319,10 +357,14 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   ];
 
   lineas.forEach((row) => {
-    doc.font('Helvetica').fontSize(9).fillColor(COLORS.text)
-      .text(row.label, colDesc, y, { width: 280 });
-    doc.text(row.value, colMonto, y, { width: 110, align: 'right' });
-    y += 17;
+    y = drawFacturaLineRow(doc, {
+      label: row.label,
+      value: row.value,
+      y,
+      colDesc,
+      colMonto,
+      descW,
+    });
   });
 
   y += 4;
@@ -336,10 +378,15 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   ];
 
   subtotalRows.forEach((row) => {
-    doc.font(row.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(COLORS.text)
-      .text(row.label, colDesc, y, { width: 280 });
-    doc.text(row.value, colMonto, y, { width: 110, align: 'right' });
-    y += 17;
+    y = drawFacturaLineRow(doc, {
+      label: row.label,
+      value: row.value,
+      y,
+      colDesc,
+      colMonto,
+      descW,
+      bold: row.bold,
+    });
   });
 
   y += 6;
@@ -353,14 +400,14 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   y = totalY + 36;
   doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
     .text(
-      `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (precio unitario × kWh mensual).`,
+      `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (${formatNum(kwh)} kWh × S/ ${formatNum(precio)}).`,
       colDesc,
       y,
-      { width: rowW, lineGap: 1, lineBreak: false, ellipsis: true },
+      { width: rowW, lineGap: 1 },
     );
 
   doc.restore();
-  doc.y = boxY + 210;
+  doc.y = boxY + boxContentH;
 }
 
 function drawEquiposTable(doc, title, items, formatNum) {

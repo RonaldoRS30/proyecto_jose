@@ -293,21 +293,57 @@ function drawPieChartAt(doc, items, cx, cy, radius) {
   doc.circle(cx, cy, radius).lineWidth(0.6).strokeColor(C.white).stroke();
 }
 
+function drawVerticalLegend(doc, items, x, y, maxWidth) {
+  let cy = y;
+  const rowH = 13;
+
+  items.forEach((item) => {
+    doc.roundedRect(x, cy + 1, 10, 10, 2).fill(item.color);
+    doc.font('Helvetica').fontSize(7).fillColor(C.text)
+      .text(item.label, x + 14, cy, {
+        width: maxWidth - 18,
+        lineBreak: false,
+      });
+    cy += rowH;
+  });
+
+  return cy;
+}
+
+function computeCategoryPanelHeight(items) {
+  const count = items.filter((d) => d.value > 0).length;
+  if (!count) return 170;
+
+  const titleH = 30;
+  const legendH = count * 13 + 12;
+  const pieMin = 86;
+  return titleH + pieMin + legendH + 14;
+}
+
 function drawCategoryPiePanel(doc, items, originX, originY, panelW, panelH) {
   const sorted = [...items].filter((d) => d.value > 0).sort((a, b) => b.value - a.value);
   if (!sorted.length) return;
 
   drawChartFrame(doc, originX, originY, panelW, panelH);
 
+  const titleH = 30;
+  const legendRowH = 13;
+  const legendPad = 12;
+  const legendH = sorted.length * legendRowH + legendPad;
+
   doc.font('Helvetica-Bold').fontSize(9).fillColor(C.primary)
-    .text('Distribución por Categoría', originX + 10, originY + 10, {
-      width: panelW - 20,
+    .text('Distribución por Categoría', originX + 8, originY + 10, {
+      width: panelW - 16,
       align: 'center',
+      lineGap: 0,
     });
 
+  const pieTop = originY + titleH;
+  const pieBottom = originY + panelH - legendH - 6;
+  const pieAreaH = Math.max(60, pieBottom - pieTop);
   const cx = originX + panelW / 2;
-  const cy = originY + panelH / 2 - 6;
-  const radius = Math.min(52, panelW / 2 - 24);
+  const cy = pieTop + pieAreaH / 2;
+  const radius = Math.min(44, pieAreaH / 2 - 4, panelW / 2 - 20);
 
   drawPieChartAt(doc, sorted, cx, cy, radius);
 
@@ -317,15 +353,17 @@ function drawCategoryPiePanel(doc, items, originX, originY, panelW, panelH) {
     label: `${item.label}: ${formatValue(item.value, 'kWh')} (${((item.value / total) * 100).toFixed(1)}%)`,
   }));
 
-  const legendY = originY + panelH - 36;
-  drawLegend(doc, legendItems, originX + 8, legendY, panelW - 16);
+  const legendY = originY + panelH - legendH + 4;
+  drawVerticalLegend(doc, legendItems, originX + 10, legendY, panelW - 20);
 }
 
 function drawConsumoCategoryRow(doc, consumoItems, catItems) {
   const halfW = (CONTENT_W - 14) / 2;
   const barData = consumoItems.slice(0, 6);
   const rowCount = Math.max(barData.length, 3);
-  const panelH = Math.max(170, rowCount * ROW_H + ROW_PAD + 44);
+  const leftPanelH = Math.max(170, rowCount * ROW_H + ROW_PAD + 44);
+  const catPanelH = computeCategoryPanelHeight(catItems);
+  const panelH = Math.max(leftPanelH, catPanelH);
 
   ensureSpace(doc, panelH + 20);
 
@@ -453,7 +491,7 @@ function drawChartsSection(doc, { detalles = [], totalesModulos = [], resumen = 
     });
     divider(doc);
   } else if (catItems.length > 0) {
-    const panelH = 200;
+    const panelH = computeCategoryPanelHeight(catItems);
     ensureSpace(doc, panelH + 20);
     const topY = doc.y;
     drawCategoryPiePanel(doc, catItems, MARGIN, topY, CONTENT_W, panelH);
