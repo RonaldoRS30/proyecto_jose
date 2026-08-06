@@ -82,22 +82,8 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
     { 
       icon: Zap, 
       label: 'Consumo de Energía', 
-      value: data.gastoEnergiaMensual || data.consumoEnergiaLinea, 
+      value: data.consumoKwh, 
       unit: 'currency',
-      isExpandable: true,
-      expandedContent: (
-        <div className="factura-line" style={{ background: 'rgba(255, 255, 255, 0.015)', borderTop: 'none', paddingLeft: '40px' }}>
-          <span className="factura-operator factura-operator-empty" aria-hidden="true"></span>
-          <div className="factura-line-icon">
-            <Info size={16} />
-          </div>
-          <div className="factura-line-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <span className="factura-line-label" style={{ color: '#a0aec0' }}>
-              Detalle de cálculo: {formatNumber(data.consumoKwh)} kWh × {formatCurrency(precioKwh || 0.613)}
-            </span>
-          </div>
-        </div>
-      )
     },
     { icon: Receipt, label: 'Cargo Fijo', value: data.cargoFijo },
     { icon: Receipt, label: 'Mant. y Reposición de Conexión', value: data.mantReposicion },
@@ -177,11 +163,14 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           <div className="factura-subtotal-box">
             <SubtotalLine icon={Equal} label="Subtotal" value={data.subtotal} operator="equal" />
             <small className="factura-formula">
-              {formatCurrency(data.gastoEnergiaMensual || data.consumoEnergiaLinea).replace('S/ ', '')} + {formatCurrency(data.cargoFijo).replace('S/ ', '')}
-              {' + '}{formatCurrency(data.mantReposicion).replace('S/ ', '')}
-              {' + '}{formatCurrency(data.alumbradoPublico).replace('S/ ', '')}
-              {' + '}{formatCurrency(data.interesCompensatorio).replace('S/ ', '')}
+              S/ {formatNumber(data.consumoEnergiaLinea)} + S/ {formatNumber(data.cargoFijo)}
+              {' + '}S/ {formatNumber(data.mantReposicion)}
+              {' + '}S/ {formatNumber(data.alumbradoPublico)}
+              {' + '}S/ {formatNumber(data.interesCompensatorio)}
             </small>
+            <div style={{ fontSize: '10.5px', color: '#a0aec0', marginTop: '8px', lineHeight: '1.4', background: 'rgba(255, 255, 255, 0.02)', padding: '8px', borderRadius: '4px', borderLeft: '3px solid #1A4AB0' }}>
+              💡 <strong>Fórmula del Excel:</strong> Para calcular el subtotal se suma el valor numérico del consumo (<strong>{formatNumber(data.consumoKwh, 0)} kWh</strong> tratado como Soles) más los cargos fijos regulados.
+            </div>
           </div>
         </div>
       </section>
@@ -195,14 +184,6 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           <SubtotalLine icon={MapPin} label="Electrificación Rural" value={data.electrificacionRural} />
         </div>
       </section>
-
-      <div className="factura-reference">
-        <Info size={15} />
-        <div>
-          <strong>Gasto energía (referencia tarifa)</strong>
-          <span>{formatCurrency(data.gastoEnergia)} — precio × kWh mensual (no suma al subtotal)</span>
-        </div>
-      </div>
     </div>
   );
 }

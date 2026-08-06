@@ -196,7 +196,7 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   const lineas = [
     { 
       label: `Consumo de energía (${formatNum(factura.consumoEnergiaKwh)} kWh × S/ ${formatNum(factura.precioKwh || 0.613)})`, 
-      value: `S/ ${formatNum(factura.consumoEnergiaLinea || factura.gastoEnergiaMensual)}` 
+      value: `S/ ${formatNum(factura.gastoEnergiaMensual)}` 
     },
     { label: 'Cargo fijo', value: `S/ ${formatNum(factura.cargoFijo)}` },
     { label: 'Mantenimiento y reposición de conexión', value: `S/ ${formatNum(factura.mantReposicion)}` },

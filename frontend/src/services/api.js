@@ -53,6 +53,7 @@ export const toggleCliente = (id) => api.patch(`/clientes/${id}/toggle`);
 export const getEstadisticas = (params) => api.get('/clientes/estadisticas', { params });
 export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
 export const getMiPerfil = () => api.get('/clientes/mi-perfil');
+export const updateMiTarifa = (tarifa_kwh) => api.put('/clientes/mi-perfil/tarifa', { tarifa_kwh });
 
 // Códigos
 export const generarCodigo = (data) => api.post('/codigos/generar', data);

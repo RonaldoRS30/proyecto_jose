@@ -53,6 +53,18 @@ const miPerfil = asyncHandler(async (req, res) => {
   res.json({ success: true, data: cliente });
 });
 
+const actualizarMiTarifa = asyncHandler(async (req, res) => {
+  const clienteId = req.user.clienteId || req.user.id;
+  const { tarifa_kwh } = req.body;
+  if (tarifa_kwh !== null && tarifa_kwh !== undefined && (isNaN(tarifa_kwh) || Number(tarifa_kwh) < 0)) {
+    return res.status(400).json({ success: false, message: 'Tarifa inválida' });
+  }
+  const cliente = await clienteService.actualizarCliente(clienteId, {
+    tarifa_kwh: tarifa_kwh ? parseFloat(tarifa_kwh) : null,
+  });
+  res.json({ success: true, data: cliente });
+});
+
 const detalleAdmin = asyncHandler(async (req, res) => {
   const data = await clienteService.obtenerClienteDetalleAdmin(req.params.id);
   res.json({ success: true, data });
@@ -63,4 +75,4 @@ const exportResumen = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
-module.exports = { listar, crear, obtener, actualizar, eliminar, toggle, estadisticas, miPerfil, detalleAdmin, exportResumen };
+module.exports = { listar, crear, obtener, actualizar, eliminar, toggle, estadisticas, miPerfil, actualizarMiTarifa, detalleAdmin, exportResumen };

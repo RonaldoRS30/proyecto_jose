@@ -1,17 +1,49 @@
 import { useEffect, useState } from 'react';
-import { User, Building, Zap } from 'lucide-react';
+import { User, Building, Zap, Save, Check } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
-import { getMiPerfil } from '../../services/api';
+import { getMiPerfil, updateMiTarifa } from '../../services/api';
 
 export default function PerfilPage() {
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tarifaInput, setTarifaInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const fetchPerfil = () => {
+    getMiPerfil()
+      .then(({ data }) => {
+        setCliente(data.data);
+        setTarifaInput(data.data.tarifa_kwh ?? '');
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    getMiPerfil()
-      .then(({ data }) => setCliente(data.data))
-      .finally(() => setLoading(false));
+    fetchPerfil();
   }, []);
+
+  const handleSaveTarifa = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const val = tarifaInput === '' ? null : parseFloat(tarifaInput);
+      const { data } = await updateMiTarifa(val);
+      setCliente(data.data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const tarifaChanged = (() => {
+    const current = cliente?.tarifa_kwh ?? '';
+    const input = tarifaInput === '' ? '' : parseFloat(tarifaInput);
+    return String(current) !== String(input);
+  })();
 
   if (loading) return <div className="loading">Cargando perfil...</div>;
   if (!cliente) return <div className="empty-state">No se pudo cargar el perfil</div>;
@@ -19,6 +51,71 @@ export default function PerfilPage() {
   return (
     <div>
       <PageHeader title="Mi Perfil" subtitle="Información de su cuenta" />
+
+      {/* Tarifa kWh editable — card destacado */}
+      <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #e11d48' }}>
+        <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={18} style={{ color: '#e11d48' }} />
+          <h3 style={{ margin: 0 }}>Tarifa kWh (S/)</h3>
+          <span style={{ fontSize: '11px', color: '#718096', marginLeft: 'auto' }}>
+            Este valor se multiplica por el consumo para calcular los gastos
+          </span>
+        </div>
+        <div className="card-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '0 0 auto' }}>
+              <label style={{ fontSize: '13px', color: '#a0aec0', display: 'block', marginBottom: '6px' }}>
+                Precio por kWh (S/)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px', fontWeight: 600, color: '#e11d48' }}>S/</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  className="form-control"
+                  style={{ width: '160px', fontSize: '18px', fontWeight: 600, padding: '8px 12px' }}
+                  value={tarifaInput}
+                  onChange={(e) => setTarifaInput(e.target.value)}
+                  placeholder="0.613"
+                />
+              </div>
+            </div>
+            <div style={{ flex: '1', display: 'flex', alignItems: 'flex-end', gap: '8px', paddingTop: '22px' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveTarifa}
+                disabled={saving || !tarifaChanged}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 20px', fontSize: '14px',
+                  background: saved ? '#10b981' : undefined,
+                  borderColor: saved ? '#10b981' : undefined,
+                }}
+              >
+                {saving ? (
+                  <>Guardando...</>
+                ) : saved ? (
+                  <><Check size={16} /> Guardado</>
+                ) : (
+                  <><Save size={16} /> Guardar Tarifa</>
+                )}
+              </button>
+              {tarifaInput === '' && (
+                <span style={{ fontSize: '12px', color: '#718096' }}>
+                  Si está vacío se usa la tarifa global (S/ 0.613)
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
+            <strong>⚡ Importante:</strong> Al cambiar la tarifa, los cálculos de gasto diario, mensual y anual se actualizarán
+            automáticamente al ejecutar un nuevo cálculo.
+            <br />
+            <strong>Fórmula:</strong> Gasto = Consumo (kWh) × Tarifa (S/ {tarifaInput || '0.613'})
+          </div>
+        </div>
+      </div>
 
       <div className="profile-cards-grid">
         <div className="card profile-card">
@@ -67,8 +164,10 @@ export default function PerfilPage() {
               <span>{cliente.tarifa}</span>
             </div>
             <div className="profile-field">
-              <span className="profile-field-label">Tarifa Personalizada (S/)</span>
-              <span>{cliente.tarifa_kwh ? `S/ ${cliente.tarifa_kwh} por kWh` : 'No asignada (Usa global)'}</span>
+              <span className="profile-field-label">Tarifa kWh Actual</span>
+              <span style={{ color: '#e11d48', fontWeight: 600 }}>
+                {cliente.tarifa_kwh ? `S/ ${cliente.tarifa_kwh} por kWh` : 'Global (S/ 0.613)'}
+              </span>
             </div>
             <div className="profile-field">
               <span className="profile-field-label">Potencia</span>
@@ -106,3 +205,4 @@ export default function PerfilPage() {
     </div>
   );
 }
+

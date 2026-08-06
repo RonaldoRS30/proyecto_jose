@@ -134,8 +134,8 @@ function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
   const kwhMes = round(Number(consumoMensualTotal));
 
   const gastoEnergiaMensual = round(kwhMes * t.precioKwh);
-  // El usuario confirmó que la línea de Consumo de Energía en la factura debe ser en Soles
-  const consumoEnergiaLinea = gastoEnergiaMensual;
+  // Representado en kWh (Fórmula idéntica a tu Excel)
+  const consumoEnergiaLinea = kwhMes;
 
   const cargoFijo = t.cargoFijo;
   const mantReposicion = t.mantReposicion;

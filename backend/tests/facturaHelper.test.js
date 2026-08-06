@@ -39,7 +39,7 @@ const calculoLegacy = {
 const factura = buildFacturaParaCalculo(calculoLegacy);
 
 assertEqual(factura.consumoEnergiaLinea, 144, 'Línea consumo kWh (C43)');
-assertEqual(factura.gastoEnergiaMensual, 88.272, 'Gasto energía referencia (no suma al subtotal)');
+assertEqual(factura.gastoEnergiaMensual, 88.272, 'Gasto energía referencia');
 assertEqual(
   factura.subtotal,
   144 + 2.26 + 1.68 + 17.64 + 0.82,

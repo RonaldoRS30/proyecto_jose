@@ -194,6 +194,32 @@ export default function ClientDashboard() {
         }}
       />
 
+      {/* Tarifa kWh destacada (solo lectura) */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #e11d48' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: 'rgba(225, 29, 72, 0.12)', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} style={{ color: '#e11d48' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 500 }}>Tarifa kWh (S/)</div>
+            <div style={{ fontSize: '24px', fontWeight: 700, color: '#e11d48', letterSpacing: '-0.5px' }}>
+              S/ {precioKwh ?? 0.613}
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <span style={{ fontSize: '11px', color: '#718096', display: 'block', lineHeight: '1.4' }}>
+            Este valor se multiplica por el consumo (día/mes/año)
+          </span>
+          <span style={{ fontSize: '11px', color: '#718096', display: 'block', lineHeight: '1.4' }}>
+            para obtener el gasto diario, mensual y anual
+          </span>
+          <Link to="/cliente/perfil" style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px', display: 'inline-block' }}>
+            Editar desde Mi Perfil →
+          </Link>
+        </div>
+      </div>
+
       {/* Stats actuales */}
       <div className="cards-grid">
         <StatCard icon={Plug} label="Electrodomésticos" value={rg.cantidadEquipos ?? 0} color="#1A4AB0" />
