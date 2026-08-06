@@ -12,6 +12,19 @@ if (!fs.existsSync(EXCEL_UPLOADS_DIR)) {
 
 const resolvePythonCommand = () => {
   if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
+
+  const venvCandidates =
+    process.platform === 'win32'
+      ? [path.join(__dirname, '..', '.venv', 'Scripts', 'python.exe')]
+      : [
+          path.join(__dirname, '..', '.venv', 'bin', 'python3'),
+          path.join(__dirname, '..', '.venv', 'bin', 'python'),
+        ];
+
+  for (const candidate of venvCandidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
   return process.platform === 'win32' ? 'python' : 'python3';
 };
 
@@ -56,7 +69,7 @@ const generarExcel = async (calculoId) => {
       } catch (e) {}
       reject(
         new Error(
-          `No se pudo ejecutar Python (${pythonCmd}). En el VPS instale: apt install python3 python3-pip && pip3 install xlsxwriter. Detalle: ${err.message}`
+          `No se pudo ejecutar Python (${pythonCmd}). En el VPS ejecute: cd backend && python3 -m venv .venv && .venv/bin/pip install xlsxwriter. Detalle: ${err.message}`
         )
       );
     });
