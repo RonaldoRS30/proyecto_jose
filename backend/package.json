@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "ensure-db": "node scripts/ensureDb.js",
+    "ensure-schema": "node scripts/ensureSchema.js",
     "db:reset-prod": "node scripts/resetProd.js",
     "test:calc": "node tests/calculationEngine.test.js",
     "test:factura": "node tests/facturaHelper.test.js"
