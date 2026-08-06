@@ -1,57 +1,46 @@
-import { Globe, Mail, Phone } from 'lucide-react';
-import { SocialIcon } from './SocialIcons';
+import { buildSocialLinks, buildContactInfoItems } from '../utils/contactLinks';
+import { ContactInfoIcon } from './ContactInfoIcons';
 
 const DEFAULTS = {
   empresaNombre: 'ELECTRIXSTUDIO',
   empresaTagline: 'Auditoría & Soluciones de Eficiencia Energética',
   web: 'www.electrixstudio.com',
   email: 'contacto@electrixstudio.com',
-  telefono: '+51 987 654 321',
+  telefono: '987654321',
 };
 
-const SOCIAL_NETWORKS = [
-  { id: 'facebook', defaultNombre: 'Facebook' },
-  { id: 'instagram', defaultNombre: 'Instagram' },
-  { id: 'tiktok', defaultNombre: 'TikTok' },
-];
+function ContactInfoRow({ id, label, value, href }) {
+  const content = (
+    <>
+      <span className="auth-promo-contact-label">
+        <ContactInfoIcon type={id} size={11} />
+        {label}
+      </span>
+      <span className="auth-promo-contact-value">{value}</span>
+    </>
+  );
 
-function webHref(web) {
-  const w = (web || '').trim();
-  if (!w) return '#';
-  return /^https?:\/\//i.test(w) ? w : `https://${w.replace(/^\/\//, '')}`;
+  if (href) {
+    return (
+      <a href={href} className="auth-promo-contact-row auth-promo-contact-row--link" target={id === 'web' ? '_blank' : undefined} rel={id === 'web' ? 'noopener noreferrer' : undefined}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div className="auth-promo-contact-row">{content}</div>;
 }
 
-function linkHref(url) {
-  const u = (url || '').trim();
-  if (!u) return '';
-  return /^https?:\/\//i.test(u) ? u : `https://${u.replace(/^\/\//, '')}`;
-}
-
-function buildSocialList(contacto) {
-  const social = contacto?.social || {};
-  const fromRedes = contacto?.redes || [];
-
-  return SOCIAL_NETWORKS.map(({ id, defaultNombre }) => {
-    const fromArray = fromRedes.find((r) => r.id === id);
-    return {
-      id,
-      url: (fromArray?.url || social[id]?.url || '').trim(),
-      nombre: (fromArray?.nombre || social[id]?.nombre || defaultNombre).trim() || defaultNombre,
-    };
-  });
-}
-
-function SocialItem({ id, url, nombre }) {
-  const href = linkHref(url);
+function SocialLinkItem({ id, logo, nombre, href }) {
   const isEmpty = !href;
-  const className = `auth-promo-social-item auth-promo-social-item--${id}${isEmpty ? ' auth-promo-social-item--empty' : ''}`;
+  const className = `auth-promo-social-link auth-promo-social-link--${id}${isEmpty ? ' auth-promo-social-link--empty' : ''}`;
 
   const content = (
     <>
-      <span className={`auth-promo-social-icon auth-promo-social-icon--${id}`}>
-        <SocialIcon network={id} size={13} />
+      <span className="auth-promo-social-link-icon">
+        <img src={logo} alt="" aria-hidden="true" />
       </span>
-      <span className="auth-promo-social-name">{nombre}</span>
+      <span className="auth-promo-social-link-name">{nombre}</span>
     </>
   );
 
@@ -70,7 +59,7 @@ function SocialItem({ id, url, nombre }) {
   }
 
   return (
-    <span className={className} title={`${nombre} — configure el enlace en Configuración`}>
+    <span className={className} title={`${nombre} — configure en Configuración`}>
       {content}
     </span>
   );
@@ -78,13 +67,9 @@ function SocialItem({ id, url, nombre }) {
 
 export default function AuthPromoContact({ contacto, featured = false }) {
   const c = { ...DEFAULTS, ...contacto };
-  const redes = buildSocialList(c);
-
-  const rows = [
-    { icon: Globe, label: 'Sitio web', value: c.web, href: webHref(c.web), external: true },
-    { icon: Mail, label: 'Correo', value: c.email, href: `mailto:${c.email}`, external: false },
-    { icon: Phone, label: 'Teléfono', value: c.telefono, href: `tel:${c.telefono.replace(/\s/g, '')}`, external: false },
-  ];
+  const base = import.meta.env.BASE_URL || '/';
+  const socialLinks = buildSocialLinks(c, base);
+  const contactInfo = buildContactInfoItems(c);
 
   return (
     <footer className={`auth-promo-contact${featured ? ' auth-promo-contact--featured' : ''}`}>
@@ -95,30 +80,20 @@ export default function AuthPromoContact({ contacto, featured = false }) {
             <strong>{c.empresaNombre}</strong>
             <span>{c.empresaTagline}</span>
           </div>
-          <div className="auth-promo-contact-rows">
-            {rows.map(({ icon: Icon, label, value, href, external }) => (
-              <div key={label} className="auth-promo-contact-row">
-                <span className="auth-promo-contact-label">
-                  <Icon size={12} />
-                  {label}
-                </span>
-                <a
-                  href={href}
-                  className="auth-promo-contact-value"
-                  {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                >
-                  {value}
-                </a>
-              </div>
-            ))}
-          </div>
+          {contactInfo.length > 0 && (
+            <div className="auth-promo-contact-rows">
+              {contactInfo.map((item) => (
+                <ContactInfoRow key={item.id} {...item} />
+              ))}
+            </div>
+          )}
         </div>
 
         <aside className="auth-promo-contact-aside" aria-label="Redes sociales">
-          <span className="auth-promo-social-heading">Síguenos</span>
-          <div className="auth-promo-social">
-            {redes.map(({ id, url, nombre }) => (
-              <SocialItem key={id} id={id} url={url} nombre={nombre} />
+          <span className="auth-promo-social-heading">Redes sociales</span>
+          <div className="auth-promo-social-links">
+            {socialLinks.map((item) => (
+              <SocialLinkItem key={item.id} {...item} />
             ))}
           </div>
         </aside>

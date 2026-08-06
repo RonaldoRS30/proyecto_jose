@@ -909,7 +909,7 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 
 .auth-promo-contact-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(108px, 132px);
+  grid-template-columns: minmax(0, 1fr) minmax(118px, 148px);
   gap: 0.85rem;
   align-items: stretch;
   padding: 0.85rem 0.9rem 0.85rem 1.1rem;
@@ -934,6 +934,7 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   padding-left: 0.75rem;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .auth-promo-social-heading {
@@ -943,6 +944,75 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   text-transform: uppercase;
   color: #64748b;
   margin-bottom: 0.1rem;
+}
+
+.auth-promo-social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+
+.auth-promo-social-link {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  text-decoration: none;
+  color: #e2e8f0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.auth-promo-social-link:hover {
+  transform: translateX(2px);
+  color: #ffffff;
+}
+
+.auth-promo-social-link-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.auth-promo-social-link-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.auth-promo-social-link-name {
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-promo-social-link--empty {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.auth-promo-social-link--empty:hover {
+  transform: none;
+  color: #e2e8f0;
+}
+
+.auth-promo-contact-row--link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.auth-promo-contact-row--link:hover .auth-promo-contact-value {
+  color: #93c5fd;
 }
 
 .auth-promo-contact-brand strong {
@@ -1020,69 +1090,20 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   color: #93c5fd;
 }
 
-.auth-promo-social {
-  display: flex;
-  flex-direction: column;
-  gap: 0.42rem;
+.auth-promo-contact-phone {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
 }
 
-.auth-promo-social-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-  text-decoration: none;
+.auth-promo-contact-phone-value {
   color: #e2e8f0;
-  transition: transform 0.15s, opacity 0.15s;
-}
-
-.auth-promo-social-item:hover {
-  transform: translateX(2px);
-  color: #ffffff;
-}
-
-.auth-promo-social-icon {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-
-.auth-promo-social-icon--facebook {
-  background: #1877f2;
-}
-
-.auth-promo-social-icon--instagram {
-  background: linear-gradient(135deg, #f58529 0%, #dd2a7b 50%, #8134af 100%);
-}
-
-.auth-promo-social-icon--tiktok {
-  background: linear-gradient(135deg, #010101 0%, #25f4ee 120%);
-}
-
-.auth-promo-social-name {
-  font-size: 0.66rem;
   font-weight: 600;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-decoration: none;
 }
 
-.auth-promo-social-item--empty {
-  opacity: 0.5;
-  cursor: default;
-  pointer-events: none;
-}
-
-.auth-promo-social-item--empty:hover {
-  transform: none;
-  color: #e2e8f0;
+.auth-promo-contact-phone-value:hover {
+  color: #93c5fd;
 }
 
 .contact-config-grid {
@@ -1227,7 +1248,7 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   }
 
   .auth-layout--intro .auth-promo-contact-inner {
-    grid-template-columns: minmax(0, 1fr) minmax(96px, 118px);
+    grid-template-columns: minmax(0, 1fr) minmax(108px, 132px);
     gap: 0.75rem;
     padding: 0.95rem 1rem 0.95rem 1.15rem;
   }
@@ -1240,13 +1261,13 @@ tr:hover td { background: rgba(37,99,235,0.03); }
     font-size: 0.62rem;
   }
 
-  .auth-layout--intro .auth-promo-social-icon {
-    width: 28px;
-    height: 28px;
+  .auth-layout--intro .auth-promo-social-link-icon {
+    width: 30px;
+    height: 30px;
   }
 
-  .auth-layout--intro .auth-promo-social-name {
-    font-size: 0.7rem;
+  .auth-layout--intro .auth-promo-social-link-name {
+    font-size: 0.72rem;
   }
 
   .auth-layout--intro .auth-promo-contact-brand strong {

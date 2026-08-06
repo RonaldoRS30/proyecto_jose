@@ -2,6 +2,7 @@ const fs = require('fs');
 const reporteService = require('../services/reporteService');
 const excelService = require('../services/excelService');
 const configuracionService = require('../services/configuracionService');
+const { validateContactoFields } = require('../helpers/contactoValidation');
 const { asyncHandler } = require('../utils/errorHandler');
 
 const generarPDF = asyncHandler(async (req, res) => {
@@ -54,10 +55,12 @@ const actualizarContactoPdfConfig = asyncHandler(async (req, res) => {
     });
   }
 
+  const validated = validateContactoFields({ email, telefono, web });
+
   const data = await configuracionService.updatePdfContacto({
-    email: email.trim(),
-    telefono: telefono.trim(),
-    web: web.trim(),
+    email: validated.email,
+    telefono: validated.telefono,
+    web: validated.web,
     empresaNombre: empresaNombre?.trim(),
     empresaTagline: empresaTagline?.trim(),
     social,

@@ -9,26 +9,26 @@ import {
 } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/ConfirmContext';
-import { SocialIcon } from '../../components/SocialIcons';
+import { validateContactoFields, formatTelefonoInput } from '../../utils/contactoValidation';
+import { mapContactoFromApi, SOCIAL_NETWORKS, contactLogoUrl } from '../../utils/contactLinks';
 
 const EMPTY_CONTACTO = {
   email: '',
   telefono: '',
   web: '',
+  emailNombre: '',
+  webNombre: '',
   empresaNombre: '',
   empresaTagline: '',
   social: {
-    facebook: { url: '', nombre: 'Facebook' },
     instagram: { url: '', nombre: 'Instagram' },
+    facebook: { url: '', nombre: 'Facebook' },
     tiktok: { url: '', nombre: 'TikTok' },
+    whatsapp: { url: '', nombre: 'WhatsApp' },
   },
 };
 
-const SOCIAL_NETWORKS = [
-  { id: 'facebook', label: 'Facebook' },
-  { id: 'instagram', label: 'Instagram' },
-  { id: 'tiktok', label: 'TikTok' },
-];
+const iconBase = import.meta.env.BASE_URL || '/';
 
 export default function ConfigPage() {
   const { user } = useAuth();
@@ -37,6 +37,7 @@ export default function ConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [contacto, setContacto] = useState(EMPTY_CONTACTO);
+  const [contactoErrors, setContactoErrors] = useState({});
   const [savingContacto, setSavingContacto] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     passwordActual: '',
@@ -49,28 +50,7 @@ export default function ConfigPage() {
     Promise.all([
       getConfiguraciones().then(({ data }) => setConfigs(data.data)),
       getContactoPdfConfig().then(({ data }) => {
-        const d = data.data;
-        setContacto({
-          email: d.email ?? '',
-          telefono: d.telefono ?? '',
-          web: d.web ?? '',
-          empresaNombre: d.empresaNombre ?? '',
-          empresaTagline: d.empresaTagline ?? '',
-          social: {
-            facebook: {
-              url: d.social?.facebook?.url ?? '',
-              nombre: d.social?.facebook?.nombre ?? 'Facebook',
-            },
-            instagram: {
-              url: d.social?.instagram?.url ?? '',
-              nombre: d.social?.instagram?.nombre ?? 'Instagram',
-            },
-            tiktok: {
-              url: d.social?.tiktok?.url ?? '',
-              nombre: d.social?.tiktok?.nombre ?? 'TikTok',
-            },
-          },
-        });
+        setContacto(mapContactoFromApi(data.data));
       }),
     ])
       .catch(async (err) => {
@@ -98,31 +78,23 @@ export default function ConfigPage() {
   };
 
   const handleSaveContacto = async () => {
+    const validation = validateContactoFields(contacto);
+    if (!validation.ok) {
+      setContactoErrors(validation.errors);
+      await alert({
+        title: 'Datos incompletos',
+        message: Object.values(validation.errors).join('. '),
+        variant: 'warning',
+      });
+      return;
+    }
+
+    setContactoErrors({});
     setSavingContacto(true);
     try {
-      const { data } = await updateContactoPdfConfig(contacto);
-      const d = data.data;
-      setContacto({
-        email: d.email ?? '',
-        telefono: d.telefono ?? '',
-        web: d.web ?? '',
-        empresaNombre: d.empresaNombre ?? '',
-        empresaTagline: d.empresaTagline ?? '',
-        social: {
-          facebook: {
-            url: d.social?.facebook?.url ?? '',
-            nombre: d.social?.facebook?.nombre ?? 'Facebook',
-          },
-          instagram: {
-            url: d.social?.instagram?.url ?? '',
-            nombre: d.social?.instagram?.nombre ?? 'Instagram',
-          },
-          tiktok: {
-            url: d.social?.tiktok?.url ?? '',
-            nombre: d.social?.tiktok?.nombre ?? 'TikTok',
-          },
-        },
-      });
+      const payload = { ...contacto, ...validation.data };
+      const { data } = await updateContactoPdfConfig(payload);
+      setContacto(mapContactoFromApi(data.data));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       await alert({
@@ -292,36 +264,83 @@ export default function ConfigPage() {
                 className="form-control"
                 type="email"
                 value={contacto.email}
-                onChange={(e) => setContacto((p) => ({ ...p, email: e.target.value }))}
+                onChange={(e) => {
+                  setContacto((p) => ({ ...p, email: e.target.value }));
+                  if (contactoErrors.email) setContactoErrors((p) => ({ ...p, email: '' }));
+                }}
+                placeholder="contacto@electrixstudio.com"
+              />
+              <small style={{ color: contactoErrors.email ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
+                {contactoErrors.email || 'Debe contener @'}
+              </small>
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Nombre visible — icono correo</label>
+              <input
+                className="form-control"
+                value={contacto.emailNombre}
+                onChange={(e) => setContacto((p) => ({ ...p, emailNombre: e.target.value }))}
+                placeholder="Opcional — si está vacío usa el correo"
               />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label>Teléfono *</label>
               <input
                 className="form-control"
+                inputMode="numeric"
+                maxLength={9}
                 value={contacto.telefono}
-                onChange={(e) => setContacto((p) => ({ ...p, telefono: e.target.value }))}
+                onChange={(e) => {
+                  setContacto((p) => ({ ...p, telefono: formatTelefonoInput(e.target.value) }));
+                  if (contactoErrors.telefono) setContactoErrors((p) => ({ ...p, telefono: '' }));
+                }}
+                placeholder="987654321"
               />
+              <small style={{ color: contactoErrors.telefono ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
+                {contactoErrors.telefono || '9 dígitos — se muestra como +51 XXX XXX XXX'}
+              </small>
             </div>
             <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
               <label>Sitio web *</label>
               <input
                 className="form-control"
                 value={contacto.web}
-                onChange={(e) => setContacto((p) => ({ ...p, web: e.target.value }))}
+                onChange={(e) => {
+                  setContacto((p) => ({ ...p, web: e.target.value }));
+                  if (contactoErrors.web) setContactoErrors((p) => ({ ...p, web: '' }));
+                }}
                 placeholder="www.electrixstudio.com"
+              />
+              <small style={{ color: contactoErrors.web ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
+                {contactoErrors.web || 'Debe incluir .com'}
+              </small>
+            </div>
+            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+              <label>Nombre visible — icono página web</label>
+              <input
+                className="form-control"
+                value={contacto.webNombre}
+                onChange={(e) => setContacto((p) => ({ ...p, webNombre: e.target.value }))}
+                placeholder="Opcional — si está vacío usa la URL del sitio"
               />
             </div>
 
             <div className="contact-config-social-block">
               <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                Opcional. Si completa el enlace, aparecerá con su icono en la publicidad del login y en los PDF.
+                Correo, teléfono y web se muestran con iconos simples. Instagram, Facebook y TikTok
+                usan sus logos con nombre visible en login y PDF.
               </p>
-              {SOCIAL_NETWORKS.map(({ id, label }) => (
+              {SOCIAL_NETWORKS.map(({ id, label, logo }) => (
                 <div key={id} className="contact-config-social-row">
                   <div className="contact-config-social-label">
-                    <SocialIcon network={id} size={18} />
+                    <img
+                      src={contactLogoUrl(id, iconBase)}
+                      alt=""
+                      width={22}
+                      height={22}
+                      style={{ borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+                    />
                     {label}
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>

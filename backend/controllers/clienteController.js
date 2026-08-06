@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 const clienteService = require('../services/clienteService');
 const { getPdfContacto, updatePdfContacto } = require('../services/configuracionService');
+const { validateContactoFields } = require('../helpers/contactoValidation');
 const { asyncHandler } = require('../utils/errorHandler');
 
 const validateCliente = [
@@ -100,10 +101,11 @@ const actualizarContactoReporte = asyncHandler(async (req, res) => {
       message: 'Correo, teléfono y página web son obligatorios',
     });
   }
+  const validated = validateContactoFields({ email, telefono, web });
   const data = await updatePdfContacto({
-    email: email.trim(),
-    telefono: telefono.trim(),
-    web: web.trim(),
+    email: validated.email,
+    telefono: validated.telefono,
+    web: validated.web,
     empresaNombre: empresaNombre?.trim(),
     empresaTagline: empresaTagline?.trim(),
     social,

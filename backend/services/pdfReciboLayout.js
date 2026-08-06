@@ -4,6 +4,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { buildSocialLinks, buildContactInfoItems } = require('../helpers/contactLinks');
+const { drawContactIcon } = require('../helpers/contactInfoIcons');
 
 const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo-electrixstudio.png');
 
@@ -23,9 +25,8 @@ const COLORS = {
 const MARGIN = 42;
 const PAGE_WIDTH = 595.28;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
-const FOOTER_HEIGHT = 52;
-const FOOTER_PAGE_NUM = 10;
-const FOOTER_RESERVE = FOOTER_HEIGHT + FOOTER_PAGE_NUM + 8;
+const FOOTER_HEIGHT = 80;
+const FOOTER_RESERVE = FOOTER_HEIGHT + 10;
 
 function formatDatePE(date) {
   return new Date(date).toLocaleDateString('es-PE', {
@@ -354,75 +355,72 @@ function drawRecomendacionesPanel(doc, recomendaciones) {
   });
 }
 
-const FOOTER_HEIGHT_BASE = 52;
-const FOOTER_SOCIAL_EXTRA = 14;
+const FOOTER_HEIGHT_BASE = FOOTER_HEIGHT;
 
 function drawFooter(doc, contacto = {}) {
   const empresaNombre = contacto.empresaNombre || 'ELECTRIXSTUDIO';
   const empresaTagline = contacto.empresaTagline || 'Auditoría & Soluciones de Eficiencia Energética';
-  const web = contacto.web || 'www.electrixstudio.com';
-  const email = contacto.email || 'contacto@electrixstudio.com';
-  const telefono = contacto.telefono || '+51 987 654 321';
-  const redes = Array.isArray(contacto.redes) ? contacto.redes.filter((r) => r.url) : [];
-  const footerHeight = FOOTER_HEIGHT_BASE + (redes.length > 0 ? FOOTER_SOCIAL_EXTRA : 0);
+  const socialLinks = buildSocialLinks(contacto);
+  const contactInfo = buildContactInfoItems(contacto);
+  const footerHeight = FOOTER_HEIGHT_BASE;
 
   const pages = doc.bufferedPageRange();
+  const padX = 14;
+  const innerLeft = MARGIN + padX;
+  const splitX = MARGIN + Math.round(CONTENT_W * 0.58);
+  const rightX = splitX + 12;
+  const leftW = splitX - innerLeft - 8;
+  const rightW = MARGIN + CONTENT_W - padX - rightX;
+  const iconSize = 13;
+  const rowH = 14;
 
   for (let i = pages.start; i < pages.start + pages.count; i++) {
     doc.switchToPage(i);
 
     const bannerY = doc.page.height - MARGIN - footerHeight;
-    const rightColW = 248;
-    const rightColX = MARGIN + CONTENT_W - rightColW;
-    const labelW = 72;
-    const valueW = rightColW - labelW - 6;
 
     doc.save();
 
     doc.roundedRect(MARGIN, bannerY, CONTENT_W, footerHeight, 5).fill('#0f172a');
     doc.rect(MARGIN, bannerY, 4, footerHeight).fill('#2563eb');
 
+    doc.lineWidth(0.5);
+    doc.strokeColor('#334155');
+    doc.moveTo(splitX, bannerY + 8).lineTo(splitX, bannerY + footerHeight - 8).stroke();
+
+    const brandY = bannerY + 10;
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff')
-      .text(empresaNombre, MARGIN + 14, bannerY + 10, { width: 210, lineBreak: false });
+      .text(empresaNombre, innerLeft, brandY, { width: leftW, lineBreak: false });
 
     doc.font('Helvetica').fontSize(7).fillColor('#94a3b8')
-      .text(empresaTagline, MARGIN + 14, bannerY + 26, { width: 210, lineGap: 1 });
+      .text(empresaTagline, innerLeft, brandY + 13, { width: leftW, lineGap: 0 });
 
-    const contactRows = [
-      ['Sitio web', web],
-      ['Correo', email],
-      ['Teléfono', telefono],
-    ];
+    const rowsStartY = brandY + 26;
 
-    let rowY = bannerY + 9;
-    contactRows.forEach(([label, value]) => {
-      doc.font('Helvetica').fontSize(7).fillColor('#64748b')
-        .text(label, rightColX, rowY, { width: labelW, lineBreak: false });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#f1f5f9')
-        .text(value, rightColX + labelW, rowY, { width: valueW, align: 'right', lineBreak: false });
-      rowY += 12;
+    contactInfo.forEach((item, index) => {
+      const rowY = rowsStartY + index * rowH;
+      drawContactIcon(doc, item.id, innerLeft, rowY + 2, 8);
+      doc.font('Helvetica').fontSize(6.5).fillColor('#64748b')
+        .text(`${item.label}:`, innerLeft + 14, rowY + 1, { width: 44, lineBreak: false });
+      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#e2e8f0')
+        .text(item.value, innerLeft + 58, rowY + 1, { width: leftW - 58, lineBreak: false, ellipsis: true });
     });
 
-    if (redes.length > 0) {
-      const socialText = redes
-        .map((r) => `${r.nombre}: ${r.url.replace(/^https?:\/\//i, '')}`)
-        .join('   ·   ');
-      doc.font('Helvetica').fontSize(6.5).fillColor('#93c5fd')
-        .text(socialText, MARGIN + 14, bannerY + footerHeight - 13, {
-          width: CONTENT_W - 28,
+    doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#64748b')
+      .text('Redes sociales', rightX, brandY + 1, { width: rightW, lineBreak: false });
+
+    socialLinks.forEach((link, index) => {
+      const rowY = rowsStartY + index * rowH;
+      if (link.hasLogo) {
+        doc.image(link.logoPath, rightX, rowY, { width: iconSize, height: iconSize });
+      }
+      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#e2e8f0')
+        .text(link.nombre, rightX + iconSize + 6, rowY + 2, {
+          width: rightW - iconSize - 8,
           lineBreak: false,
           ellipsis: true,
         });
-    }
-
-    const pageNumY = bannerY - 9;
-    doc.font('Helvetica').fontSize(6.5).fillColor('#94a3b8')
-      .text(
-        `Página ${i + 1} de ${pages.count}  ·  Documento informativo generado por ${empresaNombre}`,
-        MARGIN,
-        pageNumY,
-        { width: CONTENT_W, align: 'center', lineBreak: false }
-      );
+    });
 
     doc.restore();
   }
