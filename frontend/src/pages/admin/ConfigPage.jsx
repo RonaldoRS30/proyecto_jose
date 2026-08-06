@@ -1,8 +1,34 @@
 import { useEffect, useState } from 'react';
 import { Save, Lock } from 'lucide-react';
-import { getConfiguraciones, updateConfiguracion, changeAdminPassword } from '../../services/api';
+import {
+  getConfiguraciones,
+  updateConfiguracion,
+  getContactoPdfConfig,
+  updateContactoPdfConfig,
+  changeAdminPassword,
+} from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/ConfirmContext';
+import { SocialIcon } from '../../components/SocialIcons';
+
+const EMPTY_CONTACTO = {
+  email: '',
+  telefono: '',
+  web: '',
+  empresaNombre: '',
+  empresaTagline: '',
+  social: {
+    facebook: { url: '', nombre: 'Facebook' },
+    instagram: { url: '', nombre: 'Instagram' },
+    tiktok: { url: '', nombre: 'TikTok' },
+  },
+};
+
+const SOCIAL_NETWORKS = [
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'tiktok', label: 'TikTok' },
+];
 
 export default function ConfigPage() {
   const { user } = useAuth();
@@ -10,6 +36,8 @@ export default function ConfigPage() {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [contacto, setContacto] = useState(EMPTY_CONTACTO);
+  const [savingContacto, setSavingContacto] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     passwordActual: '',
     passwordNueva: '',
@@ -18,19 +46,113 @@ export default function ConfigPage() {
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
-    getConfiguraciones()
-      .then(({ data }) => setConfigs(data.data))
+    Promise.all([
+      getConfiguraciones().then(({ data }) => setConfigs(data.data)),
+      getContactoPdfConfig().then(({ data }) => {
+        const d = data.data;
+        setContacto({
+          email: d.email ?? '',
+          telefono: d.telefono ?? '',
+          web: d.web ?? '',
+          empresaNombre: d.empresaNombre ?? '',
+          empresaTagline: d.empresaTagline ?? '',
+          social: {
+            facebook: {
+              url: d.social?.facebook?.url ?? '',
+              nombre: d.social?.facebook?.nombre ?? 'Facebook',
+            },
+            instagram: {
+              url: d.social?.instagram?.url ?? '',
+              nombre: d.social?.instagram?.nombre ?? 'Instagram',
+            },
+            tiktok: {
+              url: d.social?.tiktok?.url ?? '',
+              nombre: d.social?.tiktok?.nombre ?? 'TikTok',
+            },
+          },
+        });
+      }),
+    ])
+      .catch(async (err) => {
+        await alert({
+          title: 'Error al cargar configuración',
+          message: err.response?.data?.message || 'No se pudo cargar la configuración del sistema.',
+          variant: 'error',
+        });
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const handleSave = async (clave, valor) => {
-    await updateConfiguracion(clave, valor);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await updateConfiguracion(clave, valor);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      await alert({
+        title: 'No se pudo guardar',
+        message: err.response?.data?.message || 'Ocurrió un error al guardar la configuración.',
+        variant: 'error',
+      });
+    }
+  };
+
+  const handleSaveContacto = async () => {
+    setSavingContacto(true);
+    try {
+      const { data } = await updateContactoPdfConfig(contacto);
+      const d = data.data;
+      setContacto({
+        email: d.email ?? '',
+        telefono: d.telefono ?? '',
+        web: d.web ?? '',
+        empresaNombre: d.empresaNombre ?? '',
+        empresaTagline: d.empresaTagline ?? '',
+        social: {
+          facebook: {
+            url: d.social?.facebook?.url ?? '',
+            nombre: d.social?.facebook?.nombre ?? 'Facebook',
+          },
+          instagram: {
+            url: d.social?.instagram?.url ?? '',
+            nombre: d.social?.instagram?.nombre ?? 'Instagram',
+          },
+          tiktok: {
+            url: d.social?.tiktok?.url ?? '',
+            nombre: d.social?.tiktok?.nombre ?? 'TikTok',
+          },
+        },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      await alert({
+        title: 'Contacto guardado',
+        message: 'Los datos de contacto y redes sociales se actualizaron correctamente.',
+        variant: 'success',
+      });
+    } catch (err) {
+      await alert({
+        title: 'No se pudo guardar',
+        message: err.response?.data?.message || 'Verifique los campos obligatorios e intente de nuevo.',
+        variant: 'error',
+      });
+    } finally {
+      setSavingContacto(false);
+    }
   };
 
   const updateLocal = (clave, valor) => {
     setConfigs((prev) => prev.map((c) => (c.clave === clave ? { ...c, valor } : c)));
+  };
+
+  const updateSocial = (network, field, value) => {
+    setContacto((prev) => ({
+      ...prev,
+      social: {
+        ...prev.social,
+        [network]: { ...prev.social[network], [field]: value },
+      },
+    }));
   };
 
   const handlePasswordChange = async (e) => {
@@ -85,11 +207,6 @@ export default function ConfigPage() {
     igv_rate: 'IGV (decimal, ej: 0.18)',
     electrificacion_rural: 'Electrificación Rural (S/)',
     umbral_alerta_consumo_pct: 'Alerta consumo alto (% sobre promedio)',
-    pdf_contacto_email: 'Correo en pie de página PDF',
-    pdf_contacto_telefono: 'Teléfono en pie de página PDF',
-    pdf_contacto_web: 'Sitio web en pie de página PDF',
-    pdf_empresa_nombre: 'Nombre empresa en PDF',
-    pdf_empresa_tagline: 'Eslogan en pie de página PDF',
   };
 
   const tarifaKeys = [
@@ -97,10 +214,6 @@ export default function ConfigPage() {
     'interes_compensatorio', 'igv_rate', 'electrificacion_rural',
   ];
   const alertaKeys = ['umbral_alerta_consumo_pct'];
-  const pdfContactoKeys = [
-    'pdf_contacto_email', 'pdf_contacto_telefono', 'pdf_contacto_web',
-    'pdf_empresa_nombre', 'pdf_empresa_tagline',
-  ];
 
   const renderConfigRow = (c) => (
     <div key={c.clave} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem' }}>
@@ -108,7 +221,7 @@ export default function ConfigPage() {
         <label>{labels[c.clave] || c.clave}</label>
         <input
           className="form-control"
-          value={c.valor}
+          value={c.valor ?? ''}
           onChange={(e) => updateLocal(c.clave, e.target.value)}
         />
         {c.clave === 'umbral_alerta_consumo_pct' && (
@@ -117,7 +230,7 @@ export default function ConfigPage() {
           </small>
         )}
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => handleSave(c.clave, c.valor)}>
+      <button type="button" className="btn btn-primary" onClick={() => handleSave(c.clave, c.valor ?? '')}>
         <Save size={16} /> Guardar
       </button>
     </div>
@@ -149,13 +262,102 @@ export default function ConfigPage() {
       </div>
 
       <div className="card" style={{ marginTop: '1.25rem' }}>
-        <div className="card-header"><h3>Pie de página — Reportes PDF</h3></div>
+        <div className="card-header"><h3>Contacto, publicidad y reportes PDF</h3></div>
         <div className="card-body">
           <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-            Datos de contacto que aparecen en el pie de página de los reportes PDF.
-            También editables desde Mi Perfil (cliente).
+            Estos datos aparecen en el login (publicidad), en el pie de página de los PDF y también
+            son editables desde Mi Perfil (cliente).
           </p>
-          {configs.filter((c) => pdfContactoKeys.includes(c.clave)).map(renderConfigRow)}
+
+          <div className="contact-config-grid">
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Nombre de la empresa</label>
+              <input
+                className="form-control"
+                value={contacto.empresaNombre}
+                onChange={(e) => setContacto((p) => ({ ...p, empresaNombre: e.target.value }))}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Eslogan</label>
+              <input
+                className="form-control"
+                value={contacto.empresaTagline}
+                onChange={(e) => setContacto((p) => ({ ...p, empresaTagline: e.target.value }))}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Correo *</label>
+              <input
+                className="form-control"
+                type="email"
+                value={contacto.email}
+                onChange={(e) => setContacto((p) => ({ ...p, email: e.target.value }))}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Teléfono *</label>
+              <input
+                className="form-control"
+                value={contacto.telefono}
+                onChange={(e) => setContacto((p) => ({ ...p, telefono: e.target.value }))}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+              <label>Sitio web *</label>
+              <input
+                className="form-control"
+                value={contacto.web}
+                onChange={(e) => setContacto((p) => ({ ...p, web: e.target.value }))}
+                placeholder="www.electrixstudio.com"
+              />
+            </div>
+
+            <div className="contact-config-social-block">
+              <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                Opcional. Si completa el enlace, aparecerá con su icono en la publicidad del login y en los PDF.
+              </p>
+              {SOCIAL_NETWORKS.map(({ id, label }) => (
+                <div key={id} className="contact-config-social-row">
+                  <div className="contact-config-social-label">
+                    <SocialIcon network={id} size={18} />
+                    {label}
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Nombre visible</label>
+                    <input
+                      className="form-control"
+                      value={contacto.social[id].nombre}
+                      onChange={(e) => updateSocial(id, 'nombre', e.target.value)}
+                      placeholder={`Ej: @electrixstudio`}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Enlace (URL)</label>
+                    <input
+                      className="form-control"
+                      value={contacto.social[id].url}
+                      onChange={(e) => updateSocial(id, 'url', e.target.value)}
+                      placeholder={`https://${id}.com/...`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1.25rem' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSaveContacto}
+              disabled={savingContacto}
+            >
+              <Save size={16} />
+              {savingContacto ? 'Guardando...' : 'Guardar contacto y redes'}
+            </button>
+          </div>
         </div>
       </div>
 

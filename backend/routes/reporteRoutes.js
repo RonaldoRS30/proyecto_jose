@@ -24,5 +24,7 @@ router.get('/:id', authenticate, authorizeRoles('admin', 'cliente'), async (req,
 const configRouter = express.Router();
 configRouter.get('/', authenticate, authorizeRoles('admin'), reporteController.listarConfig);
 configRouter.put('/', authenticate, authorizeRoles('admin'), reporteController.actualizarConfig);
+configRouter.get('/contacto-pdf', authenticate, authorizeRoles('admin'), reporteController.getContactoPdfConfig);
+configRouter.put('/contacto-pdf', authenticate, authorizeRoles('admin'), reporteController.actualizarContactoPdfConfig);
 
 module.exports = { router, configRouter };

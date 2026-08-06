@@ -91,7 +91,9 @@ const getContactoReporte = asyncHandler(async (req, res) => {
 });
 
 const actualizarContactoReporte = asyncHandler(async (req, res) => {
-  const { email, telefono, web } = req.body;
+  const {
+    email, telefono, web, empresaNombre, empresaTagline, social,
+  } = req.body;
   if (!email?.trim() || !telefono?.trim() || !web?.trim()) {
     return res.status(400).json({
       success: false,
@@ -102,6 +104,9 @@ const actualizarContactoReporte = asyncHandler(async (req, res) => {
     email: email.trim(),
     telefono: telefono.trim(),
     web: web.trim(),
+    empresaNombre: empresaNombre?.trim(),
+    empresaTagline: empresaTagline?.trim(),
+    social,
   });
   res.json({ success: true, data });
 });

@@ -1,8 +1,45 @@
 import { useEffect, useState } from 'react';
 import { User, Building, Zap, Save, Check, Mail, Phone, Globe } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import { SocialIcon } from '../../components/SocialIcons';
 import { getMiPerfil, updateMiTarifa, getContactoReporte, updateContactoReporte } from '../../services/api';
 import { useCalculo } from '../../contexts/CalculoContext';
+
+const EMPTY_SOCIAL = {
+  facebook: { url: '', nombre: 'Facebook' },
+  instagram: { url: '', nombre: 'Instagram' },
+  tiktok: { url: '', nombre: 'TikTok' },
+};
+
+const SOCIAL_NETWORKS = [
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'tiktok', label: 'TikTok' },
+];
+
+function mapContactoFromApi(d) {
+  return {
+    email: d.email ?? '',
+    telefono: d.telefono ?? '',
+    web: d.web ?? '',
+    empresaNombre: d.empresaNombre ?? '',
+    empresaTagline: d.empresaTagline ?? '',
+    social: {
+      facebook: {
+        url: d.social?.facebook?.url ?? '',
+        nombre: d.social?.facebook?.nombre ?? 'Facebook',
+      },
+      instagram: {
+        url: d.social?.instagram?.url ?? '',
+        nombre: d.social?.instagram?.nombre ?? 'Instagram',
+      },
+      tiktok: {
+        url: d.social?.tiktok?.url ?? '',
+        nombre: d.social?.tiktok?.nombre ?? 'TikTok',
+      },
+    },
+  };
+}
 
 export default function PerfilPage() {
   const { refreshPreview, refreshCalculos } = useCalculo();
@@ -11,8 +48,12 @@ export default function PerfilPage() {
   const [tarifaInput, setTarifaInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [contacto, setContacto] = useState({ email: '', telefono: '', web: '' });
-  const [contactoOriginal, setContactoOriginal] = useState({ email: '', telefono: '', web: '' });
+  const [contacto, setContacto] = useState({
+    email: '', telefono: '', web: '', empresaNombre: '', empresaTagline: '', social: EMPTY_SOCIAL,
+  });
+  const [contactoOriginal, setContactoOriginal] = useState({
+    email: '', telefono: '', web: '', empresaNombre: '', empresaTagline: '', social: EMPTY_SOCIAL,
+  });
   const [savingContacto, setSavingContacto] = useState(false);
   const [savedContacto, setSavedContacto] = useState(false);
 
@@ -26,11 +67,7 @@ export default function PerfilPage() {
 
     getContactoReporte()
       .then(({ data }) => {
-        const c = {
-          email: data.data.email ?? '',
-          telefono: data.data.telefono ?? '',
-          web: data.data.web ?? '',
-        };
+        const c = mapContactoFromApi(data.data);
         setContacto(c);
         setContactoOriginal(c);
       })
@@ -64,22 +101,24 @@ export default function PerfilPage() {
     return String(current) !== String(input);
   })();
 
-  const contactoChanged = (
-    contacto.email !== contactoOriginal.email
-    || contacto.telefono !== contactoOriginal.telefono
-    || contacto.web !== contactoOriginal.web
-  );
+  const contactoChanged = JSON.stringify(contacto) !== JSON.stringify(contactoOriginal);
+
+  const updateSocial = (network, field, value) => {
+    setContacto((prev) => ({
+      ...prev,
+      social: {
+        ...prev.social,
+        [network]: { ...prev.social[network], [field]: value },
+      },
+    }));
+  };
 
   const handleSaveContacto = async () => {
     setSavingContacto(true);
     setSavedContacto(false);
     try {
       const { data } = await updateContactoReporte(contacto);
-      const c = {
-        email: data.data.email ?? '',
-        telefono: data.data.telefono ?? '',
-        web: data.data.web ?? '',
-      };
+      const c = mapContactoFromApi(data.data);
       setContacto(c);
       setContactoOriginal(c);
       setSavedContacto(true);
@@ -165,16 +204,16 @@ export default function PerfilPage() {
       <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #2563eb' }}>
         <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Globe size={18} style={{ color: '#2563eb' }} />
-          <h3 style={{ margin: 0 }}>Contacto en reportes PDF</h3>
+          <h3 style={{ margin: 0 }}>Contacto y redes (PDF + publicidad)</h3>
         </div>
         <div className="card-body">
           <p style={{ fontSize: '13px', color: '#718096', marginBottom: '1rem', lineHeight: 1.5 }}>
-            Estos datos aparecen en el pie de página de todos los reportes PDF generados por el sistema.
+            Estos datos aparecen en el pie de página de los reportes PDF y en la publicidad del login.
           </p>
-          <div className="profile-fields" style={{ gap: '1rem' }}>
+          <div className="contact-config-grid">
             <div className="form-group" style={{ margin: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Mail size={14} /> Correo electrónico (Gmail)
+                <Mail size={14} /> Correo electrónico *
               </label>
               <input
                 type="email"
@@ -186,7 +225,7 @@ export default function PerfilPage() {
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Phone size={14} /> Número de celular / WhatsApp
+                <Phone size={14} /> Teléfono / WhatsApp *
               </label>
               <input
                 type="text"
@@ -196,9 +235,9 @@ export default function PerfilPage() {
                 placeholder="+51 987 654 321"
               />
             </div>
-            <div className="form-group" style={{ margin: 0 }}>
+            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Globe size={14} /> Página web
+                <Globe size={14} /> Página web *
               </label>
               <input
                 type="text"
@@ -207,6 +246,35 @@ export default function PerfilPage() {
                 onChange={(e) => setContacto((prev) => ({ ...prev, web: e.target.value }))}
                 placeholder="www.electrixstudio.com"
               />
+            </div>
+
+            <div className="contact-config-social-block">
+              <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
+              {SOCIAL_NETWORKS.map(({ id, label }) => (
+                <div key={id} className="contact-config-social-row">
+                  <div className="contact-config-social-label">
+                    <SocialIcon network={id} size={18} />
+                    {label}
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Nombre visible</label>
+                    <input
+                      className="form-control"
+                      value={contacto.social[id].nombre}
+                      onChange={(e) => updateSocial(id, 'nombre', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label>Enlace (URL)</label>
+                    <input
+                      className="form-control"
+                      value={contacto.social[id].url}
+                      onChange={(e) => updateSocial(id, 'url', e.target.value)}
+                      placeholder={`https://${id}.com/...`}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <div style={{ marginTop: '1rem' }}>
@@ -226,7 +294,7 @@ export default function PerfilPage() {
               ) : savedContacto ? (
                 <><Check size={16} /> Guardado</>
               ) : (
-                <><Save size={16} /> Guardar contacto PDF</>
+                <><Save size={16} /> Guardar contacto y redes</>
               )}
             </button>
           </div>

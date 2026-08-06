@@ -93,3 +93,5 @@ export const downloadExcelReporte = (calculoId) =>
 export const getConfiguraciones = () => api.get('/configuraciones');
 export const updateConfiguracion = (clave, valor) =>
   api.put('/configuraciones', { clave, valor });
+export const getContactoPdfConfig = () => api.get('/configuraciones/contacto-pdf');
+export const updateContactoPdfConfig = (data) => api.put('/configuraciones/contacto-pdf', data);

@@ -15,6 +15,12 @@ const DEFAULT_CONFIG = {
   pdf_contacto_web: 'www.electrixstudio.com',
   pdf_empresa_nombre: 'ELECTRIXSTUDIO',
   pdf_empresa_tagline: 'Auditoría & Soluciones de Eficiencia Energética',
+  pdf_social_facebook_url: '',
+  pdf_social_facebook_nombre: 'Facebook',
+  pdf_social_instagram_url: '',
+  pdf_social_instagram_nombre: 'Instagram',
+  pdf_social_tiktok_url: '',
+  pdf_social_tiktok_nombre: 'TikTok',
 };
 
 const PDF_CONTACT_KEYS = [
@@ -23,7 +29,25 @@ const PDF_CONTACT_KEYS = [
   'pdf_contacto_web',
   'pdf_empresa_nombre',
   'pdf_empresa_tagline',
+  'pdf_social_facebook_url',
+  'pdf_social_facebook_nombre',
+  'pdf_social_instagram_url',
+  'pdf_social_instagram_nombre',
+  'pdf_social_tiktok_url',
+  'pdf_social_tiktok_nombre',
 ];
+
+const SOCIAL_NETWORKS = [
+  { id: 'facebook', urlKey: 'pdf_social_facebook_url', nombreKey: 'pdf_social_facebook_nombre', defaultNombre: 'Facebook' },
+  { id: 'instagram', urlKey: 'pdf_social_instagram_url', nombreKey: 'pdf_social_instagram_nombre', defaultNombre: 'Instagram' },
+  { id: 'tiktok', urlKey: 'pdf_social_tiktok_url', nombreKey: 'pdf_social_tiktok_nombre', defaultNombre: 'TikTok' },
+];
+
+const buildRedesFromMap = (map) => SOCIAL_NETWORKS.map(({ id, urlKey, nombreKey, defaultNombre }) => ({
+  id,
+  url: (map[urlKey] || '').trim(),
+  nombre: (map[nombreKey] || defaultNombre).trim() || defaultNombre,
+}));
 
 const seedDefaults = async () => {
   for (const [clave, valor] of Object.entries(DEFAULT_CONFIG)) {
@@ -57,15 +81,22 @@ const getConfigMap = async () => {
 };
 
 const actualizarConfig = async (clave, valor) => {
+  if (!clave || String(clave).trim() === '') {
+    throw new Error('Clave de configuración requerida');
+  }
+  const valorStr = valor === null || valor === undefined ? '' : String(valor);
   const [config] = await Configuracion.findOrCreate({
     where: { clave },
-    defaults: { valor: String(valor), descripcion: `Configuración: ${clave}` },
+    defaults: { valor: valorStr, descripcion: `Configuración: ${clave}` },
   });
-  await config.update({ valor: String(valor) });
+  await config.update({ valor: valorStr });
   return config;
 };
 
-const listarTodas = () => Configuracion.findAll();
+const listarTodas = async () => {
+  await seedDefaults();
+  return Configuracion.findAll({ order: [['clave', 'ASC']] });
+};
 
 const getPdfContacto = async () => {
   await seedDefaults();
@@ -79,17 +110,39 @@ const getPdfContacto = async () => {
     web: map.pdf_contacto_web || DEFAULT_CONFIG.pdf_contacto_web,
     empresaNombre: map.pdf_empresa_nombre || DEFAULT_CONFIG.pdf_empresa_nombre,
     empresaTagline: map.pdf_empresa_tagline || DEFAULT_CONFIG.pdf_empresa_tagline,
+    redes: buildRedesFromMap(map),
+    social: {
+      facebook: {
+        url: map.pdf_social_facebook_url || '',
+        nombre: map.pdf_social_facebook_nombre || DEFAULT_CONFIG.pdf_social_facebook_nombre,
+      },
+      instagram: {
+        url: map.pdf_social_instagram_url || '',
+        nombre: map.pdf_social_instagram_nombre || DEFAULT_CONFIG.pdf_social_instagram_nombre,
+      },
+      tiktok: {
+        url: map.pdf_social_tiktok_url || '',
+        nombre: map.pdf_social_tiktok_nombre || DEFAULT_CONFIG.pdf_social_tiktok_nombre,
+      },
+    },
   };
 };
 
-const updatePdfContacto = async ({ email, telefono, web, empresaNombre, empresaTagline }) => {
+const updatePdfContacto = async (payload = {}) => {
   await seedDefaults();
+
   const updates = {
-    pdf_contacto_email: email,
-    pdf_contacto_telefono: telefono,
-    pdf_contacto_web: web,
-    pdf_empresa_nombre: empresaNombre,
-    pdf_empresa_tagline: empresaTagline,
+    pdf_contacto_email: payload.email,
+    pdf_contacto_telefono: payload.telefono,
+    pdf_contacto_web: payload.web,
+    pdf_empresa_nombre: payload.empresaNombre,
+    pdf_empresa_tagline: payload.empresaTagline,
+    pdf_social_facebook_url: payload.social?.facebook?.url,
+    pdf_social_facebook_nombre: payload.social?.facebook?.nombre,
+    pdf_social_instagram_url: payload.social?.instagram?.url,
+    pdf_social_instagram_nombre: payload.social?.instagram?.nombre,
+    pdf_social_tiktok_url: payload.social?.tiktok?.url,
+    pdf_social_tiktok_nombre: payload.social?.tiktok?.nombre,
   };
 
   for (const [clave, valor] of Object.entries(updates)) {
@@ -112,4 +165,5 @@ module.exports = {
   listarTodas,
   getPdfContacto,
   updatePdfContacto,
+  PDF_CONTACT_KEYS,
 };

@@ -354,19 +354,24 @@ function drawRecomendacionesPanel(doc, recomendaciones) {
   });
 }
 
+const FOOTER_HEIGHT_BASE = 52;
+const FOOTER_SOCIAL_EXTRA = 14;
+
 function drawFooter(doc, contacto = {}) {
   const empresaNombre = contacto.empresaNombre || 'ELECTRIXSTUDIO';
   const empresaTagline = contacto.empresaTagline || 'Auditoría & Soluciones de Eficiencia Energética';
   const web = contacto.web || 'www.electrixstudio.com';
   const email = contacto.email || 'contacto@electrixstudio.com';
   const telefono = contacto.telefono || '+51 987 654 321';
+  const redes = Array.isArray(contacto.redes) ? contacto.redes.filter((r) => r.url) : [];
+  const footerHeight = FOOTER_HEIGHT_BASE + (redes.length > 0 ? FOOTER_SOCIAL_EXTRA : 0);
 
   const pages = doc.bufferedPageRange();
 
   for (let i = pages.start; i < pages.start + pages.count; i++) {
     doc.switchToPage(i);
 
-    const bannerY = doc.page.height - MARGIN - FOOTER_HEIGHT;
+    const bannerY = doc.page.height - MARGIN - footerHeight;
     const rightColW = 248;
     const rightColX = MARGIN + CONTENT_W - rightColW;
     const labelW = 72;
@@ -374,8 +379,8 @@ function drawFooter(doc, contacto = {}) {
 
     doc.save();
 
-    doc.roundedRect(MARGIN, bannerY, CONTENT_W, FOOTER_HEIGHT, 5).fill('#0f172a');
-    doc.rect(MARGIN, bannerY, 4, FOOTER_HEIGHT).fill('#2563eb');
+    doc.roundedRect(MARGIN, bannerY, CONTENT_W, footerHeight, 5).fill('#0f172a');
+    doc.rect(MARGIN, bannerY, 4, footerHeight).fill('#2563eb');
 
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff')
       .text(empresaNombre, MARGIN + 14, bannerY + 10, { width: 210, lineBreak: false });
@@ -397,6 +402,18 @@ function drawFooter(doc, contacto = {}) {
         .text(value, rightColX + labelW, rowY, { width: valueW, align: 'right', lineBreak: false });
       rowY += 12;
     });
+
+    if (redes.length > 0) {
+      const socialText = redes
+        .map((r) => `${r.nombre}: ${r.url.replace(/^https?:\/\//i, '')}`)
+        .join('   ·   ');
+      doc.font('Helvetica').fontSize(6.5).fillColor('#93c5fd')
+        .text(socialText, MARGIN + 14, bannerY + footerHeight - 13, {
+          width: CONTENT_W - 28,
+          lineBreak: false,
+          ellipsis: true,
+        });
+    }
 
     const pageNumY = bannerY - 9;
     doc.font('Helvetica').fontSize(6.5).fillColor('#94a3b8')
