@@ -97,27 +97,33 @@ export default function LoginPage() {
             </p>
           </form>
         ) : (
-          <form onSubmit={handleAdminLogin}>
+          <form onSubmit={handleAdminLogin} autoComplete="off">
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="admin-email">Email</label>
               <input
-                className="form-control"
+                id="admin-email"
+                className="form-control auth-input"
                 type="email"
+                name="admin-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@sistema.com"
+                placeholder="Ingrese su correo"
                 required
+                autoComplete="off"
               />
             </div>
             <div className="form-group">
-              <label>Contraseña</label>
+              <label htmlFor="admin-password">Contraseña</label>
               <input
-                className="form-control"
+                id="admin-password"
+                className="form-control auth-input"
                 type="password"
+                name="admin-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Ingrese su contraseña"
                 required
+                autoComplete="new-password"
               />
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
