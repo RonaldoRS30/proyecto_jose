@@ -9,6 +9,7 @@ const {
   HistorialAcceso,
 } = require('../models');
 const { generarCodigoInterno } = require('../helpers/codigoHelper');
+const { normalizeClientePayload } = require('../helpers/clienteTipoHelper');
 const { roundNum } = require('../utils/format');
 const { enrichCalculos } = require('./facturaHelper');
 const { getConfigMap } = require('./configuracionService');
@@ -104,8 +105,9 @@ const listarClientes = async ({ search, activo, acceso, page = 1, limit = 10 }) 
 };
 
 const crearCliente = async (data) => {
-  const codigo_interno = data.codigo_interno || generarCodigoInterno();
-  return Cliente.create({ ...data, codigo_interno });
+  const payload = normalizeClientePayload(data);
+  const codigo_interno = payload.codigo_interno || generarCodigoInterno();
+  return Cliente.create({ ...payload, codigo_interno });
 };
 
 const obtenerCliente = async (id) => {
@@ -118,7 +120,8 @@ const obtenerCliente = async (id) => {
 
 const actualizarCliente = async (id, data) => {
   const cliente = await obtenerCliente(id);
-  await cliente.update(data);
+  const payload = normalizeClientePayload({ ...cliente.toJSON(), ...data });
+  await cliente.update(payload);
   return cliente;
 };
 

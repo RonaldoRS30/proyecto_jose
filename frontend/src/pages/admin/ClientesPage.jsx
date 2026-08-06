@@ -17,7 +17,20 @@ const emptyForm = {
   nombre: '', apellido: '', documento: '', email: '', telefono: '',
   direccion: '', empresa_distribuidora: 'Luz del Sur', tarifa: 'BT5B residencial',
   potencia_contratada: '10 KW', medidor: '3φ - 3 hilos', notas: '',
+  tipo_cliente: 'natural',
 };
+
+const inferTipoFromCliente = (c) => {
+  if (c.tipo_cliente === 'empresa' || c.tipo_cliente === 'natural') return c.tipo_cliente;
+  return c.apellido === '' || c.apellido == null ? 'empresa' : 'natural';
+};
+
+const buildClientePayload = (form, tipoCliente) => ({
+  ...form,
+  tipo_cliente: tipoCliente,
+  apellido: tipoCliente === 'empresa' ? null : (form.apellido || '').trim(),
+  documento: (form.documento || '').replace(/\D/g, ''),
+});
 
 const SearchableSelect = ({ value, onChange, options, placeholder, required }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -98,22 +111,73 @@ export default function ClientesPage() {
 
   useEffect(() => { load(); }, [page, search, filtroActivo]);
 
-  const openCreate = () => { setEditId(null); setForm(emptyForm); setTipoCliente('natural'); setModalOpen(true); setError(''); };
-  const openEdit = (c) => {
-    setEditId(c.id);
-    setForm({ ...c });
-    setTipoCliente(c.apellido === '' || c.apellido === null ? 'empresa' : 'natural');
+  const openCreate = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setTipoCliente('natural');
     setModalOpen(true);
     setError('');
   };
 
+  const openEdit = (c) => {
+    const tipo = inferTipoFromCliente(c);
+    setEditId(c.id);
+    setForm({
+      ...c,
+      apellido: tipo === 'empresa' ? '' : (c.apellido || ''),
+      tipo_cliente: tipo,
+    });
+    setTipoCliente(tipo);
+    setModalOpen(true);
+    setError('');
+  };
+
+  const handleTipoChange = (tipo) => {
+    setTipoCliente(tipo);
+    setForm((prev) => {
+      const doc = (prev.documento || '').replace(/\D/g, '');
+      const docLimpio = tipo === 'empresa' && doc.length === 8
+        ? ''
+        : tipo === 'natural' && doc.length === 11
+          ? ''
+          : doc;
+      return {
+        ...prev,
+        tipo_cliente: tipo,
+        apellido: tipo === 'empresa' ? '' : (prev.apellido || ''),
+        documento: docLimpio,
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    const payload = buildClientePayload(form, tipoCliente);
+
+    if (tipoCliente === 'natural' && !payload.apellido) {
+      setError('El apellido es obligatorio para persona natural.');
+      return;
+    }
+    if (tipoCliente === 'empresa' && form.apellido?.trim()) {
+      setError('Una empresa no puede tener apellido. Use solo razón social.');
+      return;
+    }
+    if (tipoCliente === 'empresa' && payload.documento.length !== 11) {
+      setError('El RUC debe tener exactamente 11 dígitos.');
+      return;
+    }
+    if (tipoCliente === 'natural' && payload.documento.length !== 8) {
+      setError('El DNI debe tener exactamente 8 dígitos.');
+      return;
+    }
+
     try {
       if (editId) {
-        await updateCliente(editId, form);
+        await updateCliente(editId, payload);
       } else {
-        const { data } = await createCliente(form);
+        const { data } = await createCliente(payload);
         await generarCodigo({ cliente_id: data.data.id });
       }
       setModalOpen(false);
@@ -267,8 +331,13 @@ export default function ClientesPage() {
           renderTableRow={(c) => (
             <tr key={c.id}>
               <td><code>{c.codigo_interno}</code></td>
-              <td>{c.nombre} {c.apellido}</td>
-              <td>{c.documento || '-'}</td>
+              <td>{c.nombre}{c.apellido ? ` ${c.apellido}` : ''}</td>
+              <td>
+                <span className={`badge ${inferTipoFromCliente(c) === 'empresa' ? 'badge-info' : 'badge-secondary'}`} style={{ marginRight: '6px' }}>
+                  {inferTipoFromCliente(c) === 'empresa' ? 'Empresa' : 'Persona'}
+                </span>
+                {c.documento || '-'}
+              </td>
               <td>{c.email || '-'}</td>
               <td>{renderEstadoAcceso(c)}</td>
               <td className="actions">{renderActions(c)}</td>
@@ -276,11 +345,16 @@ export default function ClientesPage() {
           )}
           renderCard={(c) => (
             <ListCard
-              title={`${c.nombre} ${c.apellido || ''}`.trim()}
+              title={`${c.nombre}${c.apellido ? ` ${c.apellido}` : ''}`.trim()}
               subtitle={c.email || c.telefono || 'Sin contacto'}
-              badge={renderEstadoAcceso(c)}
+              badge={
+                <span className={`badge ${inferTipoFromCliente(c) === 'empresa' ? 'badge-info' : 'badge-secondary'}`}>
+                  {inferTipoFromCliente(c) === 'empresa' ? 'Empresa' : 'Persona natural'}
+                </span>
+              }
               fields={[
                 { label: 'Código', value: c.codigo_interno },
+                { label: 'Acceso', value: hasAccesoHabilitado(c) ? 'Habilitado' : 'Deshabilitado' },
                 { label: 'Documento', value: c.documento || '-' },
                 { label: 'Teléfono', value: c.telefono || '-' },
                 { label: 'Distribuidora', value: c.empresa_distribuidora || '-' },
@@ -304,23 +378,28 @@ export default function ClientesPage() {
         {error && <div className="alert alert-error">{error}</div>}
         <form id="cliente-form" onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Tipo de Cliente</label>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Tipo de Cliente *</label>
             <div style={{ display: 'flex', gap: '10px', background: 'rgba(255, 255, 255, 0.05)', padding: '5px', borderRadius: '8px', width: 'max-content' }}>
-              <button 
+              <button
                 type="button"
-                onClick={() => setTipoCliente('natural')}
+                onClick={() => handleTipoChange('natural')}
                 style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'natural' ? '#4f46e5' : 'transparent', color: tipoCliente === 'natural' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'natural' ? '500' : 'normal' }}
               >
                 Persona Natural
               </button>
-              <button 
+              <button
                 type="button"
-                onClick={() => { setTipoCliente('empresa'); setForm({ ...form, apellido: '' }); }}
+                onClick={() => handleTipoChange('empresa')}
                 style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: tipoCliente === 'empresa' ? '#4f46e5' : 'transparent', color: tipoCliente === 'empresa' ? '#fff' : '#aaa', cursor: 'pointer', transition: 'all 0.2s', fontWeight: tipoCliente === 'empresa' ? '500' : 'normal' }}
               >
                 Empresa
               </button>
             </div>
+            <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-muted)' }}>
+              {tipoCliente === 'natural'
+                ? 'Persona natural: nombre, apellido y DNI (8 dígitos).'
+                : 'Empresa: solo razón social y RUC (11 dígitos), sin apellido.'}
+            </small>
           </div>
           <div className="form-row">
             <div className="form-group">

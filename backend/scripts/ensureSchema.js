@@ -10,6 +10,11 @@ const MIGRATIONS = [
     column: 'tarifa_kwh',
     sql: 'ALTER TABLE clientes ADD COLUMN tarifa_kwh DECIMAL(10,4) NULL AFTER tarifa',
   },
+  {
+    table: 'clientes',
+    column: 'tipo_cliente',
+    sql: "ALTER TABLE clientes ADD COLUMN tipo_cliente ENUM('natural','empresa') NOT NULL DEFAULT 'natural' AFTER tarifa_kwh",
+  },
 ];
 
 async function columnExists(conn, dbName, table, column) {
@@ -50,6 +55,16 @@ async function main() {
     await conn.query(migration.sql);
     applied += 1;
     console.log(`[OK] Columna agregada: ${migration.table}.${migration.column}`);
+  }
+
+  const hasTipoCliente = await columnExists(conn, dbName, 'clientes', 'tipo_cliente');
+  if (hasTipoCliente) {
+    const [result] = await conn.query(
+      "UPDATE clientes SET tipo_cliente = 'empresa' WHERE (apellido IS NULL OR TRIM(apellido) = '') AND tipo_cliente = 'natural'"
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[OK] tipo_cliente sincronizado en ${result.affectedRows} registro(s).`);
+    }
   }
 
   await conn.end();

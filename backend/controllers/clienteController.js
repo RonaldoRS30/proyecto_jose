@@ -5,6 +5,10 @@ const { asyncHandler } = require('../utils/errorHandler');
 
 const validateCliente = [
   body('nombre').notEmpty().withMessage('Nombre requerido'),
+  body('tipo_cliente')
+    .optional()
+    .isIn(['natural', 'empresa'])
+    .withMessage('Tipo de cliente inválido'),
 ];
 
 const listar = asyncHandler(async (req, res) => {

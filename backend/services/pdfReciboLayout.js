@@ -116,11 +116,17 @@ function drawKeyValueRow(doc, x, y, w, label, value, opts = {}) {
 }
 
 function drawClientePanel(doc, cliente) {
+  const esEmpresa = cliente.tipo_cliente === 'empresa'
+    || (!cliente.apellido && cliente.tipo_cliente !== 'natural');
+  const titular = esEmpresa
+    ? (cliente.nombre || '').trim()
+    : `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+
   drawPanel(doc, 'Datos del titular', (x, w) => {
     let y = doc.y;
     const rows = [
-      ['Titular', `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim()],
-      ['Documento', cliente.documento || '—'],
+      [esEmpresa ? 'Razón social' : 'Titular', titular || '—'],
+      [esEmpresa ? 'RUC' : 'Documento (DNI)', cliente.documento || '—'],
       ['Empresa distribuidora', cliente.empresa_distribuidora || '—'],
       ['Tipo de tarifa', cliente.tarifa || '—'],
       ['Potencia contratada', cliente.potencia_contratada || '—'],
