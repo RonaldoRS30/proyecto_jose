@@ -9,19 +9,28 @@ async function findDuplicadoPorNombre(clienteId, modulo, nombre, excludeId = nul
   const buscado = normalizeNombreEquipo(nombre);
   if (!buscado) return null;
 
+  const excludedId = excludeId != null && excludeId !== ''
+    ? parseInt(excludeId, 10)
+    : null;
+
   const items = await Electrodomestico.findAll({
     where: { cliente_id: clienteId, modulo, activo: true },
     attributes: ['id', 'nombre'],
   });
 
   return items.find(
-    (item) => item.id !== excludeId && normalizeNombreEquipo(item.nombre) === buscado,
+    (item) => {
+      if (excludedId != null && Number(item.id) === excludedId) return false;
+      return normalizeNombreEquipo(item.nombre) === buscado;
+    },
   ) || null;
 }
 
-function errorNombreDuplicado(duplicado) {
+function errorNombreDuplicado(duplicado, isEdit = false) {
   throw new AppError(
-    `Ya existe un equipo llamado «${duplicado.nombre}». Puede editarlo desde la lista en lugar de agregar uno nuevo.`,
+    isEdit
+      ? `Ya existe otro equipo llamado «${duplicado.nombre}». Elija un nombre distinto.`
+      : `Ya existe un equipo llamado «${duplicado.nombre}». Puede editarlo desde la lista en lugar de agregar uno nuevo.`,
     409,
   );
 }
@@ -57,7 +66,7 @@ const actualizar = async (id, clienteId, data) => {
   if (!item) throw new AppError('Electrodoméstico no encontrado', 404);
   if (data.nombre !== undefined) {
     const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, data.nombre, id);
-    if (duplicado) errorNombreDuplicado(duplicado);
+    if (duplicado) errorNombreDuplicado(duplicado, true);
   }
   await item.update(data);
   return item;

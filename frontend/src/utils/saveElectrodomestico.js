@@ -13,9 +13,13 @@ export async function saveElectrodomestico({
     const message = err.response?.data?.message;
     if (err.response?.status === 409) {
       await alert({
-        title: 'Equipo ya registrado',
-        message: message || 'Ya existe un equipo con ese nombre.',
-        detail: 'Busque el equipo en la lista y use «Editar» para actualizar sus datos.',
+        title: editId ? 'Nombre no disponible' : 'Equipo ya registrado',
+        message: message || (editId
+          ? 'Ya existe otro equipo con ese nombre.'
+          : 'Ya existe un equipo con ese nombre.'),
+        detail: editId
+          ? 'Use un nombre distinto o deje el nombre actual sin cambios.'
+          : 'Busque el equipo en la lista y use «Editar» para actualizar sus datos.',
         variant: 'warning',
         confirmLabel: 'Entendido',
       });
