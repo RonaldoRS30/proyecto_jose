@@ -14,7 +14,9 @@ import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
 import { useUnsavedTarifaGuard } from '../../hooks/useUnsavedTarifaGuard';
 import { tarifaValuesDiffer } from '../../utils/tarifaCompare';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
+
+const rowNumber = (page, index) => (page - 1) * PAGE_SIZE + index + 1;
 
 const emptyForm = {
   nombre: '', apellido: '', documento: '', email: '', telefono: '',
@@ -33,6 +35,8 @@ const buildClientePayload = (form, tipoCliente) => ({
   tipo_cliente: tipoCliente,
   apellido: tipoCliente === 'empresa' ? null : (form.apellido || '').trim(),
   documento: (form.documento || '').replace(/\D/g, ''),
+  email: (form.email || '').trim() || null,
+  direccion: (form.direccion || '').trim() || null,
 });
 
 const SearchableSelect = ({ value, onChange, options, placeholder, required }) => {
@@ -205,6 +209,11 @@ export default function ClientesPage() {
       setError('La tarifa eléctrica debe ser un número válido mayor o igual a 0.');
       return;
     }
+    const emailTrim = (form.email || '').trim();
+    if (emailTrim && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailTrim)) {
+      setError('Si ingresa email, debe ser un correo válido (ej. usuario@gmail.com).');
+      return;
+    }
 
     try {
       if (editId) {
@@ -358,12 +367,12 @@ export default function ClientesPage() {
           label="clientes"
           tableHead={
             <tr>
-              <th>Código</th><th>Nombre</th><th>Documento</th><th>Email</th><th>Acceso</th><th>Acciones</th>
+              <th>N°</th><th>Nombre</th><th>Documento</th><th>Email</th><th>Acceso</th><th>Acciones</th>
             </tr>
           }
-          renderTableRow={(c) => (
+          renderTableRow={(c, index) => (
             <tr key={c.id}>
-              <td><code>{c.codigo_interno}</code></td>
+              <td>{rowNumber(page, index)}</td>
               <td>{c.nombre}{c.apellido ? ` ${c.apellido}` : ''}</td>
               <td>
                 <span className={`badge ${inferTipoFromCliente(c) === 'empresa' ? 'badge-info' : 'badge-secondary'}`} style={{ marginRight: '6px' }}>
@@ -376,7 +385,7 @@ export default function ClientesPage() {
               <td className="actions">{renderActions(c)}</td>
             </tr>
           )}
-          renderCard={(c) => (
+          renderCard={(c, index) => (
             <ListCard
               title={`${c.nombre}${c.apellido ? ` ${c.apellido}` : ''}`.trim()}
               subtitle={c.email || c.telefono || 'Sin contacto'}
@@ -386,7 +395,7 @@ export default function ClientesPage() {
                 </span>
               }
               fields={[
-                { label: 'Código', value: c.codigo_interno },
+                { label: 'N°', value: rowNumber(page, index) },
                 { label: 'Acceso', value: hasAccesoHabilitado(c) ? 'Habilitado' : 'Deshabilitado' },
                 { label: 'Documento', value: c.documento || '-' },
                 { label: 'Teléfono', value: c.telefono || '-' },
@@ -492,15 +501,13 @@ export default function ClientesPage() {
             </div>
 
             <div className="form-group">
-              <label>Email *</label>
+              <label>Email</label>
               <input 
                 className="form-control" 
                 type="email" 
                 value={form.email || ''} 
                 onChange={(e) => setForm({ ...form, email: e.target.value })} 
-                pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-                title="Debe ser un correo válido, por ejemplo: usuario@gmail.com"
-                required 
+                placeholder="Opcional"
               />
             </div>
           </div>
@@ -524,7 +531,7 @@ export default function ClientesPage() {
                 value={form.empresa_distribuidora}
                 onChange={(val) => setForm({ ...form, empresa_distribuidora: val })}
                 options={[
-                  'Luz del Sur', 'PLUZ PERU', 'DISTRILUZ', 'ELECTROCENTRO', 
+                  'Luz del Sur', 'PLUZ PERU', 'ELECTROCENTRO', 
                   'HIDRANDINA', 'ENSA', 'ENOSA', 'ELECTRO DUNAS', 'SEAL', 
                   'ELECTROORIENTE', 'ELECTRO UCAYALI', 'ELECTRO SUR ESTE', 
                   'ELECTROSUR', 'ELECTRO PUNO'
@@ -590,8 +597,13 @@ export default function ClientesPage() {
               />
             </div>
             <div className="form-group">
-              <label>Dirección *</label>
-              <input className="form-control" value={form.direccion || ''} onChange={(e) => setForm({ ...form, direccion: e.target.value })} required />
+              <label>Dirección</label>
+              <input
+                className="form-control"
+                value={form.direccion || ''}
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                placeholder="Opcional"
+              />
             </div>
           </div>
         </form>

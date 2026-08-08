@@ -69,6 +69,7 @@ export default function CodigosPage() {
           emptyMessage="No hay códigos generados"
           emptyIcon={Key}
           items={codigos}
+          pageSize={10}
           label="códigos"
           tableHead={
             <tr>

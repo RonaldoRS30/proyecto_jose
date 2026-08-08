@@ -42,6 +42,9 @@ function normalizeClientePayload(raw = {}) {
       throw new AppError('El RUC debe tener exactamente 11 dígitos numéricos', 400);
     }
 
+    const email = raw.email == null ? null : String(raw.email).trim() || null;
+    const direccion = raw.direccion == null ? null : String(raw.direccion).trim() || null;
+
     return {
       ...raw,
       tipo_cliente: 'empresa',
@@ -49,6 +52,8 @@ function normalizeClientePayload(raw = {}) {
       apellido: null,
       documento,
       tarifa_kwh: tarifaKwh,
+      email,
+      direccion,
     };
   }
 
@@ -59,6 +64,9 @@ function normalizeClientePayload(raw = {}) {
     throw new AppError('El DNI debe tener exactamente 8 dígitos numéricos', 400);
   }
 
+  const email = raw.email == null ? null : String(raw.email).trim() || null;
+  const direccion = raw.direccion == null ? null : String(raw.direccion).trim() || null;
+
   return {
     ...raw,
     tipo_cliente: 'natural',
@@ -66,6 +74,8 @@ function normalizeClientePayload(raw = {}) {
     apellido: apellidoRaw,
     documento,
     tarifa_kwh: tarifaKwh,
+    email,
+    direccion,
   };
 }
 
