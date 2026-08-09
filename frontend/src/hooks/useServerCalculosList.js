@@ -90,7 +90,10 @@ export function useServerElectrodomesticosList(modulo) {
     return () => { cancelled = true; };
   }, [modulo, page, refreshToken]);
 
-  const reload = () => setRefreshToken((t) => t + 1);
+  const reload = (opts = {}) => {
+    if (opts.resetPage) setPage(1);
+    setRefreshToken((t) => t + 1);
+  };
 
   return {
     items, total, page, setPage, loading, reload,

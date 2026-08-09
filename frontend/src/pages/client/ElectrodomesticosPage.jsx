@@ -32,13 +32,14 @@ export default function ElectrodomesticosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const catalogo = useRecomendacionesCatalog('aparato');
+  const { catalogo, reloadCatalog } = useRecomendacionesCatalog('aparato');
 
   useEffect(() => { refreshPreview(); }, [refreshPreview]);
 
   const afterMutation = async () => {
     await refreshPreview();
-    reload();
+    reload({ resetPage: true });
+    reloadCatalog();
   };
 
   const moduloData = modulos.aparatos;
@@ -46,7 +47,12 @@ export default function ElectrodomesticosPage() {
   const detalles = moduloData?.detalles || [];
   const getCalc = (id) => detalles.find((d) => d.id === id);
 
-  const openCreate = () => { setEditId(null); setForm(emptyForm); setModalOpen(true); };
+  const openCreate = () => {
+    reloadCatalog();
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
   const openEdit = (item) => {
     setEditId(item.id);
     setForm({ ...item, potencia_w: item.potencia_w, horas_uso_dia: item.horas_uso_dia });
@@ -62,7 +68,11 @@ export default function ElectrodomesticosPage() {
       updateElectrodomestico,
       alert,
     });
-    if (!ok) return;
+    if (!ok) {
+      reload({ resetPage: true });
+      reloadCatalog();
+      return;
+    }
     setModalOpen(false);
     await afterMutation();
   };

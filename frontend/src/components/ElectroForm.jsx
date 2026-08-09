@@ -26,7 +26,12 @@ export default function ElectroForm({
       potencia_w: preset.potencia,
       horas_uso_dia: preset.horas ?? form.horas_uso_dia ?? 24,
       categoria: preset.categoria || form.categoria,
-      recomendacion_id: preset.recomendacion_id || preset.id || null,
+      recomendacion_id: preset.source === 'saved' ? preset.recomendacion_id : (preset.recomendacion_id || preset.id || null),
+      marca: preset.marca ?? form.marca ?? '',
+      modelo: preset.modelo ?? form.modelo ?? '',
+      cantidad: preset.cantidad ?? form.cantidad ?? 1,
+      dias_uso_mes: preset.dias_uso_mes ?? form.dias_uso_mes ?? 30,
+      observaciones: preset.observaciones ?? form.observaciones ?? '',
     });
     setPresetKey(preset.nombre);
     setSelectedConsejo(preset.texto || '');
@@ -71,7 +76,12 @@ export default function ElectroForm({
             }}
             renderOption={(opt) => (
               <span className="searchable-option-content">
-                <span className="searchable-option-name">{opt.nombre}</span>
+                <span className="searchable-option-name">
+                  {opt.nombre}
+                  {opt.source === 'saved' && (
+                    <small style={{ marginLeft: '0.35rem', opacity: 0.75 }}>(registrado)</small>
+                  )}
+                </span>
                 <span className="searchable-option-meta">{opt.potencia}W · {opt.horas ?? 24}h/día</span>
               </span>
             )}

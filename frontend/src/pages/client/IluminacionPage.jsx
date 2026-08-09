@@ -32,7 +32,7 @@ export default function IluminacionPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const catalogo = useRecomendacionesCatalog('iluminacion', TIPOS_LUMINARIA);
+  const { catalogo, reloadCatalog } = useRecomendacionesCatalog('iluminacion', TIPOS_LUMINARIA);
 
   const moduloData = modulos.iluminacion;
   const totales = moduloData?.totales;
@@ -43,10 +43,16 @@ export default function IluminacionPage() {
 
   const afterMutation = async () => {
     await refreshPreview();
-    reload();
+    reload({ resetPage: true });
+    reloadCatalog();
   };
 
-  const openCreate = () => { setEditId(null); setForm(emptyForm); setModalOpen(true); };
+  const openCreate = () => {
+    reloadCatalog();
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
   const openEdit = (item) => { setEditId(item.id); setForm({ ...item }); setModalOpen(true); };
 
   const handleSubmit = async () => {
@@ -58,7 +64,11 @@ export default function IluminacionPage() {
       updateElectrodomestico,
       alert,
     });
-    if (!ok) return;
+    if (!ok) {
+      reload({ resetPage: true });
+      reloadCatalog();
+      return;
+    }
     setModalOpen(false);
     await afterMutation();
   };

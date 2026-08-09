@@ -29,8 +29,9 @@ export default function SearchableSelect({
     if (!q) return options;
     return options.filter((opt) => {
       const label = getOptionLabel(opt).toLowerCase();
+      const searchText = (opt.searchText || label).toLowerCase();
       const extra = opt.potencia != null ? `${opt.potencia}w` : '';
-      return label.includes(q) || extra.includes(q);
+      return searchText.includes(q) || label.includes(q) || extra.includes(q);
     });
   }, [options, query, getOptionLabel]);
 
@@ -146,7 +147,7 @@ export default function SearchableSelect({
           ) : (
             filtered.map((opt, index) => (
               <li
-                key={getOptionValue(opt)}
+                key={opt.id ?? getOptionValue(opt)}
                 role="option"
                 aria-selected={index === highlightIndex}
                 className={`searchable-select-option ${index === highlightIndex ? 'highlighted' : ''} ${getOptionValue(opt) === value ? 'selected' : ''}`}
