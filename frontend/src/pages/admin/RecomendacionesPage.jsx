@@ -173,7 +173,7 @@ export default function RecomendacionesPage() {
             <tr>
               <th>Equipo</th>
               <th>Categoría</th>
-              <th>Potencia</th>
+              <th>Potencia normal máx.</th>
               <th>Horas/día</th>
               <th>Estado</th>
               <th>Acciones</th>
@@ -210,7 +210,7 @@ export default function RecomendacionesPage() {
                 </span>
               )}
               fields={[
-                { label: 'Potencia sugerida', value: item.potencia_w != null ? `${item.potencia_w} W` : '-' },
+                { label: 'Potencia normal máx.', value: item.potencia_w != null ? `${item.potencia_w} W` : '-' },
                 { label: 'Horas/día sugeridas', value: item.horas_uso_dia != null ? `${item.horas_uso_dia}h` : '-' },
                 { label: 'Consejo', value: item.texto },
               ]}
@@ -302,12 +302,13 @@ export default function RecomendacionesPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Potencia sugerida (W)</label>
+              <label>Potencia normal máx. (W)</label>
               <input
                 className="form-control"
                 type="number"
                 min="0"
                 step="0.01"
+                placeholder="Límite de consumo normal para alertas en PDF"
                 value={form.potencia_w}
                 onChange={(e) => setForm({ ...form, potencia_w: e.target.value })}
               />

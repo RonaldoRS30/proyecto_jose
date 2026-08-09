@@ -20,12 +20,12 @@ const {
   drawEquiposTable,
   drawRecomendacionesPanel,
   drawFacturaRecibo,
-  drawFooter,
   applyPdfPageMargins,
   PDF_BOTTOM_MARGIN,
   MARGIN,
 } = require('./pdfReciboLayout');
 const { drawChartsSection } = require('./pdfChartsLayout');
+const { getEquiposExcedenPotenciaReferencia } = require('../helpers/potenciaReferenciaHelper');
 const recomendacionService = require('./recomendacionService');
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'reportes');
@@ -84,6 +84,12 @@ const generarReportePDF = async (calculoId, clienteId) => {
   }));
 
   const recomendaciones = await recomendacionService.obtenerParaEquipos(equiposParaMatch);
+  const catalogoReferencia = await recomendacionService.listar({ soloActivas: true });
+  const excedentesPotencia = getEquiposExcedenPotenciaReferencia(
+    detalles,
+    catalogoReferencia,
+    electroMap,
+  );
 
   const filename = `reporte_${clienteIdReporte}_${calculoId}_${Date.now()}.pdf`;
   const filepath = path.join(UPLOADS_DIR, filename);
@@ -110,6 +116,7 @@ const generarReportePDF = async (calculoId, clienteId) => {
       calculoId,
       fecha: calculoEnriquecido.created_at,
       precioKwh: formatNum(calculoEnriquecido.precio_kwh),
+      contacto: contactoPdf,
     });
 
     drawClientePanel(doc, cliente);
@@ -132,9 +139,8 @@ const generarReportePDF = async (calculoId, clienteId) => {
       detalles,
       totalesModulos,
       resumen,
+      excedentesPotencia,
     });
-
-    drawFooter(doc, contactoPdf);
 
     doc.end();
     stream.on('finish', resolve);

@@ -4,8 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { buildSocialLinks, buildContactInfoItems } = require('../helpers/contactLinks');
-const { drawContactIcon } = require('../helpers/contactInfoIcons');
+const { buildSocialLinks } = require('../helpers/contactLinks');
 
 const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo-electrixstudio.png');
 
@@ -26,12 +25,8 @@ const MARGIN = 42;
 const PAGE_WIDTH = 595.28;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
 
-/** Pie de página fijo — compacto, anclado al borde inferior */
-const FOOTER_FROM_BOTTOM = 14;
-const FOOTER_HEIGHT = 76;
-const FOOTER_CONTENT_GAP = 8;
-const PDF_BOTTOM_MARGIN = FOOTER_FROM_BOTTOM + FOOTER_HEIGHT + FOOTER_CONTENT_GAP;
-const FOOTER_RESERVE = PDF_BOTTOM_MARGIN - MARGIN;
+/** Margen inferior sin pie de página fijo */
+const PDF_BOTTOM_MARGIN = MARGIN + 14;
 
 function applyPdfPageMargins(doc) {
   if (!doc.page) return;
@@ -54,19 +49,6 @@ const SOCIAL_PLATFORM_LABELS = {
   tiktok: 'TikTok',
   whatsapp: 'WhatsApp',
 };
-
-function drawFooterBar(doc, x, y, w, h, radius, fillColor) {
-  doc.save();
-  doc.moveTo(x, y + h)
-    .lineTo(x, y + radius)
-    .quadraticCurveTo(x, y, x + radius, y)
-    .lineTo(x + w - radius, y)
-    .quadraticCurveTo(x + w, y, x + w, y + radius)
-    .lineTo(x + w, y + h)
-    .closePath()
-    .fill(fillColor);
-  doc.restore();
-}
 
 function formatDatePE(date) {
   return new Date(date).toLocaleDateString('es-PE', {
@@ -147,35 +129,89 @@ function drawTextBlock(doc, text, x, w, opts = {}) {
   return doc.y;
 }
 
-function drawHeaderBand(doc, { calculoId, fecha, precioKwh }) {
+const SOCIAL_PLATFORM_ORDER = ['instagram', 'facebook', 'tiktok', 'whatsapp'];
+
+function drawSocialCardsRow(doc, x, y, w, contacto = {}) {
+  const socialLinks = buildSocialLinks(contacto);
+  const socialById = Object.fromEntries(socialLinks.map((link) => [link.id, link]));
+  const socialH = 22;
+  const colCount = SOCIAL_PLATFORM_ORDER.length;
+  const colGap = 4;
+  const colW = (w - colGap * (colCount - 1)) / colCount;
+  const iconSize = 10;
+
+  SOCIAL_PLATFORM_ORDER.forEach((id, index) => {
+    const link = socialById[id] || {
+      id,
+      nombre: SOCIAL_PLATFORM_LABELS[id],
+      hasLogo: false,
+    };
+    const colX = x + index * (colW + colGap);
+    const textX = colX + iconSize + 5;
+    const textW = colW - iconSize - 8;
+
+    doc.roundedRect(colX, y, colW, socialH, 3).fill('#1e293b');
+    doc.roundedRect(colX, y, colW, socialH, 3)
+      .lineWidth(0.35)
+      .strokeColor('#475569')
+      .stroke();
+
+    if (link.hasLogo) {
+      doc.image(link.logoPath, colX + 3, y + 5, { width: iconSize, height: iconSize });
+    }
+
+    drawFixedText(doc, link.nombre, textX, y + 4, {
+      font: 'Helvetica-Bold',
+      size: 5.8,
+      color: '#f8fafc',
+      width: textW,
+      ellipsis: true,
+    });
+
+    drawFixedText(doc, SOCIAL_PLATFORM_LABELS[id], textX, y + 12, {
+      size: 5.4,
+      color: '#94a3b8',
+      width: textW,
+      ellipsis: true,
+    });
+  });
+
+  return socialH;
+}
+
+function drawHeaderBand(doc, { calculoId, fecha, precioKwh, contacto = {} }) {
   const y = MARGIN;
-  const h = 86;
   const pad = 14;
   const metaW = 168;
   const metaX = MARGIN + CONTENT_W - metaW - pad;
+  const innerW = CONTENT_W - pad * 2;
+  const socialGap = 8;
+  const socialH = 22;
+  const logoHeight = 36;
+  const logoY = y + 8 + socialH + socialGap;
+  const h = logoY - y + logoHeight + 22;
 
   doc.save();
   doc.roundedRect(MARGIN, y, CONTENT_W, h, 6).fill(COLORS.dark);
 
-  const logoHeight = 40;
-  const logoY = y + (h - logoHeight) / 2;
+  drawSocialCardsRow(doc, MARGIN + pad, y + 8, innerW, contacto);
 
   if (fs.existsSync(LOGO_PATH)) {
     doc.image(LOGO_PATH, MARGIN + pad, logoY, { height: logoHeight });
   } else {
     doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(16)
-      .text('ELECTRIXSTUDIO', MARGIN + pad, logoY + 12);
+      .text('ELECTRIXSTUDIO', MARGIN + pad, logoY + 8);
   }
 
   doc.font('Helvetica').fontSize(9).fillColor('#c8d9f5')
-    .text('Recibo de Consumo Eléctrico — Estimación Mensual', MARGIN + pad, y + h - 20, {
-      width: CONTENT_W - pad * 2,
+    .text('Recibo de Consumo Eléctrico — Estimación Mensual', MARGIN + pad, logoY + logoHeight + 4, {
+      width: CONTENT_W - pad * 2 - metaW,
     });
 
   doc.fontSize(8.5).fillColor('#d1d5db')
-    .text(`N° ${String(calculoId).padStart(6, '0')}`, metaX, y + 18, { width: metaW, align: 'right' })
-    .text(formatDatePE(fecha), metaX, y + 32, { width: metaW, align: 'right' })
-    .text(`Tarifa: S/ ${precioKwh} / kWh`, metaX, y + 46, { width: metaW, align: 'right' });
+    .text(`N° ${String(calculoId).padStart(6, '0')}`, metaX, logoY + 2, { width: metaW, align: 'right' })
+    .text(formatDatePE(fecha), metaX, logoY + 16, { width: metaW, align: 'right' })
+    .text(`Tarifa: S/ ${precioKwh} / kWh`, metaX, logoY + 30, { width: metaW, align: 'right' });
 
   doc.restore();
   doc.y = y + h + 18;
@@ -546,149 +582,6 @@ function drawRecomendacionesPanel(doc, recomendaciones) {
   doc.y = y + 8;
 }
 
-const FOOTER_HEIGHT_BASE = FOOTER_HEIGHT;
-
-const FOOTER_SOCIAL_ORDER = ['instagram', 'facebook', 'tiktok', 'whatsapp'];
-
-function drawFooter(doc, contacto = {}) {
-  const empresaNombre = contacto.empresaNombre || 'ELECTRIXSTUDIO';
-  const empresaTagline = contacto.empresaTagline || 'Auditoría & Soluciones de Eficiencia Energética';
-  const socialLinks = buildSocialLinks(contacto);
-  const socialById = Object.fromEntries(socialLinks.map((link) => [link.id, link]));
-  const contactInfo = buildContactInfoItems(contacto);
-
-  const pages = doc.bufferedPageRange();
-  const padX = 10;
-  const innerLeft = MARGIN + padX;
-  const innerW = CONTENT_W - padX * 2;
-  const footerHeight = FOOTER_HEIGHT_BASE;
-  const footerBottom = (pageH) => pageH - FOOTER_FROM_BOTTOM;
-  const bannerY = (pageH) => footerBottom(pageH) - footerHeight;
-
-  for (let i = pages.start; i < pages.start + pages.count; i++) {
-    doc.switchToPage(i);
-
-    const savedMargins = { ...doc.page.margins };
-    const savedY = doc.y;
-    const pageH = doc.page.height;
-    const footY = bannerY(pageH);
-
-    doc.page.margins.bottom = FOOTER_FROM_BOTTOM;
-
-    doc.save();
-
-    drawFooterBar(doc, MARGIN, footY, CONTENT_W, footerHeight, 7, '#0f172a');
-
-    doc.save();
-    doc.moveTo(MARGIN, footY + footerHeight)
-      .lineTo(MARGIN, footY + 7)
-      .quadraticCurveTo(MARGIN, footY, MARGIN + 7, footY)
-      .lineTo(MARGIN + 3, footY)
-      .lineTo(MARGIN + 3, footY + footerHeight)
-      .closePath()
-      .fill('#2563eb');
-    doc.restore();
-
-    doc.moveTo(MARGIN, footY)
-      .lineTo(MARGIN + CONTENT_W, footY)
-      .lineWidth(0.6)
-      .strokeColor('#334155')
-      .stroke();
-
-    drawFixedText(doc, empresaNombre, innerLeft, footY + 7, {
-      font: 'Helvetica-Bold',
-      size: 8.5,
-      color: '#ffffff',
-      width: innerW,
-    });
-
-    drawFixedText(doc, empresaTagline, innerLeft, footY + 17, {
-      size: 6.5,
-      color: '#94a3b8',
-      width: innerW,
-    });
-
-    let contactX = innerLeft;
-    const contactY = footY + 28;
-    contactInfo.forEach((item, idx) => {
-      if (idx > 0) {
-        drawFixedText(doc, '·', contactX, contactY, { size: 6, color: '#475569' });
-        contactX += 8;
-      }
-      drawContactIcon(doc, item.id, contactX, contactY + 1, 6);
-      contactX += 9;
-      drawFixedText(doc, item.value, contactX, contactY, {
-        size: 6.2,
-        color: '#e2e8f0',
-      });
-      contactX += doc.widthOfString(item.value) + 8;
-    });
-
-    const dividerY = footY + 40;
-    doc.moveTo(innerLeft, dividerY)
-      .lineTo(innerLeft + innerW, dividerY)
-      .lineWidth(0.4)
-      .strokeColor('#334155')
-      .stroke();
-
-    drawFixedText(doc, 'REDES SOCIALES', innerLeft, dividerY + 4, {
-      font: 'Helvetica-Bold',
-      size: 6,
-      color: '#64748b',
-    });
-
-    const socialY = dividerY + 9;
-    const socialH = 24;
-    const colCount = FOOTER_SOCIAL_ORDER.length;
-    const colGap = 4;
-    const colW = (innerW - colGap * (colCount - 1)) / colCount;
-    const iconSize = 11;
-
-    FOOTER_SOCIAL_ORDER.forEach((id, index) => {
-      const link = socialById[id] || {
-        id,
-        nombre: SOCIAL_PLATFORM_LABELS[id],
-        hasLogo: false,
-      };
-      const colX = innerLeft + index * (colW + colGap);
-      const textX = colX + iconSize + 6;
-      const textW = colW - iconSize - 9;
-
-      doc.roundedRect(colX, socialY, colW, socialH, 3).fill('#1e293b');
-      doc.roundedRect(colX, socialY, colW, socialH, 3)
-        .lineWidth(0.35)
-        .strokeColor('#475569')
-        .stroke();
-
-      if (link.hasLogo) {
-        doc.image(link.logoPath, colX + 4, socialY + 6, { width: iconSize, height: iconSize });
-      }
-
-      drawFixedText(doc, link.nombre, textX, socialY + 5, {
-        font: 'Helvetica-Bold',
-        size: 6,
-        color: '#f8fafc',
-        width: textW,
-        ellipsis: true,
-      });
-
-      drawFixedText(doc, SOCIAL_PLATFORM_LABELS[id], textX, socialY + 14, {
-        size: 5.6,
-        color: '#94a3b8',
-        width: textW,
-        ellipsis: true,
-      });
-    });
-
-    doc.restore();
-
-    doc.page.margins.bottom = savedMargins.bottom;
-    doc.y = savedY;
-  }
-
-  doc.switchToPage(pages.start + pages.count - 1);
-}
-
 module.exports = {
   drawHeaderBand,
   drawClientePanel,
@@ -697,7 +590,6 @@ module.exports = {
   drawEquiposTable,
   drawRecomendacionesPanel,
   drawFacturaRecibo,
-  drawFooter,
   applyPdfPageMargins,
   PDF_BOTTOM_MARGIN,
   MARGIN,

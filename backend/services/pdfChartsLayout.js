@@ -146,16 +146,20 @@ function drawCleanHBarsAt(doc, opts) {
     labelW = LABEL_W,
     valueW = VALUE_W,
     showValues = true,
+    allowZeroValues = false,
   } = opts;
 
-  const data = items.filter((d) => (d.value || 0) > 0 || (d.value2 || 0) > 0);
+  const data = allowZeroValues
+    ? items.filter((d) => d !== null)
+    : items.filter((d) => (d.value || 0) > 0 || (d.value2 || 0) > 0);
   if (!data.length) return originY;
 
   const barAreaX = originX + labelW + 6;
   const barAreaW = originW - labelW - valueW - 14;
   const maxVal = Math.max(...data.map((d) => Math.max(d.value || 0, d.value2 || 0)), 1);
   const dual = Boolean(color2);
-  const rowH = dual ? 36 : ROW_H;
+  const hasSublabel = data.some((d) => d.sublabel);
+  const rowH = dual ? 36 : (hasSublabel ? 34 : ROW_H);
 
   data.forEach((item, i) => {
     const rowY = originY + i * rowH;
@@ -165,10 +169,18 @@ function drawCleanHBarsAt(doc, opts) {
     }
 
     doc.font('Helvetica').fontSize(7.5).fillColor(C.text)
-      .text(String(item.label || ''), originX + 10, rowY + (dual ? 10 : 8), {
+      .text(String(item.label || ''), originX + 10, rowY + (hasSublabel ? 5 : 8), {
         width: labelW - 12,
         lineGap: 0,
       });
+
+    if (item.sublabel) {
+      doc.font('Helvetica').fontSize(6.5).fillColor(C.muted)
+        .text(String(item.sublabel), originX + 10, rowY + 16, {
+          width: labelW - 12,
+          lineGap: 0,
+        });
+    }
 
     const w1 = Math.max(8, ((item.value || 0) / maxVal) * barAreaW);
     const barY = rowY + (dual ? 6 : 7);
@@ -224,10 +236,11 @@ function drawCleanHBars(doc, opts) {
     maxBars = 10,
     originX = MARGIN,
     originW = CONTENT_W,
+    allowZeroValues = false,
   } = opts;
 
   const data = [...items]
-    .filter((d) => (d.value || 0) > 0 || (d.value2 || 0) > 0)
+    .filter((d) => allowZeroValues || (d.value || 0) > 0 || (d.value2 || 0) > 0)
     .sort((a, b) => (b.value || 0) - (a.value || 0))
     .slice(0, maxBars);
 
@@ -261,6 +274,7 @@ function drawCleanHBars(doc, opts) {
     color2,
     unit,
     valueW,
+    allowZeroValues,
   });
 
   doc.y = Math.max(bottomY + 8, frameY + chartH + 10);
@@ -389,6 +403,37 @@ function drawConsumoCategoryRow(doc, consumoItems, catItems) {
   doc.y = topY + panelH + 12;
 }
 
+function drawExcedentesPotenciaSection(doc, excedentes) {
+  if (!excedentes?.length) return;
+
+  const chartItems = excedentes.map((e) => ({
+    label: e.nombre,
+    sublabel: `${e.moduloLabel} · ${Number(e.potencia_w).toFixed(0)} W (ref. ${Number(e.potencia_referencia_w).toFixed(0)} W)`,
+    value: e.consumo_mes,
+  }));
+
+  drawCleanHBars(doc, {
+    title: 'EQUIPOS QUE SUPERAN LA POTENCIA NORMAL DE REFERENCIA',
+    sub: 'Mayor consumo mensual entre equipos por encima del límite del catálogo (3 módulos)',
+    items: chartItems,
+    color: C.red,
+    unit: 'kWh',
+    maxBars: 15,
+    allowZeroValues: true,
+  });
+
+  ensureSpace(doc, 24);
+  doc.font('Helvetica').fontSize(7).fillColor(C.muted)
+    .text(
+      'Referencia: potencia normal máx. (W) configurada en Admin → Recomendaciones/Catálogo. '
+      + 'Potencias comerciales son aproximadas y pueden variar según modelo y uso.',
+      MARGIN,
+      doc.y,
+      { width: CONTENT_W, lineGap: 1 },
+    );
+  doc.y += 20;
+}
+
 function drawModuloCharts(doc, moduloItems) {
   const active = moduloItems.filter((m) => m.value > 0 || m.value2 > 0);
   if (!active.length) return;
@@ -413,7 +458,12 @@ function drawModuloCharts(doc, moduloItems) {
   });
 }
 
-function drawChartsSection(doc, { detalles = [], totalesModulos = [], resumen = {} }) {
+function drawChartsSection(doc, {
+  detalles = [],
+  totalesModulos = [],
+  resumen = {},
+  excedentesPotencia = [],
+}) {
   doc.addPage();
   applyPdfPageMargins(doc);
   doc.y = MARGIN;
@@ -431,6 +481,11 @@ function drawChartsSection(doc, { detalles = [], totalesModulos = [], resumen = 
     });
   doc.moveDown(1.1);
   divider(doc);
+
+  if (excedentesPotencia.length > 0) {
+    drawExcedentesPotenciaSection(doc, excedentesPotencia);
+    divider(doc);
+  }
 
   const moduloItems = totalesModulos.map((m) => ({
     label: m.label,
