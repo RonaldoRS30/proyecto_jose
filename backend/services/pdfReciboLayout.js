@@ -217,10 +217,13 @@ function drawHeaderBand(doc, { calculoId, fecha, precioKwh, contacto = {} }) {
   doc.y = y + h + 18;
 }
 
-function drawPanel(doc, title, drawContent) {
-  ensureSpace(doc, 60);
-  const startY = doc.y;
+function drawPanel(doc, title, drawContent, options = {}) {
   const padding = 12;
+  const titleBlockH = 28;
+  const estimatedBodyH = options.estimatedBodyH ?? 80;
+  ensureSpace(doc, titleBlockH + estimatedBodyH + padding + 14);
+
+  const startY = doc.y;
 
   doc.save();
   doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.primary)
@@ -275,7 +278,7 @@ function drawClientePanel(doc, cliente) {
       y = drawKeyValueRow(doc, x, y, w, label, value);
     });
     return y + 4;
-  });
+  }, { estimatedBodyH: 88 });
 }
 
 function drawResumenPanel(doc, resumen, formatNum) {
@@ -306,7 +309,7 @@ function drawResumenPanel(doc, resumen, formatNum) {
     y += 60;
     y = drawKeyValueRow(doc, x, y, w, 'Demanda contratada', `${formatNum(resumen.demandaTotal)} kW`);
     return y + 4;
-  });
+  }, { estimatedBodyH: 76 });
 }
 
 function drawFacturaLineRow(doc, opts) {
@@ -321,6 +324,7 @@ function drawFacturaLineRow(doc, opts) {
     bold = false,
   } = opts;
 
+  const rowH = sublabel ? 28 : 17;
   const valueY = sublabel ? y + 2 : y;
   doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(COLORS.text)
     .text(label, colDesc, y, { width: descW, lineBreak: false });
@@ -333,26 +337,56 @@ function drawFacturaLineRow(doc, opts) {
   doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor(COLORS.text)
     .text(value, colMonto, valueY, { width: 110, align: 'right', lineBreak: false });
 
-  return y + (sublabel ? 28 : 17);
+  return y + rowH;
+}
+
+function measureFacturaBlockHeight(doc, factura, formatNum) {
+  const pad = 14;
+  const rowW = CONTENT_W - pad * 2;
+  const kwh = factura.consumoEnergiaKwh ?? factura.consumoEnergiaLinea ?? 0;
+  const precio = factura.precioKwh ?? 0.613;
+
+  doc.font('Helvetica').fontSize(7.5);
+  const footnote = `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (${formatNum(kwh)} kWh × S/ ${formatNum(precio)}).`;
+  const footnoteH = doc.heightOfString(footnote, { width: rowW, lineGap: 1 });
+
+  const chargeRows = 4;
+  const subtotalRows = 3;
+
+  return (
+    8 // barra superior
+    + pad + 12 // título
+    + 18 // separador bajo título
+    + 14 // encabezados columna
+    + 28 // consumo de energía (con sublabel)
+    + chargeRows * 17
+    + 4 + 10 // línea antes de subtotal
+    + subtotalRows * 17
+    + 6 + 28 // caja total
+    + footnoteH + 8
+    + pad
+  );
 }
 
 function drawFacturaRecibo(doc, factura, formatNum) {
-  const boxContentH = 228;
-  ensureSpace(doc, boxContentH + 8);
+  const blockH = measureFacturaBlockHeight(doc, factura, formatNum);
+  ensureSpace(doc, blockH + 12);
+
   const startY = doc.y;
   const pad = 14;
+  const boxH = blockH - 8;
 
   doc.save();
   doc.roundedRect(MARGIN, startY, CONTENT_W, 8, 2).fill(COLORS.primary);
 
   const boxY = startY + 8;
-  doc.roundedRect(MARGIN, boxY, CONTENT_W, 218, 4)
+  doc.roundedRect(MARGIN, boxY, CONTENT_W, boxH, 4)
     .lineWidth(0.75)
     .strokeColor(COLORS.border)
     .stroke();
 
   doc.font('Helvetica-Bold').fontSize(11).fillColor(COLORS.primaryDark)
-    .text('DETALLE DE FACTURACIÓN', MARGIN + pad, boxY + 12);
+    .text('DETALLE DE FACTURACIÓN', MARGIN + pad, boxY + 12, { lineBreak: false });
 
   doc.moveTo(MARGIN + pad, boxY + 30)
     .lineTo(MARGIN + CONTENT_W - pad, boxY + 30)
@@ -366,8 +400,8 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   const descW = colMonto - colDesc - 12;
 
   doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.muted)
-    .text('CONCEPTO', colDesc, boxY + 36)
-    .text('IMPORTE', colMonto, boxY + 36, { width: 110, align: 'right' });
+    .text('CONCEPTO', colDesc, boxY + 36, { lineBreak: false })
+    .text('IMPORTE', colMonto, boxY + 36, { width: 110, align: 'right', lineBreak: false });
 
   let y = boxY + 50;
 
@@ -428,22 +462,28 @@ function drawFacturaRecibo(doc, factura, formatNum) {
   y += 6;
   const totalY = y;
   doc.roundedRect(colDesc, totalY, rowW, 28, 4).fill(COLORS.bgTotal);
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(COLORS.primaryDark)
-    .text('TOTAL DEL MES', colDesc + 10, totalY + 8);
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(COLORS.primary)
-    .text(`S/ ${formatNum(factura.totalMes)}`, colMonto, totalY + 7, { width: 110, align: 'right' });
+  drawFixedText(doc, 'TOTAL DEL MES', colDesc + 10, totalY + 8, {
+    font: 'Helvetica-Bold',
+    size: 11,
+    color: COLORS.primaryDark,
+  });
+  drawFixedText(doc, `S/ ${formatNum(factura.totalMes)}`, colMonto, totalY + 7, {
+    font: 'Helvetica-Bold',
+    size: 12,
+    color: COLORS.primary,
+    width: 110,
+    align: 'right',
+  });
 
   y = totalY + 36;
-  doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
-    .text(
-      `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (${formatNum(kwh)} kWh × S/ ${formatNum(precio)}).`,
-      colDesc,
-      y,
-      { width: rowW, lineGap: 1 },
-    );
+  const footnoteText = `Referencia tarifaria energía: S/ ${formatNum(factura.gastoEnergiaMensual)} (${formatNum(kwh)} kWh × S/ ${formatNum(precio)}).`;
+  doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted);
+  wrapTextLines(doc, footnoteText, rowW).forEach((line, i) => {
+    drawFixedText(doc, line, colDesc, y + i * 9.5, { size: 7.5, color: COLORS.muted });
+  });
 
   doc.restore();
-  doc.y = boxY + boxContentH;
+  doc.y = startY + blockH + 14;
 }
 
 function drawEquiposTable(doc, title, items, formatNum) {
@@ -522,6 +562,8 @@ function drawEquiposTable(doc, title, items, formatNum) {
 function drawModuloResumen(doc, totalesModulos, formatNum) {
   if (!totalesModulos.length) return;
 
+  const estimatedBodyH = totalesModulos.length * 34 + 8;
+
   drawPanel(doc, 'Resumen por categoría', (x, w) => {
     let y = doc.y;
     totalesModulos.forEach(({ label, totales: t }) => {
@@ -536,7 +578,7 @@ function drawModuloResumen(doc, totalesModulos, formatNum) {
       y += 4;
     });
     return y;
-  });
+  }, { estimatedBodyH });
 }
 
 function drawRecomendacionesPanel(doc, recomendaciones) {
