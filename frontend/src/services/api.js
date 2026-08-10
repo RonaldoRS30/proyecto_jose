@@ -61,6 +61,7 @@ export const toggleCliente = (id) => api.patch(`/clientes/${id}/toggle`);
 export const getEstadisticas = (params) => api.get('/clientes/estadisticas', { params });
 export const getClientesExportResumen = () => api.get('/clientes/export-resumen');
 export const getMiPerfil = () => api.get('/clientes/mi-perfil');
+export const updateMiPerfil = (payload) => api.put('/clientes/mi-perfil', payload);
 export const updateMiTarifa = (payload) => api.put('/clientes/mi-perfil/tarifa', payload);
 export const getContactoPublico = () => api.get('/reportes/contacto-publico');
 

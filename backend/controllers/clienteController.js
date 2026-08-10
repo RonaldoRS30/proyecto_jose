@@ -64,34 +64,13 @@ const miPerfil = asyncHandler(async (req, res) => {
   res.json({ success: true, data: cliente });
 });
 
-const actualizarMiTarifa = asyncHandler(async (req, res) => {
+const actualizarMiPerfil = asyncHandler(async (req, res) => {
   const clienteId = req.user.clienteId || req.user.id;
-  const { tarifa_kwh, potencia_contratada, alumbrado_publico } = req.body;
-
-  const payload = {};
-  if (tarifa_kwh !== undefined) {
-    if (tarifa_kwh !== null && (isNaN(tarifa_kwh) || Number(tarifa_kwh) < 0)) {
-      return res.status(400).json({ success: false, message: 'Tarifa inválida' });
-    }
-    payload.tarifa_kwh = tarifa_kwh === null || tarifa_kwh === '' ? null : parseFloat(tarifa_kwh);
-  }
-  if (potencia_contratada !== undefined) {
-    payload.potencia_contratada = potencia_contratada == null || potencia_contratada === ''
-      ? null
-      : String(potencia_contratada).trim();
-  }
-  if (alumbrado_publico !== undefined) {
-    if (alumbrado_publico !== null && alumbrado_publico !== '' && (isNaN(alumbrado_publico) || Number(alumbrado_publico) < 0)) {
-      return res.status(400).json({ success: false, message: 'Alumbrado público inválido' });
-    }
-    payload.alumbrado_publico = alumbrado_publico === null || alumbrado_publico === ''
-      ? null
-      : parseFloat(alumbrado_publico);
-  }
-
-  const cliente = await clienteService.actualizarCliente(clienteId, payload);
+  const cliente = await clienteService.actualizarPerfilCliente(clienteId, req.body);
   res.json({ success: true, data: cliente });
 });
+
+const actualizarMiTarifa = actualizarMiPerfil;
 
 const detalleAdmin = asyncHandler(async (req, res) => {
   const data = await clienteService.obtenerClienteDetalleAdmin(req.params.id);
@@ -142,6 +121,7 @@ module.exports = {
   estadisticas,
   miPerfil,
   actualizarMiTarifa,
+  actualizarMiPerfil,
   detalleAdmin,
   exportResumen,
   extraerTarifaRecibo,

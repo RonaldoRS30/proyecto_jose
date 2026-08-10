@@ -551,6 +551,7 @@ export default function ClientesPage() {
                     ...(datos.tarifa_kwh != null ? { tarifa_kwh: datos.tarifa_kwh } : {}),
                     ...(datos.potencia_contratada ? { potencia_contratada: datos.potencia_contratada } : {}),
                     ...(datos.alumbrado_publico != null ? { alumbrado_publico: datos.alumbrado_publico } : {}),
+                    ...(datos.empresa_distribuidora ? { empresa_distribuidora: datos.empresa_distribuidora } : {}),
                   }));
                   setTarifaDesdeRecibo(true);
                 }}

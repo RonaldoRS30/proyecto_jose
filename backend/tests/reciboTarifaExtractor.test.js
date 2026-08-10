@@ -147,3 +147,46 @@ for (const sample of extraSamples) {
 }
 
 console.log(`reciboTarifaExtractor extras: ${extraPassed}/${extraSamples.length} OK`);
+
+const { extractEmpresaDistribuidoraFromText } = require('../helpers/reciboDistribuidoraExtractor');
+
+const distribuidoraSamples = [
+  {
+    name: 'PLUZ por RUC y razón social',
+    text: 'Pluz Energía Perú S.A.A. R.U.C N° 20269985900 Paseo del Bosque 500 Urb. Chacarilla del Estanque San Borja',
+    empresa: 'PLUZ PERU',
+  },
+  {
+    name: 'PLUZ por logo/texto',
+    text: 'PLUZ PERU recibo de luz al precio de S/ 0.6291',
+    empresa: 'PLUZ PERU',
+  },
+  {
+    name: 'Luz del Sur por RUC y dirección',
+    text: 'LUZ DEL SUR S.A.A. AV. CANAVAL Y MOREYRA 380 SAN ISIDRO - LIMA RUC 20331898008',
+    empresa: 'Luz del Sur',
+  },
+  {
+    name: 'Luz del Sur encabezado',
+    text: 'LUZ DEL SUR Precio kWh (S/.) 0.6130 Importe',
+    empresa: 'Luz del Sur',
+  },
+  {
+    name: 'Sin distribuidora conocida',
+    text: 'Recibo genérico de energía 0.5000 kWh',
+    empresa: null,
+  },
+];
+
+let distPassed = 0;
+for (const sample of distribuidoraSamples) {
+  const result = extractEmpresaDistribuidoraFromText(sample.text);
+  assert.strictEqual(
+    result.empresa_distribuidora,
+    sample.empresa,
+    `${sample.name}: esperado ${sample.empresa}, obtuvo ${result.empresa_distribuidora} (${result.metodo})`,
+  );
+  distPassed += 1;
+}
+
+console.log(`reciboDistribuidoraExtractor: ${distPassed}/${distribuidoraSamples.length} OK`);

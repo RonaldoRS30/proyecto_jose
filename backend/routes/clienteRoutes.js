@@ -11,6 +11,7 @@ router.post('/', authenticate, authorizeRoles('admin'), clienteController.crear)
 router.get('/estadisticas', authenticate, authorizeRoles('admin'), clienteController.estadisticas);
 router.get('/export-resumen', authenticate, authorizeRoles('admin'), clienteController.exportResumen);
 router.get('/mi-perfil', authenticate, authorizeRoles('cliente'), clienteController.miPerfil);
+router.put('/mi-perfil', authenticate, authorizeRoles('cliente'), clienteController.actualizarMiPerfil);
 router.put('/mi-perfil/tarifa', authenticate, authorizeRoles('cliente'), clienteController.actualizarMiTarifa);
 router.get('/:id/detalle', authenticate, authorizeRoles('admin'), clienteController.detalleAdmin);
 router.get('/:id', authenticate, authorizeRoles('admin'), clienteController.obtener);

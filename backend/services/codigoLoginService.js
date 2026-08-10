@@ -44,4 +44,18 @@ const loginConCodigo = async (codigoStr, meta = {}) => {
   };
 };
 
-module.exports = { loginConCodigo };
+const verificarCodigoAccesoCliente = async (clienteId, codigoStr) => {
+  const codigoNormalizado = String(codigoStr || '').trim().toUpperCase();
+  if (!codigoNormalizado) throw new AppError('Código de acceso requerido', 400);
+
+  const codigo = await CodigoAcceso.findOne({
+    where: { codigo: codigoNormalizado, cliente_id: clienteId, activo: true },
+  });
+  if (!codigo) throw new AppError('Código de acceso incorrecto', 401);
+  if (codigo.fecha_expiracion && new Date(codigo.fecha_expiracion) < new Date()) {
+    throw new AppError('Código de acceso expirado', 403);
+  }
+  return codigo;
+};
+
+module.exports = { loginConCodigo, verificarCodigoAccesoCliente };

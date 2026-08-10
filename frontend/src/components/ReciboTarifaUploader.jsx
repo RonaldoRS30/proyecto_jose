@@ -45,8 +45,13 @@ export default function ReciboTarifaUploader({
       const datos = data.data || {};
       if (datos.tarifa_kwh == null) {
         setError(data.message || datos.message || 'No se encontró la tarifa en el recibo.');
-        if (datos.potencia_contratada || datos.alumbrado_publico != null) {
+        if (
+          datos.potencia_contratada
+          || datos.alumbrado_publico != null
+          || datos.empresa_distribuidora
+        ) {
           emitDatos(datos);
+          setMessage(datos.message || 'Se detectaron algunos datos del recibo.');
         }
         return;
       }
@@ -131,11 +136,11 @@ export default function ReciboTarifaUploader({
           }}
         >
           <Loader2 size={18} className="spin" />
-          <span>Leyendo recibo y detectando tarifa, potencia y alumbrado público…</span>
+          <span>Leyendo recibo y detectando distribuidora, tarifa, potencia y alumbrado…</span>
         </div>
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
-        Extrae tarifa (S/kWh), potencia contratada y alumbrado público del recibo.
+        Extrae empresa distribuidora, tarifa (S/kWh), potencia contratada y alumbrado público del recibo.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

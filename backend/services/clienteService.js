@@ -10,6 +10,7 @@ const {
 } = require('../models');
 const { generarCodigoInterno } = require('../helpers/codigoHelper');
 const { normalizeClientePayload, inferTipoCliente } = require('../helpers/clienteTipoHelper');
+const { verificarCodigoAccesoCliente } = require('./codigoLoginService');
 const { roundNum } = require('../utils/format');
 const { enrichCalculos } = require('./facturaHelper');
 const { getConfigMap } = require('./configuracionService');
@@ -134,6 +135,129 @@ const actualizarCliente = async (id, data) => {
   });
   await cliente.update(payload);
   return cliente;
+};
+
+const PERFIL_CAMPOS = [
+  'nombre', 'apellido', 'email', 'telefono', 'direccion',
+  'empresa_distribuidora', 'tarifa', 'medidor', 'potencia_contratada',
+  'tarifa_kwh', 'alumbrado_publico',
+];
+
+const actualizarPerfilCliente = async (id, data) => {
+  const cliente = await obtenerCliente(id);
+  const existente = cliente.toJSON();
+  const tipo = inferTipoCliente(existente);
+  const updateFields = {};
+
+  for (const key of PERFIL_CAMPOS) {
+    if (data[key] !== undefined) updateFields[key] = data[key];
+  }
+
+  if (updateFields.nombre !== undefined) {
+    const nombre = String(updateFields.nombre ?? '').trim();
+    if (!nombre) {
+      throw new AppError(
+        tipo === 'empresa' ? 'La razón social es obligatoria' : 'El nombre es obligatorio',
+        400,
+      );
+    }
+    updateFields.nombre = nombre;
+  }
+
+  if (tipo === 'empresa') {
+    updateFields.apellido = null;
+  } else if (updateFields.apellido !== undefined) {
+    const apellido = String(updateFields.apellido ?? '').trim();
+    if (!apellido) throw new AppError('El apellido es obligatorio', 400);
+    updateFields.apellido = apellido;
+  }
+
+  if (updateFields.telefono !== undefined) {
+    const tel = String(updateFields.telefono ?? '').replace(/\D/g, '');
+    if (tel && (tel.length < 7 || tel.length > 9)) {
+      throw new AppError('El teléfono debe tener entre 7 y 9 dígitos', 400);
+    }
+    updateFields.telefono = tel;
+  }
+
+  if (updateFields.email !== undefined) {
+    updateFields.email = updateFields.email == null || updateFields.email === ''
+      ? null
+      : String(updateFields.email).trim();
+  }
+
+  if (updateFields.direccion !== undefined) {
+    updateFields.direccion = updateFields.direccion == null || updateFields.direccion === ''
+      ? null
+      : String(updateFields.direccion).trim();
+  }
+
+  if (updateFields.potencia_contratada !== undefined) {
+    updateFields.potencia_contratada = updateFields.potencia_contratada == null
+      || updateFields.potencia_contratada === ''
+      ? null
+      : String(updateFields.potencia_contratada).trim();
+  }
+
+  if (updateFields.tarifa_kwh !== undefined) {
+    if (updateFields.tarifa_kwh === null || updateFields.tarifa_kwh === '') {
+      updateFields.tarifa_kwh = null;
+    } else {
+      const tarifa = parseFloat(updateFields.tarifa_kwh);
+      if (Number.isNaN(tarifa) || tarifa < 0) {
+        throw new AppError('La tarifa eléctrica debe ser un número válido mayor o igual a 0', 400);
+      }
+      updateFields.tarifa_kwh = tarifa;
+    }
+  }
+
+  if (updateFields.alumbrado_publico !== undefined) {
+    if (updateFields.alumbrado_publico === null || updateFields.alumbrado_publico === '') {
+      updateFields.alumbrado_publico = null;
+    } else {
+      const alumbrado = parseFloat(updateFields.alumbrado_publico);
+      if (Number.isNaN(alumbrado) || alumbrado < 0) {
+        throw new AppError('El alumbrado público debe ser un número válido mayor o igual a 0', 400);
+      }
+      updateFields.alumbrado_publico = alumbrado;
+    }
+  }
+
+  if (data.documento !== undefined) {
+    const nuevoDoc = String(data.documento ?? '').replace(/\D/g, '');
+    const docActual = String(existente.documento ?? '').replace(/\D/g, '');
+
+    if (nuevoDoc !== docActual) {
+      const codigo1 = data.codigo_acceso;
+      const codigo2 = data.codigo_acceso_confirmacion;
+
+      if (!codigo1 || !codigo2) {
+        throw new AppError(
+          'Debe ingresar su código de acceso dos veces para cambiar el documento',
+          400,
+        );
+      }
+      if (String(codigo1).trim().toUpperCase() !== String(codigo2).trim().toUpperCase()) {
+        throw new AppError('Los códigos de acceso no coinciden', 400);
+      }
+      await verificarCodigoAccesoCliente(id, codigo1);
+
+      if (tipo === 'empresa' && !/^\d{11}$/.test(nuevoDoc)) {
+        throw new AppError('El RUC debe tener exactamente 11 dígitos numéricos', 400);
+      }
+      if (tipo === 'natural' && !/^\d{8}$/.test(nuevoDoc)) {
+        throw new AppError('El DNI debe tener exactamente 8 dígitos numéricos', 400);
+      }
+      updateFields.documento = nuevoDoc;
+    }
+  }
+
+  if (Object.keys(updateFields).length === 0) {
+    return cliente;
+  }
+
+  await cliente.update(updateFields);
+  return obtenerCliente(id);
 };
 
 const eliminarCliente = async (id) => {
@@ -347,6 +471,7 @@ module.exports = {
   crearCliente,
   obtenerCliente,
   actualizarCliente,
+  actualizarPerfilCliente,
   eliminarCliente,
   toggleCliente,
   getEstadisticasAdmin,

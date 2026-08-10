@@ -1,4 +1,6 @@
-/** Extrae tarifa, potencia contratada y alumbrado público de recibos de luz peruanos. */
+/** Extrae tarifa, potencia contratada, alumbrado público y empresa distribuidora de recibos de luz peruanos. */
+
+const { extractEmpresaDistribuidoraFromText } = require('./reciboDistribuidoraExtractor');
 
 const TARIFA_PATTERNS = [
   {
@@ -251,8 +253,9 @@ function extractAlumbradoPublicoFromText(source) {
   return { alumbrado_publico: null, metodo: null };
 }
 
-function buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico }) {
+function buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico, empresa_distribuidora }) {
   const parts = [];
+  if (empresa_distribuidora) parts.push(`Distribuidora: ${empresa_distribuidora}`);
   if (tarifa_kwh != null) parts.push(`Tarifa: S/ ${tarifa_kwh.toFixed(4)}/kWh`);
   if (potencia_contratada) parts.push(`Potencia: ${potencia_contratada}`);
   if (alumbrado_publico != null) parts.push(`Alumbrado público: S/ ${alumbrado_publico.toFixed(2)}`);
@@ -322,6 +325,7 @@ function extractDatosReciboFromText(text) {
       tarifa_kwh: null,
       potencia_contratada: null,
       alumbrado_publico: null,
+      empresa_distribuidora: null,
       metodo: null,
       message: 'No se pudo leer texto del archivo',
     };
@@ -353,17 +357,30 @@ function extractDatosReciboFromText(text) {
 
   const { potencia_contratada, metodo: potenciaMetodo } = extractPotenciaContratadaFromText(source);
   const { alumbrado_publico, metodo: alumbradoMetodo } = extractAlumbradoPublicoFromText(source);
+  const { empresa_distribuidora, metodo: distribuidoraMetodo } = extractEmpresaDistribuidoraFromText(source);
 
-  const message = buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico });
+  const message = buildReciboMessage({
+    tarifa_kwh,
+    potencia_contratada,
+    alumbrado_publico,
+    empresa_distribuidora,
+  });
 
   if (tarifa_kwh == null) {
+    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora;
     return {
       tarifa_kwh: null,
       potencia_contratada,
       alumbrado_publico,
+      empresa_distribuidora,
       metodo: null,
-      metodos: { tarifa: null, potencia: potenciaMetodo, alumbrado: alumbradoMetodo },
-      message: tarifa_kwh == null && (potencia_contratada || alumbrado_publico != null)
+      metodos: {
+        tarifa: null,
+        potencia: potenciaMetodo,
+        alumbrado: alumbradoMetodo,
+        distribuidora: distribuidoraMetodo,
+      },
+      message: hasPartial
         ? `${message}. No se encontró la tarifa en el recibo.`
         : 'No se encontró la tarifa en el recibo. Verifique que sea un PDF con texto o una foto nítida.',
     };
@@ -373,8 +390,14 @@ function extractDatosReciboFromText(text) {
     tarifa_kwh,
     potencia_contratada,
     alumbrado_publico,
+    empresa_distribuidora,
     metodo: tarifaMetodo,
-    metodos: { tarifa: tarifaMetodo, potencia: potenciaMetodo, alumbrado: alumbradoMetodo },
+    metodos: {
+      tarifa: tarifaMetodo,
+      potencia: potenciaMetodo,
+      alumbrado: alumbradoMetodo,
+      distribuidora: distribuidoraMetodo,
+    },
     message,
   };
 }
