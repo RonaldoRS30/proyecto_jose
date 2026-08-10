@@ -489,25 +489,32 @@ function drawFacturaRecibo(doc, factura, formatNum) {
 function drawEquiposTable(doc, title, items, formatNum) {
   if (!items.length) return;
 
-  const cols = {
-    nombre: { x: MARGIN + 8, w: 130 },
-    potencia: { x: MARGIN + 142, w: 48 },
-    consumo: { x: MARGIN + 194, w: 72 },
-    gasto: { x: MARGIN + 270, w: 72 },
-    anual: { x: MARGIN + 346, w: CONTENT_W - 354 },
-  };
+  const tablePad = 6;
+  let colX = MARGIN + tablePad;
+  const columns = [
+    { label: 'EQUIPO', w: 92, get: (item) => String(item.nombre).substring(0, 24) },
+    { label: 'POT.', w: 38, get: (item) => `${item.potencia_w}W` },
+    { label: 'kWh/DÍA', w: 52, get: (item) => formatNum(item.consumo_dia), align: 'right' },
+    { label: 'kWh/MES', w: 52, get: (item) => formatNum(item.consumo_mes), align: 'right' },
+    { label: 'kWh/AÑO', w: 52, get: (item) => formatNum(item.consumo_anio), align: 'right' },
+    { label: 'S/ DÍA', w: 48, get: (item) => formatNum(item.gasto_diario), align: 'right' },
+    { label: 'S/ MES', w: 48, get: (item) => formatNum(item.gasto_mensual), align: 'right' },
+    { label: 'S/ AÑO', w: 48, get: (item) => formatNum(item.gasto_anual), align: 'right' },
+  ].map((col) => {
+    const positioned = { ...col, x: colX };
+    colX += col.w;
+    return positioned;
+  });
 
   const headerH = 20;
   const rowH = 18;
 
   const drawTableHeader = (tableY) => {
     doc.roundedRect(MARGIN, tableY, CONTENT_W, headerH, 3).fill(COLORS.bgPanel);
-    doc.font('Helvetica-Bold').fontSize(7).fillColor(COLORS.muted)
-      .text('EQUIPO', cols.nombre.x, tableY + 6, { width: cols.nombre.w })
-      .text('POT.', cols.potencia.x, tableY + 6, { width: cols.potencia.w })
-      .text('kWh/MES', cols.consumo.x, tableY + 6, { width: cols.consumo.w })
-      .text('S/ MES', cols.gasto.x, tableY + 6, { width: cols.gasto.w })
-      .text('S/ AÑO', cols.anual.x, tableY + 6, { width: cols.anual.w, align: 'right' });
+    doc.font('Helvetica-Bold').fontSize(6.5).fillColor(COLORS.muted);
+    columns.forEach((col) => {
+      doc.text(col.label, col.x, tableY + 6, { width: col.w, align: col.align || 'left' });
+    });
     return tableY + headerH;
   };
 
@@ -542,16 +549,14 @@ function drawEquiposTable(doc, title, items, formatNum) {
     if (i % 2 === 0) {
       doc.rect(MARGIN, rowY, CONTENT_W, rowH).fill('#fafbfc');
     }
-    doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.text)
-      .text(String(item.nombre).substring(0, 28), cols.nombre.x, rowY + 5, { width: cols.nombre.w })
-      .text(`${item.potencia_w}W`, cols.potencia.x, rowY + 5, { width: cols.potencia.w })
-      .text(formatNum(item.consumo_mes), cols.consumo.x, rowY + 5, { width: cols.consumo.w })
-      .text(formatNum(item.gasto_mensual), cols.gasto.x, rowY + 5, { width: cols.gasto.w })
-      .text(formatNum(item.gasto_anual), cols.anual.x, rowY + 5, { width: cols.anual.w, align: 'right' });
+    doc.font('Helvetica').fontSize(6.8).fillColor(COLORS.text);
+    columns.forEach((col) => {
+      doc.text(col.get(item), col.x, rowY + 5, { width: col.w, align: col.align || 'left' });
+    });
     rowY += rowH;
   });
 
-  doc.roundedRect(MARGIN, tableY, CONTENT_W, rowY - tableY, 3)
+  doc.roundedRect(MARGIN, tableStartY, CONTENT_W, rowY - tableStartY, 3)
     .lineWidth(0.75)
     .strokeColor(COLORS.border)
     .stroke();
