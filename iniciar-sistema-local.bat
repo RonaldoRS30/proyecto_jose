@@ -30,7 +30,7 @@ if not exist "backend\.env" (
   )
 )
 
-echo [1/6] Verificando / iniciando MySQL ...
+echo [1/7] Verificando / iniciando MySQL ...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure-mysql.ps1"
 if errorlevel 1 (
   echo.
@@ -40,7 +40,7 @@ if errorlevel 1 (
 echo.
 
 if not exist "backend\node_modules\" (
-  echo [2/6] Instalando dependencias del backend...
+  echo [2/7] Instalando dependencias del backend...
   pushd backend
   call npm install
   if errorlevel 1 (
@@ -51,11 +51,11 @@ if not exist "backend\node_modules\" (
   )
   popd
 ) else (
-  echo [2/6] Dependencias del backend OK.
+  echo [2/7] Dependencias del backend OK.
 )
 
 if not exist "frontend\node_modules\" (
-  echo [3/6] Instalando dependencias del frontend...
+  echo [3/7] Instalando dependencias del frontend...
   pushd frontend
   call npm install
   if errorlevel 1 (
@@ -66,11 +66,11 @@ if not exist "frontend\node_modules\" (
   )
   popd
 ) else (
-  echo [3/6] Dependencias del frontend OK.
+  echo [3/7] Dependencias del frontend OK.
 )
 echo.
 
-echo [4/6] Preparando base de datos ...
+echo [4/7] Preparando base de datos ...
 pushd backend
 call npm run ensure-db
 if errorlevel 1 (
@@ -83,7 +83,20 @@ if errorlevel 1 (
 popd
 echo.
 
-echo [5/6] Iniciando backend ...
+echo [5/7] Actualizando esquema de tablas ...
+pushd backend
+call npm run ensure-schema
+if errorlevel 1 (
+  popd
+  echo.
+  echo Revise la conexion MySQL en backend\.env
+  pause
+  exit /b 1
+)
+popd
+echo.
+
+echo [6/7] Iniciando backend ...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop-port.ps1" -Port 5000 >nul 2>&1
 timeout /t 1 /nobreak >nul
 
@@ -104,7 +117,7 @@ echo [OK] Backend listo en http://localhost:5000
 echo.
 
 :INICIAR_FRONTEND
-echo [6/6] Iniciando frontend ...
+echo [7/7] Iniciando frontend ...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop-port.ps1" -Port 5173 >nul 2>&1
 timeout /t 1 /nobreak >nul
 

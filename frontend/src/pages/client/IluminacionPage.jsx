@@ -18,7 +18,7 @@ import { CATEGORIAS_ILUMINACION, TIPOS_LUMINARIA } from '../../utils/helpers';
 
 const emptyForm = {
   nombre: '', categoria: 'LED', marca: '', modelo: '',
-  potencia_w: '', cantidad: 1, horas_uso_dia: 6, dias_uso_mes: 30,
+  potencia_w: '', cantidad: 1, horas_uso_dia: '', dias_uso_mes: 30,
   observaciones: '', modulo: 'iluminacion', recomendacion_id: null,
 };
 

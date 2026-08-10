@@ -24,7 +24,7 @@ export default function ElectroForm({
       ...form,
       nombre: preset.nombre,
       potencia_w: preset.potencia,
-      horas_uso_dia: preset.horas ?? form.horas_uso_dia ?? 24,
+      horas_uso_dia: '',
       categoria: preset.categoria || form.categoria,
       recomendacion_id: preset.source === 'saved' ? preset.recomendacion_id : (preset.recomendacion_id || preset.id || null),
       marca: preset.marca ?? form.marca ?? '',
@@ -86,7 +86,7 @@ export default function ElectroForm({
               </span>
             )}
           />
-          <small className="form-hint">Seleccione un equipo del catálogo para autocompletar la potencia y horas sugeridas.</small>
+          <small className="form-hint">Seleccione un equipo del catálogo para autocompletar nombre y potencia. Las horas de uso las registra usted.</small>
           {selectedConsejo && (
             <div className="recomendacion-preview" style={{ marginTop: '0.5rem' }}>
               <strong>Consejo de ahorro:</strong> {selectedConsejo}

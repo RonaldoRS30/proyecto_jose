@@ -18,7 +18,7 @@ import { CATEGORIAS_FANTASMA, TIPOS_STANDBY } from '../../utils/helpers';
 
 const emptyForm = {
   nombre: '', categoria: 'Stand-by', marca: '', modelo: '',
-  potencia_w: '', cantidad: 1, horas_uso_dia: 24, dias_uso_mes: 30,
+  potencia_w: '', cantidad: 1, horas_uso_dia: '', dias_uso_mes: 30,
   observaciones: '', modulo: 'fantasma', recomendacion_id: null,
 };
 
