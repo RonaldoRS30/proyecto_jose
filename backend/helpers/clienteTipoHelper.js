@@ -12,6 +12,36 @@ function inferTipoCliente(cliente) {
     : 'natural';
 }
 
+function parseOptionalAlumbrado(raw) {
+  if (raw.alumbrado_publico === undefined) return undefined;
+  if (raw.alumbrado_publico === null || raw.alumbrado_publico === '') return null;
+  const parsed = parseFloat(raw.alumbrado_publico);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new AppError('El alumbrado público debe ser un número válido mayor o igual a 0', 400);
+  }
+  return parsed;
+}
+
+function buildCommonFields(raw, tarifaKwh) {
+  const payload = {
+    ...raw,
+    tarifa_kwh: tarifaKwh,
+    email: raw.email == null ? null : String(raw.email).trim() || null,
+    direccion: raw.direccion == null ? null : String(raw.direccion).trim() || null,
+  };
+
+  if (raw.potencia_contratada != null) {
+    payload.potencia_contratada = String(raw.potencia_contratada).trim() || null;
+  }
+
+  const alumbradoPublico = parseOptionalAlumbrado(raw);
+  if (alumbradoPublico !== undefined) {
+    payload.alumbrado_publico = alumbradoPublico;
+  }
+
+  return payload;
+}
+
 function normalizeClientePayload(raw = {}) {
   const tipo = raw.tipo_cliente === 'empresa' ? 'empresa' : 'natural';
   const nombre = String(raw.nombre ?? '').trim();
@@ -42,18 +72,12 @@ function normalizeClientePayload(raw = {}) {
       throw new AppError('El RUC debe tener exactamente 11 dígitos numéricos', 400);
     }
 
-    const email = raw.email == null ? null : String(raw.email).trim() || null;
-    const direccion = raw.direccion == null ? null : String(raw.direccion).trim() || null;
-
     return {
-      ...raw,
+      ...buildCommonFields(raw, tarifaKwh),
       tipo_cliente: 'empresa',
       nombre,
       apellido: null,
       documento,
-      tarifa_kwh: tarifaKwh,
-      email,
-      direccion,
     };
   }
 
@@ -64,18 +88,12 @@ function normalizeClientePayload(raw = {}) {
     throw new AppError('El DNI debe tener exactamente 8 dígitos numéricos', 400);
   }
 
-  const email = raw.email == null ? null : String(raw.email).trim() || null;
-  const direccion = raw.direccion == null ? null : String(raw.direccion).trim() || null;
-
   return {
-    ...raw,
+    ...buildCommonFields(raw, tarifaKwh),
     tipo_cliente: 'natural',
     nombre,
     apellido: apellidoRaw,
     documento,
-    tarifa_kwh: tarifaKwh,
-    email,
-    direccion,
   };
 }
 

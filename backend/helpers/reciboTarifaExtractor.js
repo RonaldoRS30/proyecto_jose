@@ -1,4 +1,4 @@
-/** Extrae precio S/ por kWh de texto de recibos de luz (varios formatos peruanos). */
+/** Extrae tarifa, potencia contratada y alumbrado público de recibos de luz peruanos. */
 
 const TARIFA_PATTERNS = [
   {
@@ -41,8 +41,42 @@ const TARIFA_PATTERNS = [
 
 const MIN_TARIFA = 0.05;
 const MAX_TARIFA = 3.5;
+const MIN_ALUMBRADO = 0.01;
+const MAX_ALUMBRADO = 500;
+const MIN_POTENCIA_KW = 0.1;
+const MAX_POTENCIA_KW = 100;
 
-function parseTarifaNumber(raw) {
+const POTENCIA_PATTERNS = [
+  {
+    id: 'potencia_contratada_kw',
+    re: /Potencia\s+Contratada\s*:?\s*([\d.,]+)\s*kW?/gi,
+  },
+  {
+    id: 'potencia_contratada',
+    re: /Potencia\s+Contratada\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'potencia_suministro',
+    re: /\bPotencia\s+(?!Contratada\b)([\d.,]+)\s*kW?/gi,
+  },
+];
+
+const ALUMBRADO_PATTERNS = [
+  {
+    id: 'alumbrado_publico_camel',
+    re: /AlumbradoPublico(?:\s*\([^)]*\))?\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'alumbrado_publico',
+    re: /Alumbrado\s+P[úu]blico\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'alumbrado_publico_espaciado',
+    re: /Alumbrado\s+P[úu]blico[^\d]{0,24}([\d.,]+)/gi,
+  },
+];
+
+function parseDecimalNumber(raw, { min, max, decimals = 4 } = {}) {
   if (raw == null) return null;
   let s = String(raw).trim().replace(/\s/g, '');
   if (!s) return null;
@@ -53,8 +87,179 @@ function parseTarifaNumber(raw) {
   }
   const n = Number.parseFloat(s);
   if (!Number.isFinite(n)) return null;
-  if (n < MIN_TARIFA || n > MAX_TARIFA) return null;
-  return Math.round(n * 10000) / 10000;
+  if (min != null && n < min) return null;
+  if (max != null && n > max) return null;
+  const factor = 10 ** decimals;
+  return Math.round(n * factor) / factor;
+}
+
+function parseTarifaNumber(raw) {
+  return parseDecimalNumber(raw, { min: MIN_TARIFA, max: MAX_TARIFA, decimals: 4 });
+}
+
+function parseAlumbradoNumber(raw) {
+  return parseDecimalNumber(raw, { min: MIN_ALUMBRADO, max: MAX_ALUMBRADO, decimals: 2 });
+}
+
+function parsePotenciaKw(raw) {
+  return parseDecimalNumber(raw, { min: MIN_POTENCIA_KW, max: MAX_POTENCIA_KW, decimals: 2 });
+}
+
+function formatPotenciaContratada(kw) {
+  if (kw == null) return null;
+  return `${Number(kw).toFixed(2)} KW`;
+}
+
+function matchFirstPattern(source, patterns, parser) {
+  for (const { id, re } of patterns) {
+    re.lastIndex = 0;
+    const match = re.exec(source);
+    if (match) {
+      const value = parser(match[1]);
+      if (value != null) return { value, metodo: id };
+    }
+  }
+  return { value: null, metodo: null };
+}
+
+function extractPotenciaContratadaInverted(source) {
+  const markerRes = [
+    /Potencia\s+Contratada/i,
+    /\bPotencia\b(?!\s+Contratada)/i,
+  ];
+
+  for (const markerRe of markerRes) {
+    const marker = markerRe.exec(source);
+    if (!marker) continue;
+
+    const after = source.slice(marker.index, marker.index + 60);
+    const directAfter = /\bPotencia(?:\s+Contratada)?\s*:?\s*([\d.,]+)\s*kW?/i.exec(after);
+    if (directAfter) {
+      const val = parsePotenciaKw(directAfter[1]);
+      if (val != null) return val;
+    }
+
+    const before = source.slice(Math.max(0, marker.index - 400), marker.index);
+    const re = /([\d.,]+)\s*kW/gi;
+    let match;
+    let last = null;
+    while ((match = re.exec(before)) !== null) {
+      const val = parsePotenciaKw(match[1]);
+      if (val != null) last = val;
+    }
+    if (last != null) return last;
+  }
+
+  return null;
+}
+
+function extractPotenciaContratadaFromText(source) {
+  const direct = matchFirstPattern(source, POTENCIA_PATTERNS, parsePotenciaKw);
+  if (direct.value != null) {
+    return {
+      potencia_contratada: formatPotenciaContratada(direct.value),
+      metodo: direct.metodo,
+    };
+  }
+
+  const inverted = extractPotenciaContratadaInverted(source);
+  if (inverted != null) {
+    return {
+      potencia_contratada: formatPotenciaContratada(inverted),
+      metodo: 'potencia_columna_invertida',
+    };
+  }
+
+  return { potencia_contratada: null, metodo: null };
+}
+
+function collectDecimalAmounts(text) {
+  return [...String(text).matchAll(/(\d{1,4}[.,]\d{2})/g)]
+    .map((m) => parseAlumbradoNumber(m[1]))
+    .filter((n) => n != null);
+}
+
+/** Luz del Sur: etiquetas primero y bloque numérico después del SUBTOTAL. */
+function extractAlumbradoLabelsThenValues(source) {
+  const cargoIdx = source.search(/Cargo\s+Fijo/i);
+  const alumbradoIdx = source.search(/Alumbrado\s*P[úu]blico|AlumbradoPublico/i);
+  const subtotalIdx = source.search(/SUB\s*TOTAL|SUBTOTAL/i);
+  if (cargoIdx < 0 || alumbradoIdx < 0 || subtotalIdx < 0) return null;
+
+  const labelsChunk = source.slice(cargoIdx, subtotalIdx + 12);
+  const labelOrder = [];
+  const checks = [
+    [/Cargo\s+Fijo/i, 'cargo_fijo'],
+    [/Mant\.?\s*y\s+Reposici[oó]n/i, 'mant'],
+    [/Alumbrado\s*P[úu]blico|AlumbradoPublico/i, 'alumbrado'],
+    [/Inter[eé]s\s+Compensatorio/i, 'interes'],
+  ];
+  for (const [re, key] of checks) {
+    if (re.test(labelsChunk)) labelOrder.push(key);
+  }
+
+  const alumbradoLabelIdx = labelOrder.indexOf('alumbrado');
+  if (alumbradoLabelIdx < 0) return null;
+
+  const afterSubtotal = source.slice(subtotalIdx, subtotalIdx + 450);
+  const numbers = collectDecimalAmounts(afterSubtotal).filter((n) => n <= 500);
+  const slice = numbers.slice(0, labelOrder.length);
+  return slice[alumbradoLabelIdx] ?? null;
+}
+
+/** PLUZ: importes en columna antes de «SUBTOTAL Mes Actual». */
+function extractAlumbradoFromPluzLayout(source) {
+  const endIdx = source.search(/SUBTOTAL\s+Mes\s+Actual/i);
+  if (endIdx < 0) return null;
+
+  const window = source.slice(Math.max(0, endIdx - 450), endIdx);
+  const numbers = collectDecimalAmounts(window);
+
+  for (let i = numbers.length - 1; i >= 0; i -= 1) {
+    if (numbers[i] < 300) continue;
+
+    const block = numbers.slice(Math.max(0, i - 5), i);
+    const energyIdx = block.findIndex((n) => n >= 100 && n <= 500);
+    if (energyIdx >= 0 && energyIdx + 2 < block.length) {
+      const candidate = block[energyIdx + 2];
+      if (candidate >= 5 && candidate <= 200) return candidate;
+    }
+
+    const lastCharge = block[block.length - 1];
+    if (lastCharge >= 5 && lastCharge <= 200) return lastCharge;
+  }
+
+  return null;
+}
+
+function extractAlumbradoPublicoFromText(source) {
+  const direct = matchFirstPattern(source, ALUMBRADO_PATTERNS, parseAlumbradoNumber);
+  if (direct.value != null) {
+    return { alumbrado_publico: direct.value, metodo: direct.metodo };
+  }
+
+  const fromPluz = extractAlumbradoFromPluzLayout(source);
+  if (fromPluz != null) {
+    return { alumbrado_publico: fromPluz, metodo: 'alumbrado_columna_pluz' };
+  }
+
+  const fromLabelsThenValues = extractAlumbradoLabelsThenValues(source);
+  if (fromLabelsThenValues != null) {
+    return { alumbrado_publico: fromLabelsThenValues, metodo: 'alumbrado_columna_luz_sur' };
+  }
+
+  return { alumbrado_publico: null, metodo: null };
+}
+
+function buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico }) {
+  const parts = [];
+  if (tarifa_kwh != null) parts.push(`Tarifa: S/ ${tarifa_kwh.toFixed(4)}/kWh`);
+  if (potencia_contratada) parts.push(`Potencia: ${potencia_contratada}`);
+  if (alumbrado_publico != null) parts.push(`Alumbrado público: S/ ${alumbrado_publico.toFixed(2)}`);
+  if (!parts.length) {
+    return 'No se encontraron datos del recibo. Verifique que sea un PDF con texto o una foto nítida.';
+  }
+  return `Datos detectados: ${parts.join(' · ')}`;
 }
 
 /** Luz del Sur: etiqueta "Precio kWh (S/.)" — valor en columna o en "… = kWh X factor = kWh X tarifa". */
@@ -107,44 +312,81 @@ function extractLuzDelSurTarifa(source) {
 }
 
 function extractTarifaFromText(text) {
+  return extractDatosReciboFromText(text);
+}
+
+function extractDatosReciboFromText(text) {
   const source = String(text || '').replace(/\s+/g, ' ');
   if (!source.trim()) {
-    return { tarifa_kwh: null, metodo: null, message: 'No se pudo leer texto del archivo' };
+    return {
+      tarifa_kwh: null,
+      potencia_contratada: null,
+      alumbrado_publico: null,
+      metodo: null,
+      message: 'No se pudo leer texto del archivo',
+    };
   }
+
+  let tarifa_kwh = null;
+  let tarifaMetodo = null;
 
   for (const { id, re } of TARIFA_PATTERNS) {
     re.lastIndex = 0;
     const match = re.exec(source);
     if (match) {
-      const tarifa_kwh = parseTarifaNumber(match[1]);
-      if (tarifa_kwh != null) {
-        return {
-          tarifa_kwh,
-          metodo: id,
-          message: `Tarifa detectada: S/ ${tarifa_kwh.toFixed(4)} por kWh`,
-        };
+      const val = parseTarifaNumber(match[1]);
+      if (val != null) {
+        tarifa_kwh = val;
+        tarifaMetodo = id;
+        break;
       }
     }
   }
 
-  const luzDelSur = extractLuzDelSurTarifa(source);
-  if (luzDelSur != null) {
+  if (tarifa_kwh == null) {
+    const luzDelSur = extractLuzDelSurTarifa(source);
+    if (luzDelSur != null) {
+      tarifa_kwh = luzDelSur;
+      tarifaMetodo = 'precio_kwh_luz_sur';
+    }
+  }
+
+  const { potencia_contratada, metodo: potenciaMetodo } = extractPotenciaContratadaFromText(source);
+  const { alumbrado_publico, metodo: alumbradoMetodo } = extractAlumbradoPublicoFromText(source);
+
+  const message = buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico });
+
+  if (tarifa_kwh == null) {
     return {
-      tarifa_kwh: luzDelSur,
-      metodo: 'precio_kwh_luz_sur',
-      message: `Tarifa detectada: S/ ${luzDelSur.toFixed(4)} por kWh`,
+      tarifa_kwh: null,
+      potencia_contratada,
+      alumbrado_publico,
+      metodo: null,
+      metodos: { tarifa: null, potencia: potenciaMetodo, alumbrado: alumbradoMetodo },
+      message: tarifa_kwh == null && (potencia_contratada || alumbrado_publico != null)
+        ? `${message}. No se encontró la tarifa en el recibo.`
+        : 'No se encontró la tarifa en el recibo. Verifique que sea un PDF con texto o una foto nítida.',
     };
   }
 
   return {
-    tarifa_kwh: null,
-    metodo: null,
-    message: 'No se encontró la tarifa en el recibo. Verifique que sea un PDF con texto o una foto nítida.',
+    tarifa_kwh,
+    potencia_contratada,
+    alumbrado_publico,
+    metodo: tarifaMetodo,
+    metodos: { tarifa: tarifaMetodo, potencia: potenciaMetodo, alumbrado: alumbradoMetodo },
+    message,
   };
 }
 
 module.exports = {
   extractTarifaFromText,
+  extractDatosReciboFromText,
   parseTarifaNumber,
+  parseAlumbradoNumber,
+  parsePotenciaKw,
+  formatPotenciaContratada,
   TARIFA_PATTERNS,
+  POTENCIA_PATTERNS,
+  ALUMBRADO_PATTERNS,
 };

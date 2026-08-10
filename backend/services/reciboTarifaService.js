@@ -1,6 +1,6 @@
 const pdf = require('pdf-parse');
 const { createWorker } = require('tesseract.js');
-const { extractTarifaFromText } = require('../helpers/reciboTarifaExtractor');
+const { extractDatosReciboFromText } = require('../helpers/reciboTarifaExtractor');
 const { resolveReciboMimeType } = require('../helpers/reciboMimeType');
 
 let ocrWorkerPromise = null;
@@ -48,12 +48,17 @@ async function extractTextFromBuffer(buffer, mimetype, filename) {
   throw new Error('Formato no soportado. Use PDF o imagen (JPEG, JPG o PNG).');
 }
 
-async function extractTarifaFromRecibo(buffer, mimetype, filename) {
+async function extractDatosFromRecibo(buffer, mimetype, filename) {
   const text = await extractTextFromBuffer(buffer, mimetype, filename);
-  return extractTarifaFromText(text);
+  return extractDatosReciboFromText(text);
+}
+
+async function extractTarifaFromRecibo(buffer, mimetype, filename) {
+  return extractDatosFromRecibo(buffer, mimetype, filename);
 }
 
 module.exports = {
   extractTarifaFromRecibo,
+  extractDatosFromRecibo,
   extractTextFromBuffer,
 };

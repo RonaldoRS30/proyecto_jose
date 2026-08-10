@@ -15,6 +15,11 @@ const MIGRATIONS = [
     column: 'tipo_cliente',
     sql: "ALTER TABLE clientes ADD COLUMN tipo_cliente ENUM('natural','empresa') NOT NULL DEFAULT 'natural' AFTER tarifa_kwh",
   },
+  {
+    table: 'clientes',
+    column: 'alumbrado_publico',
+    sql: 'ALTER TABLE clientes ADD COLUMN alumbrado_publico DECIMAL(10,2) NULL AFTER potencia_contratada',
+  },
 ];
 
 async function columnExists(conn, dbName, table, column) {

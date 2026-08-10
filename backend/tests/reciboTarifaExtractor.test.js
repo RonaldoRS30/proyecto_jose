@@ -1,5 +1,8 @@
 const assert = require('assert');
-const { extractTarifaFromText } = require('../helpers/reciboTarifaExtractor');
+const {
+  extractTarifaFromText,
+  extractDatosReciboFromText,
+} = require('../helpers/reciboTarifaExtractor');
 
 const samples = [
   {
@@ -76,3 +79,71 @@ for (const sample of samples) {
 }
 
 console.log(`reciboTarifaExtractor: ${passed}/${samples.length} OK`);
+
+const extraSamples = [
+  {
+    name: 'Luz del Sur potencia contratada',
+    text: 'DATOS DEL SUMINISTRO Potencia Contratada 3.00 kW Medidor MONOFÁSICO',
+    potencia: '3.00 KW',
+    alumbrado: null,
+  },
+  {
+    name: 'Potencia contratada sin kW',
+    text: 'Potencia Contratada: 5.00 KW Tarifa BT5B Residencial',
+    potencia: '5.00 KW',
+    alumbrado: null,
+  },
+  {
+    name: 'Alumbrado público detalle importes',
+    text: 'DETALLE DE IMPORTES Alumbrado Público 28.00 SUBTOTAL Mes Actual',
+    potencia: null,
+    alumbrado: 28,
+  },
+  {
+    name: 'Alumbrado público factura PDF',
+    text: 'Alumbrado público 12.60 SUBTOTAL IGV',
+    potencia: null,
+    alumbrado: 12.6,
+  },
+  {
+    name: 'Luz del Sur labels luego importes',
+    text: 'Cargo Fijo Mant. y Reposición de Conexión Alumbrado Público Interés Compensatorio SUBTOTAL 2.26 1.68 17.64 0.82 301.62',
+    tarifa: null,
+    potencia: null,
+    alumbrado: 17.64,
+  },
+  {
+    name: 'PLUZ columnas invertidas',
+    text: 'CH-20 3.00 kW MONOFÁSICO Alimentador Potencia Contratada 663kWh al precio de S/ 0.6291 1.69 2.34 417.09 1.91 28.00 451.03 SUBTOTAL Mes Actual Cargo Fijo Alumbrado Público',
+    tarifa: 0.6291,
+    potencia: '3.00 KW',
+    alumbrado: 28,
+  },
+  {
+    name: 'Electrocentro Potencia y AlumbradoPublico',
+    text: 'DATOS DEL SUMINISTRO DE CONSUMO Potencia 0.85 kW Consumo 2.00 kWh IMPORTES FACTURADOS Cargo Fijo 3.55 Ene.Activa(S/ 0.3462 x 2.0000 kWh) 0.69 AlumbradoPublico (Alicuota : S/ 0.7368) 0.74 Interés Compensatorio 0.02 SUB TOTAL 5.00',
+    tarifa: 0.3462,
+    potencia: '0.85 KW',
+    alumbrado: 0.74,
+  },
+  {
+    name: 'Electrocentro AlumbradoPublico sin paréntesis',
+    text: 'Potencia 1.20 kW AlumbradoPublico 12.35 SUB TOTAL',
+    tarifa: null,
+    potencia: '1.20 KW',
+    alumbrado: 12.35,
+  },
+];
+
+let extraPassed = 0;
+for (const sample of extraSamples) {
+  const result = extractDatosReciboFromText(sample.text);
+  if (sample.tarifa != null) {
+    assert.strictEqual(result.tarifa_kwh, sample.tarifa, `${sample.name} tarifa`);
+  }
+  assert.strictEqual(result.potencia_contratada, sample.potencia, `${sample.name} potencia`);
+  assert.strictEqual(result.alumbrado_publico, sample.alumbrado, `${sample.name} alumbrado`);
+  extraPassed += 1;
+}
+
+console.log(`reciboTarifaExtractor extras: ${extraPassed}/${extraSamples.length} OK`);

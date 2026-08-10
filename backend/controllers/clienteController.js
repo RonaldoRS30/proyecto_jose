@@ -66,13 +66,30 @@ const miPerfil = asyncHandler(async (req, res) => {
 
 const actualizarMiTarifa = asyncHandler(async (req, res) => {
   const clienteId = req.user.clienteId || req.user.id;
-  const { tarifa_kwh } = req.body;
-  if (tarifa_kwh !== null && tarifa_kwh !== undefined && (isNaN(tarifa_kwh) || Number(tarifa_kwh) < 0)) {
-    return res.status(400).json({ success: false, message: 'Tarifa inválida' });
+  const { tarifa_kwh, potencia_contratada, alumbrado_publico } = req.body;
+
+  const payload = {};
+  if (tarifa_kwh !== undefined) {
+    if (tarifa_kwh !== null && (isNaN(tarifa_kwh) || Number(tarifa_kwh) < 0)) {
+      return res.status(400).json({ success: false, message: 'Tarifa inválida' });
+    }
+    payload.tarifa_kwh = tarifa_kwh === null || tarifa_kwh === '' ? null : parseFloat(tarifa_kwh);
   }
-  const cliente = await clienteService.actualizarCliente(clienteId, {
-    tarifa_kwh: tarifa_kwh ? parseFloat(tarifa_kwh) : null,
-  });
+  if (potencia_contratada !== undefined) {
+    payload.potencia_contratada = potencia_contratada == null || potencia_contratada === ''
+      ? null
+      : String(potencia_contratada).trim();
+  }
+  if (alumbrado_publico !== undefined) {
+    if (alumbrado_publico !== null && alumbrado_publico !== '' && (isNaN(alumbrado_publico) || Number(alumbrado_publico) < 0)) {
+      return res.status(400).json({ success: false, message: 'Alumbrado público inválido' });
+    }
+    payload.alumbrado_publico = alumbrado_publico === null || alumbrado_publico === ''
+      ? null
+      : parseFloat(alumbrado_publico);
+  }
+
+  const cliente = await clienteService.actualizarCliente(clienteId, payload);
   res.json({ success: true, data: cliente });
 });
 

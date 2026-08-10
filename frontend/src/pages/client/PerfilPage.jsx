@@ -12,6 +12,8 @@ export default function PerfilPage() {
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tarifaInput, setTarifaInput] = useState('');
+  const [potenciaInput, setPotenciaInput] = useState('');
+  const [alumbradoInput, setAlumbradoInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [extractingTarifa, setExtractingTarifa] = useState(false);
@@ -22,6 +24,8 @@ export default function PerfilPage() {
       .then(({ data }) => {
         setCliente(data.data);
         setTarifaInput(data.data.tarifa_kwh ?? '');
+        setPotenciaInput(data.data.potencia_contratada ?? '');
+        setAlumbradoInput(data.data.alumbrado_publico ?? '');
       })
       .finally(() => setLoading(false));
   };
@@ -36,7 +40,12 @@ export default function PerfilPage() {
     setSaved(false);
     try {
       const val = tarifaInput === '' ? null : parseFloat(tarifaInput);
-      const { data } = await updateMiTarifa(val);
+      const payload = {
+        tarifa_kwh: val,
+        potencia_contratada: potenciaInput.trim() || null,
+        alumbrado_publico: alumbradoInput === '' ? null : parseFloat(alumbradoInput),
+      };
+      const { data } = await updateMiTarifa(payload);
       setCliente(data.data);
       setTarifaDesdeRecibo(false);
       await Promise.all([refreshPreview(), refreshCalculos()]);
@@ -51,6 +60,8 @@ export default function PerfilPage() {
 
   const tarifaChanged = cliente
     ? tarifaValuesDiffer(cliente.tarifa_kwh, tarifaInput)
+      || (cliente.potencia_contratada || '') !== (potenciaInput || '')
+      || String(cliente.alumbrado_publico ?? '') !== String(alumbradoInput === '' ? '' : alumbradoInput)
     : false;
 
   const tarifaPendiente = tarifaChanged && !extractingTarifa && !saving;
@@ -94,6 +105,35 @@ export default function PerfilPage() {
                 />
               </div>
             </div>
+            <div style={{ flex: '0 0 auto' }}>
+              <label style={{ fontSize: '13px', color: '#a0aec0', display: 'block', marginBottom: '6px' }}>
+                Potencia contratada
+              </label>
+              <input
+                className="form-control"
+                style={{ width: '160px', padding: '8px 12px' }}
+                value={potenciaInput}
+                onChange={(e) => setPotenciaInput(e.target.value)}
+                placeholder="Ej. 3.00 KW"
+                disabled={extractingTarifa}
+              />
+            </div>
+            <div style={{ flex: '0 0 auto' }}>
+              <label style={{ fontSize: '13px', color: '#a0aec0', display: 'block', marginBottom: '6px' }}>
+                Alumbrado público (S/)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-control"
+                style={{ width: '160px', padding: '8px 12px' }}
+                value={alumbradoInput}
+                onChange={(e) => setAlumbradoInput(e.target.value)}
+                placeholder="Ej. 12.60"
+                disabled={extractingTarifa}
+              />
+            </div>
             <div style={{ flex: '1', display: 'flex', alignItems: 'flex-end', gap: '8px', paddingTop: '22px' }}>
               <button
                 className="btn btn-primary"
@@ -126,8 +166,10 @@ export default function PerfilPage() {
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <ReciboTarifaUploader
-              onTarifaDetected={(tarifa) => {
-                setTarifaInput(String(tarifa));
+              onDatosDetected={(datos) => {
+                if (datos.tarifa_kwh != null) setTarifaInput(String(datos.tarifa_kwh));
+                if (datos.potencia_contratada) setPotenciaInput(datos.potencia_contratada);
+                if (datos.alumbrado_publico != null) setAlumbradoInput(String(datos.alumbrado_publico));
                 setTarifaDesdeRecibo(true);
               }}
               onExtractingChange={setExtractingTarifa}
@@ -155,14 +197,14 @@ export default function PerfilPage() {
               <span>
                 {tarifaDesdeRecibo
                   ? 'Subió un recibo y la tarifa fue detectada, pero aún no la ha guardado. Pulse «Guardar Tarifa» antes de salir de este módulo.'
-                  : 'Tiene cambios en la tarifa sin guardar. Pulse «Guardar Tarifa» antes de cambiar de módulo.'}
+                  : 'Tiene cambios sin guardar (tarifa, potencia o alumbrado). Pulse «Guardar Tarifa» antes de cambiar de módulo.'}
               </span>
             </div>
           )}
 
           <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
-            <strong>⚡ Importante:</strong> Al guardar la tarifa, los gastos en Inicio, Dashboard y Reportes
-            se actualizan al instante.
+            <strong>⚡ Importante:</strong> Al guardar, la tarifa y el alumbrado público del recibo se usan en los cálculos y reportes PDF.
+            La potencia contratada aparece en el PDF del cliente.
             <br />
           </div>
         </div>
@@ -221,8 +263,16 @@ export default function PerfilPage() {
               </span>
             </div>
             <div className="profile-field">
-              <span className="profile-field-label">Potencia</span>
-              <span>{cliente.potencia_contratada}</span>
+              <span className="profile-field-label">Potencia contratada</span>
+              <span>{cliente.potencia_contratada || '—'}</span>
+            </div>
+            <div className="profile-field">
+              <span className="profile-field-label">Alumbrado público</span>
+              <span>
+                {cliente.alumbrado_publico != null && cliente.alumbrado_publico !== ''
+                  ? `S/ ${cliente.alumbrado_publico}`
+                  : 'Global (configuración del sistema)'}
+              </span>
             </div>
             <div className="profile-field">
               <span className="profile-field-label">Medidor</span>

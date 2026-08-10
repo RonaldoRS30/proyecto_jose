@@ -3,7 +3,12 @@ import { Upload, Camera, Loader2 } from 'lucide-react';
 import { extraerTarifaRecibo } from '../services/api';
 import { RECIBO_ACCEPT, isReciboFileAllowed } from '../utils/reciboTarifaUpload';
 
-export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingChange, disabled = false }) {
+export default function ReciboTarifaUploader({
+  onTarifaDetected,
+  onDatosDetected,
+  onExtractingChange,
+  disabled = false,
+}) {
   const [extracting, setExtracting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -11,6 +16,13 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
   const setExtractingState = (value) => {
     setExtracting(value);
     onExtractingChange?.(value);
+  };
+
+  const emitDatos = (datos) => {
+    onDatosDetected?.(datos);
+    if (datos.tarifa_kwh != null) {
+      onTarifaDetected?.(datos.tarifa_kwh);
+    }
   };
 
   const handleFile = async (e) => {
@@ -30,16 +42,19 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
 
     try {
       const { data } = await extraerTarifaRecibo(file);
-      const tarifa = data.data?.tarifa_kwh;
-      if (tarifa == null) {
-        setError(data.message || 'No se encontró la tarifa en el recibo.');
+      const datos = data.data || {};
+      if (datos.tarifa_kwh == null) {
+        setError(data.message || datos.message || 'No se encontró la tarifa en el recibo.');
+        if (datos.potencia_contratada || datos.alumbrado_publico != null) {
+          emitDatos(datos);
+        }
         return;
       }
-      onTarifaDetected?.(tarifa);
-      setMessage(data.data.message || `Tarifa detectada: S/ ${tarifa} por kWh`);
+      emitDatos(datos);
+      setMessage(datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`);
     } catch (err) {
       setError(
-        err.response?.data?.message || 'No se pudo leer la tarifa. Intente con otro archivo o ingrésela manualmente.',
+        err.response?.data?.message || 'No se pudo leer el recibo. Intente con otro archivo o ingrese los datos manualmente.',
       );
     } finally {
       setExtractingState(false);
@@ -51,7 +66,7 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
   return (
     <div className="recibo-tarifa-uploader">
       <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#a0aec0' }}>
-        Detectar tarifa desde recibo de luz
+        Detectar datos desde recibo de luz
       </label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <label
@@ -116,11 +131,11 @@ export default function ReciboTarifaUploader({ onTarifaDetected, onExtractingCha
           }}
         >
           <Loader2 size={18} className="spin" />
-          <span>Leyendo recibo y detectando tarifa…</span>
+          <span>Leyendo recibo y detectando tarifa, potencia y alumbrado público…</span>
         </div>
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
-        PDF, JPEG, JPG o PNG. Compatible con PRECIO UNIT. S/. /kW.h, Precio kWh (S/.), Ene.Activa, etc.
+        Extrae tarifa (S/kWh), potencia contratada y alumbrado público del recibo.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

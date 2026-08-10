@@ -21,7 +21,7 @@ const rowNumber = (page, index) => (page - 1) * PAGE_SIZE + index + 1;
 const emptyForm = {
   nombre: '', apellido: '', documento: '', email: '', telefono: '',
   direccion: '', empresa_distribuidora: 'Luz del Sur', tarifa: 'BT5B residencial',
-  potencia_contratada: '10 KW', medidor: '3φ - 3 hilos', notas: '',
+  potencia_contratada: '10 KW', alumbrado_publico: '', medidor: '3φ - 3 hilos', notas: '',
   tipo_cliente: 'natural',
 };
 
@@ -545,8 +545,13 @@ export default function ClientesPage() {
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <ReciboTarifaUploader
                 key={editId ?? 'new'}
-                onTarifaDetected={(tarifa) => {
-                  setForm((prev) => ({ ...prev, tarifa_kwh: tarifa }));
+                onDatosDetected={(datos) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    ...(datos.tarifa_kwh != null ? { tarifa_kwh: datos.tarifa_kwh } : {}),
+                    ...(datos.potencia_contratada ? { potencia_contratada: datos.potencia_contratada } : {}),
+                    ...(datos.alumbrado_publico != null ? { alumbrado_publico: datos.alumbrado_publico } : {}),
+                  }));
                   setTarifaDesdeRecibo(true);
                 }}
                 onExtractingChange={setExtractingTarifa}
@@ -593,6 +598,34 @@ export default function ClientesPage() {
                 })}
                 placeholder="Ej. 0.613"
                 required
+                disabled={extractingTarifa}
+              />
+            </div>
+            <div className="form-group">
+              <label>Potencia contratada</label>
+              <input
+                className="form-control"
+                value={form.potencia_contratada || ''}
+                onChange={(e) => setForm({ ...form, potencia_contratada: e.target.value })}
+                placeholder="Ej. 3.00 KW"
+                disabled={extractingTarifa}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Alumbrado público (S/)</label>
+              <input
+                className="form-control"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.alumbrado_publico ?? ''}
+                onChange={(e) => setForm({
+                  ...form,
+                  alumbrado_publico: e.target.value === '' ? '' : parseFloat(e.target.value),
+                })}
+                placeholder="Ej. 12.60"
                 disabled={extractingTarifa}
               />
             </div>
