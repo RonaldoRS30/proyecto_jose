@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Plug, Zap, DollarSign, TrendingUp, Calculator,
-  CalendarDays, RefreshCw, BarChart2,
+  Plug, Zap, DollarSign, Calculator, Ghost, Lightbulb,
+  Receipt, BarChart3, AlertTriangle, History, ChevronRight, BarChart2, TrendingUp,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -10,59 +10,56 @@ import {
 } from 'recharts';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
+import DashboardTabs from '../../components/DashboardTabs';
+import DashboardChartFilters from '../../components/DashboardChartFilters';
 import {
   ConsumoPorEquipoChart, ConsumoPorCategoriaChart, ConsumoMensualChart,
-  GastoPorEquipoChart, GastoResumenChart,
+  GastoPorEquipoChart, GastoResumenChart, EvolucionHistoricaChart,
 } from '../../components/ConsumoCharts';
 import FacturaBreakdown from '../../components/FacturaBreakdown';
 import ExcedentesPotenciaAlert from '../../components/ExcedentesPotenciaAlert';
 import { useCalculo } from '../../contexts/CalculoContext';
 import { useAlert } from '../../contexts/ConfirmContext';
 import { getCalculos } from '../../services/api';
-import { formatNumber, formatCurrency, MODULOS, roundNumber } from '../../utils/helpers';
+import {
+  formatNumber, formatCurrency, MODULOS, roundNumber, formatDate,
+} from '../../utils/helpers';
+import {
+  getChartPresetDates, aggregateCalculosByMonth,
+} from '../../utils/chartPeriodFilters';
 
-const PRESETS = [
-  { label: 'Esta semana', value: 'semana' },
-  { label: 'Este mes', value: 'mes' },
-  { label: 'Mes pasado', value: 'mes_pasado' },
-  { label: 'Últimos 3 meses', value: '3meses' },
-  { label: 'Últimos 6 meses', value: '6meses' },
-  { label: 'Este año', value: 'anio' },
-  { label: 'Todo', value: 'todo' },
+const ACTUAL_CHART_OPTIONS = [
+  { id: 'gasto-equipo', label: 'Gasto por equipo' },
+  { id: 'consumo-equipo', label: 'Consumo por equipo' },
+  { id: 'categoria', label: 'Por categoría' },
+  { id: 'modulo', label: 'Por módulo' },
+  { id: 'resumen-gasto', label: 'Resumen de gastos' },
 ];
 
-const getPresetDates = (preset) => {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = now.getMonth();
-  const dd = now.getDate();
-  const fmt = (d) => d.toISOString().slice(0, 10);
-  switch (preset) {
-    case 'semana': {
-      const day = now.getDay();
-      return { desde: fmt(new Date(yyyy, mm, dd - (day === 0 ? 6 : day - 1))), hasta: fmt(now) };
-    }
-    case 'mes': return { desde: fmt(new Date(yyyy, mm, 1)), hasta: fmt(now) };
-    case 'mes_pasado': return { desde: fmt(new Date(yyyy, mm - 1, 1)), hasta: fmt(new Date(yyyy, mm, 0)) };
-    case '3meses': return { desde: fmt(new Date(yyyy, mm - 2, 1)), hasta: fmt(now) };
-    case '6meses': return { desde: fmt(new Date(yyyy, mm - 5, 1)), hasta: fmt(now) };
-    case 'anio': return { desde: fmt(new Date(yyyy, 0, 1)), hasta: fmt(now) };
-    default: return { desde: '', hasta: '' };
-  }
+const HISTORIAL_CHART_OPTIONS = [
+  { id: 'evolucion', label: 'Evolución por cálculo' },
+  { id: 'consumo-promedio', label: 'Consumo promedio / mes' },
+  { id: 'gasto-periodo', label: 'Gasto y n° cálculos' },
+];
+
+const MODULO_LINKS = [
+  { key: 'aparatos', path: '/cliente/electrodomesticos', icon: Plug, modKey: 'aparato' },
+  { key: 'iluminacion', path: '/cliente/iluminacion', icon: Lightbulb, modKey: 'iluminacion' },
+  { key: 'fantasma', path: '/cliente/fantasma', icon: Ghost, modKey: 'fantasma' },
+];
+
+const historialTooltipStyle = {
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  fontSize: '13px',
 };
 
-const formatMesLabel = (fechaStr) => {
-  if (!fechaStr) return '';
-  const d = new Date(fechaStr);
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  return `${months[d.getMonth()]} ${d.getFullYear()}`;
-};
-
-const CustomTooltip = ({ active, payload, label }) => {
+function HistorialTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#1a1a2e', border: '1px solid #2b2b40', borderRadius: '8px', padding: '10px 14px', fontSize: '13px' }}>
-      <p style={{ color: '#aaa', margin: '0 0 6px' }}>{label}</p>
+    <div style={historialTooltipStyle}>
+      <p style={{ color: 'var(--text-muted)', margin: '0 0 6px' }}>{label}</p>
       {payload.map((entry) => (
         <p key={entry.name} style={{ color: entry.color, margin: '2px 0' }}>
           {entry.name}: <strong>{entry.value}</strong>
@@ -70,15 +67,28 @@ const CustomTooltip = ({ active, payload, label }) => {
       ))}
     </div>
   );
-};
+}
 
 export default function ClientDashboard() {
   const alert = useAlert();
+  const [activeTab, setActiveTab] = useState('resumen');
+  const [activeChart, setActiveChart] = useState('gasto-equipo');
+  const [dataSource, setDataSource] = useState('actual');
+  const [moduloFilter, setModuloFilter] = useState('todos');
+  const [preset, setPreset] = useState('6meses');
+  const [customDesde, setCustomDesde] = useState('');
+  const [customHasta, setCustomHasta] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
+  const [historialRaw, setHistorialRaw] = useState([]);
+  const [historialByMonth, setHistorialByMonth] = useState([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+
   const {
     loading,
     calculating,
     ejecutarCalculo,
     hasEquipos,
+    hasCambiosSinGuardar,
     resumenGeneral: rg,
     modulos,
     factura,
@@ -89,51 +99,57 @@ export default function ClientDashboard() {
     excedentesPotencia,
   } = useCalculo();
 
-  const [preset, setPreset] = useState('6meses');
-  const [customDesde, setCustomDesde] = useState('');
-  const [customHasta, setCustomHasta] = useState('');
-  const [isCustom, setIsCustom] = useState(false);
-  const [historialData, setHistorialData] = useState([]);
-  const [historialLoading, setHistorialLoading] = useState(false);
-
   const fetchHistorial = useCallback(async () => {
     setHistorialLoading(true);
     try {
-      let desde, hasta;
-      if (isCustom) { desde = customDesde; hasta = customHasta; }
-      else { const d = getPresetDates(preset); desde = d.desde; hasta = d.hasta; }
+      let desde;
+      let hasta;
+      if (isCustom) {
+        desde = customDesde;
+        hasta = customHasta;
+      } else {
+        const d = getChartPresetDates(preset);
+        desde = d.desde;
+        hasta = d.hasta;
+      }
 
       const params = { page: 1, limit: 100 };
       if (desde) params.fecha_desde = desde;
       if (hasta) params.fecha_hasta = hasta;
 
       const { data } = await getCalculos(params);
-      const calculos = (data.data ?? []).reverse();
-
-      // Aggregate by month
-      const byMonth = {};
-      calculos.forEach((c) => {
-        const key = formatMesLabel(c.created_at);
-        if (!byMonth[key]) byMonth[key] = { mes: key, consumoMes: 0, gastoMensual: 0, count: 0 };
-        byMonth[key].consumoMes += parseFloat(c.consumo_mes_total) || 0;
-        byMonth[key].gastoMensual += parseFloat(c.gasto_mensual_total) || 0;
-        byMonth[key].count += 1;
-      });
-
-      setHistorialData(Object.values(byMonth).map((row) => ({
-        mes: row.mes,
-        consumoMes: Math.round((row.consumoMes / row.count) * 100) / 100,
-        gastoMensual: Math.round((row.gastoMensual / row.count) * 100) / 100,
-        totalCalculos: row.count,
-      })));
+      const calculos = data.data ?? [];
+      setHistorialRaw([...calculos].reverse());
+      setHistorialByMonth(aggregateCalculosByMonth(calculos));
     } catch (e) {
       console.error(e);
+      setHistorialRaw([]);
+      setHistorialByMonth([]);
     } finally {
       setHistorialLoading(false);
     }
   }, [preset, isCustom, customDesde, customHasta]);
 
-  useEffect(() => { fetchHistorial(); }, [fetchHistorial, precioKwh]);
+  useEffect(() => {
+    if (activeTab === 'graficos' && dataSource === 'historial') {
+      fetchHistorial();
+    }
+  }, [activeTab, dataSource, fetchHistorial, precioKwh, ultimoCalculo?.id]);
+
+  const handleDataSourceChange = (source) => {
+    setDataSource(source);
+    setActiveChart(source === 'historial' ? 'evolucion' : 'gasto-equipo');
+  };
+
+  const handlePreset = (p) => {
+    setPreset(p);
+    setIsCustom(false);
+  };
+
+  const handleCustomApply = () => {
+    setIsCustom(true);
+    setPreset('');
+  };
 
   const handleCalcular = async () => {
     try {
@@ -147,12 +163,13 @@ export default function ClientDashboard() {
     }
   };
 
-  const handlePreset = (p) => { setPreset(p); setIsCustom(false); };
-  const handleCustomApply = () => { setIsCustom(true); setPreset(''); };
-
   if (loading) return <div className="loading">Cargando dashboard...</div>;
 
-  const chartEquipos = dispositivos.map((d) => ({
+  const filteredDispositivos = moduloFilter === 'todos'
+    ? dispositivos
+    : dispositivos.filter((d) => d.modulo === moduloFilter);
+
+  const chartEquipos = filteredDispositivos.map((d) => ({
     nombre: d.nombre?.substring(0, 16),
     consumoMes: d.consumoMes,
     gastoDiario: d.gastoDiario,
@@ -167,26 +184,145 @@ export default function ClientDashboard() {
   ] : [];
 
   const chartCategorias = hasEquipos ? Object.entries(
-    dispositivos.reduce((acc, d) => {
+    filteredDispositivos.reduce((acc, d) => {
       acc[d.categoria] = (acc[d.categoria] || 0) + d.consumoMes;
       return acc;
-    }, {})
+    }, {}),
   ).map(([name, value]) => ({ name, value: roundNumber(value) })) : [];
 
-  const chartModulos = hasEquipos ? Object.entries(modulos).map(([key, val]) => ({
-    modulo: MODULOS[key]?.label || key,
-    consumoMes: val.totales?.consumoMes || 0,
-    gastoMensual: val.totales?.gastoMensual || 0,
-  })) : [];
+  const chartModulos = hasEquipos ? Object.entries(modulos)
+    .filter(([key]) => {
+      if (moduloFilter === 'todos') return true;
+      const map = { aparatos: 'aparato', iluminacion: 'iluminacion', fantasma: 'fantasma' };
+      return map[key] === moduloFilter;
+    })
+    .map(([key, val]) => ({
+      modulo: MODULOS[key]?.label || key,
+      consumoMes: val.totales?.consumoMes || 0,
+      gastoMensual: val.totales?.gastoMensual || 0,
+    })) : [];
+
+  const evolucionData = historialRaw.map((c) => ({
+    fecha: new Date(c.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }),
+    consumoMes: parseFloat(c.consumo_mes_total) || 0,
+    gastoDiario: parseFloat(c.gasto_diario_total) || 0,
+    gastoMensual: parseFloat(c.gasto_mensual_total) || 0,
+    gastoAnual: parseFloat(c.gasto_anual_total) || 0,
+  }));
+
+  const alertCount = excedentesPotencia?.length ?? 0;
+  const chartOptions = dataSource === 'historial' ? HISTORIAL_CHART_OPTIONS : ACTUAL_CHART_OPTIONS;
+  const showModuloFilter = ['gasto-equipo', 'consumo-equipo', 'categoria'].includes(activeChart);
+
+  const tabs = [
+    { id: 'resumen', label: 'Resumen', icon: Zap },
+    { id: 'factura', label: 'Factura', icon: Receipt },
+    { id: 'graficos', label: 'Gráficos', icon: BarChart3 },
+    { id: 'alertas', label: 'Alertas', icon: AlertTriangle, badge: alertCount },
+  ];
+
+  const renderActualChart = () => {
+    if (!hasEquipos) {
+      return (
+        <div className="dashboard-empty">
+          <p>Registre equipos en los módulos para ver gráficos.</p>
+        </div>
+      );
+    }
+    if (chartEquipos.length === 0 && showModuloFilter && moduloFilter !== 'todos') {
+      return (
+        <div className="dashboard-empty">
+          <p>No hay equipos en el módulo seleccionado.</p>
+        </div>
+      );
+    }
+    switch (activeChart) {
+      case 'consumo-equipo':
+        return <ConsumoPorEquipoChart data={chartEquipos} />;
+      case 'categoria':
+        return <ConsumoPorCategoriaChart data={chartCategorias} />;
+      case 'modulo':
+        return <ConsumoMensualChart data={chartModulos} />;
+      case 'resumen-gasto':
+        return <GastoResumenChart data={chartGastosResumen} />;
+      default:
+        return <GastoPorEquipoChart data={chartEquipos} />;
+    }
+  };
+
+  const renderHistorialChart = () => {
+    if (historialLoading) {
+      return <div className="loading" style={{ minHeight: 200 }}>Cargando historial...</div>;
+    }
+    if (!historialRaw.length) {
+      return (
+        <div className="dashboard-empty">
+          <BarChart2 size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.4 }} />
+          <p>No hay cálculos en el período seleccionado.</p>
+          <p style={{ fontSize: '0.8125rem', marginTop: '0.5rem' }}>
+            Cambie el filtro de período o ejecute un cálculo desde Inicio.
+          </p>
+        </div>
+      );
+    }
+    switch (activeChart) {
+      case 'consumo-promedio':
+        return (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={historialByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+              <defs>
+                <linearGradient id="dashColorKwh" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1A4AB0" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#1A4AB0" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <Tooltip content={<HistorialTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="consumoMes"
+                name="kWh prom."
+                stroke="#1A4AB0"
+                fill="url(#dashColorKwh)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        );
+      case 'gasto-periodo':
+        return (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={historialByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <Tooltip content={<HistorialTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar yAxisId="left" dataKey="gastoMensual" name="Gasto (S/)" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="right" dataKey="totalCalculos" name="N° cálculos" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      default:
+        return (
+          <div className="chart-evolucion-wrap">
+            <EvolucionHistoricaChart data={evolucionData} />
+          </div>
+        );
+    }
+  };
 
   return (
-    <div>
+    <div className="client-dashboard">
       <PageHeader
         title="Inicio"
         subtitle={
           ultimoCalculo
-            ? 'Centro de control — un solo cálculo para todos los módulos'
-            : 'Registre equipos y ejecute el cálculo para sincronizar todo el sistema'
+            ? `Último cálculo: ${formatDate(ultimoCalculo.created_at)}`
+            : 'Registre equipos y ejecute el cálculo para sincronizar el sistema'
         }
         action={{
           label: 'Ejecutar Cálculo',
@@ -197,186 +333,166 @@ export default function ClientDashboard() {
         }}
       />
 
-      {/* Tarifa kWh destacada (solo lectura) */}
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #e11d48' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: 'rgba(225, 29, 72, 0.12)', borderRadius: '10px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Zap size={20} style={{ color: '#e11d48' }} />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 500 }}>Tarifa kWh (S/)</div>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: '#e11d48', letterSpacing: '-0.5px' }}>
-              S/ {precioKwh ?? 0.613}
+      <DashboardTabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} />
+
+      <div className="dashboard-panel" role="tabpanel">
+        {activeTab === 'resumen' && (
+          <div className="dashboard-resumen">
+            <div className="dashboard-context-bar">
+              <div className="dashboard-tarifa-pill">
+                <Zap size={16} aria-hidden />
+                <span>Tarifa kWh:</span>
+                <strong>S/ {precioKwh ?? 0.613}</strong>
+                <small>{tarifaFuente === 'cliente' ? 'Personalizada' : 'Global'}</small>
+              </div>
+              {hasCambiosSinGuardar && (
+                <span className="dashboard-status-chip dashboard-status-chip--warn">
+                  Cambios sin guardar — ejecute cálculo
+                </span>
+              )}
+              <Link to="/cliente/perfil" className="dashboard-link-sm">Editar tarifa →</Link>
             </div>
-            <div style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
-              {tarifaFuente === 'cliente' ? 'Tarifa personalizada' : 'Tarifa global del sistema'}
+
+            {alertCount > 0 && (
+              <button
+                type="button"
+                className="dashboard-alert-banner"
+                onClick={() => setActiveTab('alertas')}
+              >
+                <AlertTriangle size={18} aria-hidden />
+                <span>
+                  <strong>{alertCount} equipo{alertCount > 1 ? 's' : ''}</strong>
+                  {' '}supera{alertCount === 1 ? '' : 'n'} la potencia de referencia
+                </span>
+                <ChevronRight size={18} aria-hidden />
+              </button>
+            )}
+
+            <div className="dashboard-kpi-grid">
+              <StatCard icon={Zap} label="Consumo mensual" value={`${formatNumber(rg.consumoMes ?? 0)} kWh`} color="#10b981" />
+              <StatCard icon={DollarSign} label="Gasto mensual" value={formatCurrency(rg.gastoMensual ?? 0)} color="#f59e0b" />
+              <StatCard icon={Receipt} label="Factura estimada" value={formatCurrency(factura?.totalMes ?? 0)} color="#1A4AB0" />
+              <StatCard icon={Plug} label="Equipos registrados" value={rg.cantidadEquipos ?? 0} color="#2563d4" />
             </div>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
 
-
-          <Link to="/cliente/perfil" style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px', display: 'inline-block' }}>
-            Editar desde Mi Perfil →
-          </Link>
-        </div>
-      </div>
-
-      {hasEquipos && excedentesPotencia.length > 0 && (
-        <ExcedentesPotenciaAlert items={excedentesPotencia} />
-      )}
-
-      {/* Stats actuales */}
-      <div className="cards-grid">
-        <StatCard icon={Plug} label="Electrodomésticos" value={rg.cantidadEquipos ?? 0} color="#1A4AB0" />
-        <StatCard icon={Zap} label="Consumo Diario" value={`${formatNumber(rg.consumoDia ?? 0)} kWh`} color="#3b82f6" />
-        <StatCard icon={Zap} label="Consumo Mensual" value={`${formatNumber(rg.consumoMes ?? 0)} kWh`} color="#10b981" />
-        <StatCard icon={Zap} label="Consumo Anual" value={`${formatNumber(rg.consumoAnio ?? 0)} kWh`} color="#8b5cf6" />
-        <StatCard icon={DollarSign} label="Gasto Diario" value={formatCurrency(rg.gastoDiario ?? 0)} color="#2563d4" />
-        <StatCard icon={DollarSign} label="Gasto Mensual" value={formatCurrency(rg.gastoMensual ?? 0)} color="#f59e0b" />
-        <StatCard icon={DollarSign} label="Gasto Anual" value={formatCurrency(rg.gastoAnual ?? 0)} color="#10b981" />
-        <StatCard icon={TrendingUp} label="Demanda Total" value={`${formatNumber(rg.demandaTotal ?? 0)} kW`} color="#06b6d4" />
-      </div>
-
-      {hasEquipos && factura && (
-        <div className="card" style={{ marginBottom: '2rem' }}>
-          <div className="card-header"><h3>Estimación Factura Mensual</h3></div>
-          <div className="card-body">
-            <FacturaBreakdown factura={factura} precioKwh={precioKwh} consumoMesFallback={rg.consumoMes} />
-          </div>
-        </div>
-      )}
-
-      {/* Sección de filtros históricos */}
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <CalendarDays size={15} style={{ color: '#7c6ef5' }} />
-          <span style={{ color: '#aaa', fontSize: '13px', fontWeight: 500 }}>Historial de consumo por período</span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={fetchHistorial}
-            disabled={historialLoading}
-            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-          >
-            <RefreshCw size={13} className={historialLoading ? 'spin' : ''} />
-            Actualizar
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          {PRESETS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => handlePreset(p.value)}
-              style={{
-                padding: '5px 12px', borderRadius: '20px', border: '1px solid',
-                borderColor: preset === p.value && !isCustom ? '#4f46e5' : '#2b2b40',
-                background: preset === p.value && !isCustom ? 'rgba(79,70,229,0.15)' : 'transparent',
-                color: preset === p.value && !isCustom ? '#7c6ef5' : '#aaa',
-                cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', color: '#aaa' }}>Rango:</span>
-          <input type="date" className="form-control" style={{ width: 'auto', fontSize: '13px', padding: '5px 10px' }}
-            value={customDesde} onChange={(e) => setCustomDesde(e.target.value)} />
-          <span style={{ color: '#aaa' }}>→</span>
-          <input type="date" className="form-control" style={{ width: 'auto', fontSize: '13px', padding: '5px 10px' }}
-            value={customHasta} onChange={(e) => setCustomHasta(e.target.value)} />
-          <button type="button" className="btn btn-primary" style={{ padding: '5px 14px', fontSize: '13px' }}
-            onClick={handleCustomApply} disabled={!customDesde && !customHasta}>
-            Aplicar
-          </button>
-        </div>
-      </div>
-
-      {/* Gráficos históricos */}
-      {historialData.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={16} style={{ color: '#4f46e5' }} />
-              <h3>Consumo Promedio por Mes (kWh)</h3>
+            <div className="dashboard-section">
+              <h3 className="dashboard-section__title">Resumen por módulo</h3>
+              <div className="dashboard-modulo-list">
+                {MODULO_LINKS.map(({ key, path, icon: Icon, modKey }) => {
+                  const t = modulos[key]?.totales;
+                  const meta = MODULOS[modKey];
+                  return (
+                    <Link key={key} to={path} className="dashboard-modulo-row">
+                      <div className="dashboard-modulo-row__left">
+                        <span className="dashboard-modulo-row__icon" style={{ color: meta?.color }}>
+                          <Icon size={18} aria-hidden />
+                        </span>
+                        <span className="dashboard-modulo-row__name">{meta?.label || key}</span>
+                      </div>
+                      <div className="dashboard-modulo-row__stats">
+                        <span>{formatNumber(t?.consumoMes ?? 0)} kWh</span>
+                        <span className="dashboard-modulo-row__sep">·</span>
+                        <span>{formatCurrency(t?.gastoMensual ?? 0)}</span>
+                      </div>
+                      <ChevronRight size={16} className="dashboard-modulo-row__chevron" aria-hidden />
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <div className="card-body" style={{ paddingTop: '0.5rem' }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={historialData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="colorKwh" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2d" />
-                  <XAxis dataKey="mes" tick={{ fill: '#888', fontSize: 11 }} />
-                  <YAxis tick={{ fill: '#888', fontSize: 11 }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="consumoMes" name="kWh" stroke="#4f46e5"
-                    fill="url(#colorKwh)" strokeWidth={2} dot={{ fill: '#4f46e5', r: 3 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+
+            <div className="dashboard-quick-links">
+              <Link to="/cliente/historial" className="dashboard-quick-link">
+                <History size={18} aria-hidden />
+                <span>Ver historial de cálculos</span>
+                <ChevronRight size={16} aria-hidden />
+              </Link>
             </div>
           </div>
+        )}
 
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <BarChart2 size={16} style={{ color: '#10b981' }} />
-              <h3>Gasto Mensual y Cálculos (S/)</h3>
-            </div>
-            <div className="card-body" style={{ paddingTop: '0.5rem' }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={historialData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2d" />
-                  <XAxis dataKey="mes" tick={{ fill: '#888', fontSize: 11 }} />
-                  <YAxis yAxisId="left" tick={{ fill: '#888', fontSize: 11 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: '#888', fontSize: 11 }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: '12px', color: '#aaa' }} />
-                  <Bar yAxisId="left" dataKey="gastoMensual" name="Gasto (S/)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="right" dataKey="totalCalculos" name="N° cálculos" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+        {activeTab === 'factura' && (
+          <div className="dashboard-factura">
+            {hasEquipos && factura ? (
+              <div className="card">
+                <div className="card-header"><h3>Estimación factura mensual</h3></div>
+                <div className="card-body">
+                  <FacturaBreakdown factura={factura} precioKwh={precioKwh} consumoMesFallback={rg.consumoMes} />
+                </div>
+              </div>
+            ) : (
+              <div className="dashboard-empty">
+                <p>Ejecute un cálculo con equipos registrados para ver la factura estimada.</p>
+              </div>
+            )}
           </div>
-        </div>
-      ) : (
-        !historialLoading && (
-          <div className="card" style={{ marginBottom: '1.5rem', textAlign: 'center', padding: '1.5rem', color: '#888' }}>
-            <BarChart2 size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.4 }} />
-            <p style={{ margin: 0, fontSize: '14px' }}>No hay cálculos en el período seleccionado.</p>
-          </div>
-        )
-      )}
+        )}
 
-      {/* Gráficos actuales */}
-      <div className="charts-grid">
-        <div className="card card-chart">
-          <div className="card-header"><h3>Gasto por Equipo (S/)</h3></div>
-          <div className="card-body"><GastoPorEquipoChart data={chartEquipos} /></div>
-        </div>
-        <div className="card card-chart">
-          <div className="card-header"><h3>Resumen de Gastos</h3></div>
-          <div className="card-body"><GastoResumenChart data={chartGastosResumen} /></div>
-        </div>
-        <div className="card card-chart">
-          <div className="card-header"><h3>Consumo por Equipo (kWh)</h3></div>
-          <div className="card-body"><ConsumoPorEquipoChart data={chartEquipos} /></div>
-        </div>
-        <div className="card card-chart">
-          <div className="card-header"><h3>Distribución por Categoría</h3></div>
-          <div className="card-body"><ConsumoPorCategoriaChart data={chartCategorias} /></div>
-        </div>
-        <div className="card card-chart">
-          <div className="card-header"><h3>Consumo por Módulo</h3></div>
-          <div className="card-body"><ConsumoMensualChart data={chartModulos} /></div>
-        </div>
+        {activeTab === 'graficos' && (
+          <div className="dashboard-graficos">
+            <DashboardChartFilters
+              dataSource={dataSource}
+              onDataSourceChange={handleDataSourceChange}
+              preset={preset}
+              onPresetChange={handlePreset}
+              customDesde={customDesde}
+              customHasta={customHasta}
+              onCustomDesdeChange={setCustomDesde}
+              onCustomHastaChange={setCustomHasta}
+              onCustomApply={handleCustomApply}
+              isCustom={isCustom}
+              moduloFilter={moduloFilter}
+              onModuloFilterChange={setModuloFilter}
+              showModuloFilter={showModuloFilter}
+              onRefresh={fetchHistorial}
+              loading={historialLoading}
+            />
+
+            <div className="dashboard-chart-chips">
+              {chartOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`dashboard-chart-chip ${activeChart === opt.id ? 'active' : ''}`}
+                  onClick={() => setActiveChart(opt.id)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {dataSource === 'historial' && historialRaw.length > 0 && (
+              <p className="dashboard-chart-meta">
+                <TrendingUp size={14} aria-hidden />
+                {historialRaw.length} cálculo{historialRaw.length !== 1 ? 's' : ''} en el período seleccionado
+              </p>
+            )}
+
+            <div className="card card-chart dashboard-chart-card">
+              <div className="card-body">
+                {dataSource === 'historial' ? renderHistorialChart() : renderActualChart()}
+              </div>
+            </div>
+
+            <Link to="/cliente/historial" className="dashboard-link-center">
+              Ver listado completo en Historial →
+            </Link>
+          </div>
+        )}
+
+        {activeTab === 'alertas' && (
+          <div className="dashboard-alertas">
+            {alertCount > 0 ? (
+              <ExcedentesPotenciaAlert items={excedentesPotencia} />
+            ) : (
+              <div className="dashboard-empty dashboard-empty--success">
+                <AlertTriangle size={32} aria-hidden />
+                <h3>Todo en orden</h3>
+                <p>Ningún equipo supera la potencia de referencia del catálogo.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
