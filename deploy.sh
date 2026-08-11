@@ -87,6 +87,20 @@ npm install
 log "Frontend: compilando producción..."
 npm run build
 
+NGINX_TEMPLATE="$ROOT_DIR/deploy/nginx-sistema.conf"
+NGINX_SITE="/etc/nginx/sites-available/electrixstudio-sistema"
+if [[ -f "$NGINX_TEMPLATE" ]] && command -v nginx >/dev/null; then
+  log "Actualizando config Nginx (gzip + caché assets)..."
+  RUN=""
+  if [[ "$(id -u)" -eq 0 ]]; then
+    RUN=""
+  else
+    RUN="sudo"
+  fi
+  sed "s|__PROJECT_ROOT__|$ROOT_DIR|g" "$NGINX_TEMPLATE" | $RUN tee "$NGINX_SITE" >/dev/null
+  $RUN ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/electrixstudio-sistema
+fi
+
 if command -v nginx >/dev/null; then
   log "Recargando Nginx..."
   if [[ "$(id -u)" -eq 0 ]]; then
