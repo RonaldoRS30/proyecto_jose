@@ -4,6 +4,7 @@ import {
 import { AlertTriangle, Info } from 'lucide-react';
 import { formatCurrency, formatNumber, formatChartKwh } from '../utils/helpers';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { ListCard } from './ResponsiveList';
 
 const chartTooltipStyle = {
   background: 'var(--bg-card)',
@@ -61,6 +62,7 @@ function ConsumoTooltip({ active, payload }) {
 export default function ExcedentesPotenciaAlert({ items = [] }) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
+  const useDetailCards = bp !== 'desktop';
 
   if (!items.length) return null;
 
@@ -231,34 +233,57 @@ export default function ExcedentesPotenciaAlert({ items = [] }) {
 
       <details className="excedentes-potencia-details">
         <summary>Ver tabla detallada de equipos</summary>
-        <div className="table-responsive">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Equipo</th>
-                <th>Módulo</th>
-                <th>Su potencia (W)</th>
-                <th>Referencia (W)</th>
-                <th>Exceso (W)</th>
-                <th>Consumo/mes</th>
-                <th>Gasto/mes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={`table-${item.modulo}-${item.nombre}`}>
-                  <td><strong>{item.nombre}</strong></td>
-                  <td><span className="badge badge-warning">{item.moduloLabel}</span></td>
-                  <td>{formatNumber(item.potencia_w, 0)}</td>
-                  <td>{formatNumber(item.potencia_referencia_w, 0)}</td>
-                  <td className="excedentes-potencia-td-excess">+{formatNumber(item.exceso_w, 0)}</td>
-                  <td>{formatChartKwh(item.consumo_mes)}</td>
-                  <td>{formatCurrency(item.gasto_mensual)}</td>
+        {useDetailCards ? (
+          <div className="data-cards-grid data-cards-single excedentes-potencia-cards">
+            {items.map((item) => (
+              <ListCard
+                key={`card-${item.modulo}-${item.nombre}`}
+                className="list-card-equipo excedentes-potencia-card"
+                title={item.nombre}
+                badge={<span className="badge badge-warning">{item.moduloLabel}</span>}
+                featured={{
+                  label: 'Exceso sobre referencia',
+                  value: `+${formatNumber(item.exceso_w, 0)} W`,
+                }}
+                fields={[
+                  { label: 'Su potencia', value: `${formatNumber(item.potencia_w, 0)} W` },
+                  { label: 'Referencia catálogo', value: `${formatNumber(item.potencia_referencia_w, 0)} W` },
+                  { label: 'Consumo mensual', value: formatChartKwh(item.consumo_mes) },
+                  { label: 'Gasto mensual', value: formatCurrency(item.gasto_mensual), highlight: true },
+                ]}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Equipo</th>
+                  <th>Módulo</th>
+                  <th>Su potencia (W)</th>
+                  <th>Referencia (W)</th>
+                  <th>Exceso (W)</th>
+                  <th>Consumo/mes</th>
+                  <th>Gasto/mes</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={`table-${item.modulo}-${item.nombre}`}>
+                    <td><strong>{item.nombre}</strong></td>
+                    <td><span className="badge badge-warning">{item.moduloLabel}</span></td>
+                    <td>{formatNumber(item.potencia_w, 0)}</td>
+                    <td>{formatNumber(item.potencia_referencia_w, 0)}</td>
+                    <td className="excedentes-potencia-td-excess">+{formatNumber(item.exceso_w, 0)}</td>
+                    <td>{formatChartKwh(item.consumo_mes)}</td>
+                    <td>{formatCurrency(item.gasto_mensual)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </details>
 
       <p className="excedentes-potencia-footnote">
