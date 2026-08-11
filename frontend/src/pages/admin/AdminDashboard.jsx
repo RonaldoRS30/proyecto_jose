@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, UserCheck, UserX, Calculator, FileText, Zap, AlertTriangle,
@@ -41,9 +41,10 @@ export default function AdminDashboard() {
   const [customDesde, setCustomDesde] = useState('');
   const [customHasta, setCustomHasta] = useState('');
   const [isCustom, setIsCustom] = useState(false);
+  const loadedOnce = useRef(false);
 
   const fetchStats = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnce.current) setLoading(true);
     try {
       let desde;
       let hasta;
@@ -64,6 +65,7 @@ export default function AdminDashboard() {
       console.error(e);
     } finally {
       setLoading(false);
+      loadedOnce.current = true;
     }
   }, [preset, isCustom, customDesde, customHasta]);
 
@@ -95,6 +97,21 @@ export default function AdminDashboard() {
     { id: 'alertas', label: 'Alertas', icon: AlertTriangle, badge: alertCount },
     { id: 'actividad', label: 'Actividad', icon: Activity },
   ];
+
+  if (loading && !stats) {
+    return (
+      <div className="admin-dashboard page-skeleton" aria-busy="true" aria-live="polite">
+        <PageHeader title="Dashboard" subtitle="Preparando resumen del sistema..." />
+        <div className="page-skeleton-tabs" />
+        <div className="dashboard-kpi-grid admin-dashboard-kpi">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="page-skeleton-card" />
+          ))}
+        </div>
+        <p className="page-skeleton-hint">Cargando estadísticas…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-dashboard">

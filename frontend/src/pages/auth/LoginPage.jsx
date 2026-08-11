@@ -5,6 +5,7 @@ import AuthBackground from '../../components/AuthBackground';
 import AuthServicesPanel from '../../components/AuthServicesPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminLogin, clienteLogin } from '../../services/api';
+import { prefetchAdminShell, prefetchClientShell, prefetchOnIdle } from '../../utils/routePrefetch';
 
 const MOBILE_AUTH_MQ = '(max-width: 900px)';
 
@@ -42,6 +43,13 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { isMobile, loginVisible, showLogin } = useMobileAuthIntro();
 
+  useEffect(() => {
+    prefetchOnIdle(() => {
+      prefetchClientShell();
+      prefetchAdminShell();
+    });
+  }, []);
+
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -49,6 +57,7 @@ export default function LoginPage() {
     try {
       const { data } = await adminLogin(email, password);
       login(data.data.token, { ...data.data.admin, role: 'admin' });
+      await prefetchAdminShell();
       navigate('/admin');
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
@@ -64,10 +73,7 @@ export default function LoginPage() {
     try {
       const { data } = await clienteLogin(codigo.toUpperCase());
       login(data.data.token, { ...data.data.cliente, role: 'cliente' });
-      await Promise.all([
-        import('../../layouts/ClientLayout'),
-        import('../../pages/client/ClientDashboard'),
-      ]).catch(() => {});
+      await prefetchClientShell();
       navigate('/cliente');
     } catch (err) {
       setError(err.response?.data?.message || 'Código inválido');
@@ -106,6 +112,8 @@ export default function LoginPage() {
             type="button"
             className={`auth-tab ${tab === 'cliente' ? 'active' : ''}`}
             onClick={() => { setTab('cliente'); setError(''); }}
+            onMouseEnter={prefetchClientShell}
+            onFocus={prefetchClientShell}
           >
             <KeyRound size={14} style={{ marginRight: 4 }} /> Cliente
           </button>
@@ -113,6 +121,8 @@ export default function LoginPage() {
             type="button"
             className={`auth-tab ${tab === 'admin' ? 'active' : ''}`}
             onClick={() => { setTab('admin'); setError(''); }}
+            onMouseEnter={prefetchAdminShell}
+            onFocus={prefetchAdminShell}
           >
             <Shield size={14} style={{ marginRight: 4 }} /> Administrador
           </button>
@@ -172,7 +182,7 @@ export default function LoginPage() {
               />
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+              {loading ? 'Entrando...' : 'Iniciar Sesión'}
             </button>
           </form>
         )}

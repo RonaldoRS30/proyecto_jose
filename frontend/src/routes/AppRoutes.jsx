@@ -2,9 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import LoginPage from '../pages/auth/LoginPage';
-
-const AdminLayout = lazy(() => import('../layouts/AdminLayout'));
-const ClientLayout = lazy(() => import('../layouts/ClientLayout'));
+import AdminLayout from '../layouts/AdminLayout';
+import ClientLayout from '../layouts/ClientLayout';
 
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
 const ClientesPage = lazy(() => import('../pages/admin/ClientesPage'));
@@ -24,70 +23,68 @@ const PerfilPage = lazy(() => import('../pages/client/PerfilPage'));
 
 function RouteFallback() {
   return (
-    <div className="page-skeleton page-skeleton--route" aria-busy="true" aria-live="polite">
-      <div className="page-skeleton-sidebar" />
-      <div className="page-skeleton-main">
-        <div className="page-skeleton-block page-skeleton-block--title" />
-        <div className="page-skeleton-card" />
-        <div className="page-skeleton-card" />
-        <p className="page-skeleton-hint">Cargando módulo…</p>
+    <div className="page-skeleton page-skeleton--inline" aria-busy="true" aria-live="polite">
+      <div className="page-skeleton-block page-skeleton-block--title" />
+      <div className="dashboard-kpi-grid">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="page-skeleton-card" />
+        ))}
       </div>
+      <p className="page-skeleton-hint">Cargando…</p>
     </div>
   );
 }
 
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route
-          path="/admin/*"
-          element={
-            <ProtectedRoute role="admin">
-              <AdminLayout>
-                <Suspense fallback={<RouteFallback />}>
-                  <Routes>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="clientes" element={<ClientesPage />} />
-                    <Route path="clientes/:id" element={<ClienteDetallePage />} />
-                    <Route path="codigos" element={<CodigosPage />} />
-                    <Route path="recomendaciones" element={<RecomendacionesPage />} />
-                    <Route path="configuracion" element={<ConfigPage />} />
-                    <Route path="reportes" element={<ReportesPage admin />} />
-                  </Routes>
-                </Suspense>
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminLayout>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="clientes" element={<ClientesPage />} />
+                  <Route path="clientes/:id" element={<ClienteDetallePage />} />
+                  <Route path="codigos" element={<CodigosPage />} />
+                  <Route path="recomendaciones" element={<RecomendacionesPage />} />
+                  <Route path="configuracion" element={<ConfigPage />} />
+                  <Route path="reportes" element={<ReportesPage admin />} />
+                </Routes>
+              </Suspense>
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-          path="/cliente/*"
-          element={
-            <ProtectedRoute role="cliente">
-              <ClientLayout>
-                <Suspense fallback={<RouteFallback />}>
-                  <Routes>
-                    <Route index element={<ClientDashboard />} />
-                    <Route path="electrodomesticos" element={<ElectrodomesticosPage />} />
-                    <Route path="fantasma" element={<FantasmaPage />} />
-                    <Route path="iluminacion" element={<IluminacionPage />} />
-                    <Route path="historial" element={<HistorialPage />} />
-                    <Route path="reportes" element={<ReportesPage />} />
-                    <Route path="comparacion" element={<ComparacionPage />} />
-                    <Route path="perfil" element={<PerfilPage />} />
-                  </Routes>
-                </Suspense>
-              </ClientLayout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/cliente/*"
+        element={
+          <ProtectedRoute role="cliente">
+            <ClientLayout>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route index element={<ClientDashboard />} />
+                  <Route path="electrodomesticos" element={<ElectrodomesticosPage />} />
+                  <Route path="fantasma" element={<FantasmaPage />} />
+                  <Route path="iluminacion" element={<IluminacionPage />} />
+                  <Route path="historial" element={<HistorialPage />} />
+                  <Route path="reportes" element={<ReportesPage />} />
+                  <Route path="comparacion" element={<ComparacionPage />} />
+                  <Route path="perfil" element={<PerfilPage />} />
+                </Routes>
+              </Suspense>
+            </ClientLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Suspense>
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }

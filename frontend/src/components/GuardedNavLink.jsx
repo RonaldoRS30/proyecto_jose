@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useNavigationGuard } from '../contexts/NavigationGuardContext';
+import { prefetchRoute } from '../utils/routePrefetch';
 
 export default function GuardedNavLink({
   to,
@@ -12,11 +13,16 @@ export default function GuardedNavLink({
   const location = useLocation();
   const { runGuards } = useNavigationGuard();
 
+  const targetPath = typeof to === 'string' ? to : to.pathname;
+
+  const handleMouseEnter = () => {
+    prefetchRoute(targetPath);
+  };
+
   const handleClick = async (e) => {
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
-    const targetPath = typeof to === 'string' ? to : to.pathname;
     if (location.pathname === targetPath) {
       onAfterNavigate?.();
       return;
@@ -31,7 +37,14 @@ export default function GuardedNavLink({
   };
 
   return (
-    <NavLink to={to} end={end} className={className} onClick={handleClick}>
+    <NavLink
+      to={to}
+      end={end}
+      className={className}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onFocus={handleMouseEnter}
+    >
       {children}
     </NavLink>
   );
