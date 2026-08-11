@@ -4583,3 +4583,76 @@ tr:hover td { background: rgba(37,99,235,0.03); }
     margin-top: 0.25rem;
   }
 }
+
+@keyframes pageSkeletonPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+
+.page-skeleton-card,
+.page-skeleton-block,
+.page-skeleton-tabs,
+.page-skeleton-sidebar {
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  animation: pageSkeletonPulse 1.4s ease-in-out infinite;
+}
+
+.page-skeleton-card {
+  min-height: 88px;
+}
+
+.page-skeleton-block {
+  min-height: 120px;
+  margin-top: 1rem;
+}
+
+.page-skeleton-block--title {
+  min-height: 48px;
+  max-width: 320px;
+}
+
+.page-skeleton-tabs {
+  min-height: 42px;
+  margin: 1rem 0;
+}
+
+.page-skeleton-hint {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.page-skeleton--route {
+  display: flex;
+  min-height: 60vh;
+  gap: 0;
+}
+
+.page-skeleton-sidebar {
+  width: 240px;
+  min-height: 100%;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.page-skeleton-main {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .page-skeleton-sidebar {
+    display: none;
+  }
+
+  .page-skeleton-main {
+    padding: 1rem;
+  }
+}

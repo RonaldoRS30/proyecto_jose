@@ -36,6 +36,22 @@ const MODULO_LINKS = [
   { key: 'fantasma', path: '/cliente/fantasma', icon: Ghost, modKey: 'fantasma' },
 ];
 
+function DashboardSkeleton() {
+  return (
+    <div className="client-dashboard page-skeleton" aria-busy="true" aria-live="polite">
+      <PageHeader title="Inicio" subtitle="Preparando su resumen de consumo..." />
+      <div className="page-skeleton-tabs" />
+      <div className="dashboard-kpi-grid">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="page-skeleton-card" />
+        ))}
+      </div>
+      <div className="page-skeleton-block" />
+      <p className="page-skeleton-hint">Cargando cálculos…</p>
+    </div>
+  );
+}
+
 export default function ClientDashboard() {
   const alert = useAlert();
   const [activeTab, setActiveTab] = useState('resumen');
@@ -179,7 +195,7 @@ export default function ClientDashboard() {
 
   const alertCount = excedentesPotencia?.length ?? 0;
 
-  if (loading) return <div className="loading">Cargando dashboard...</div>;
+  if (loading) return <DashboardSkeleton />;
 
   const tabs = [
     { id: 'resumen', label: 'Resumen', icon: Zap },

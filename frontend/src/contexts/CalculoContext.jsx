@@ -8,30 +8,44 @@ const CalculoContext = createContext(null);
 export function CalculoProvider({ children }) {
   const [preview, setPreview] = useState(null);
   const [ultimoCalculo, setUltimoCalculo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [previewLoading, setPreviewLoading] = useState(true);
+  const [calculosLoading, setCalculosLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
 
   const refreshPreview = useCallback(async () => {
-    const { data } = await getCalculoPreview();
-    setPreview(data.data);
-    return data.data;
+    setPreviewLoading(true);
+    try {
+      const { data } = await getCalculoPreview();
+      setPreview(data.data);
+      return data.data;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      setPreviewLoading(false);
+    }
   }, []);
 
   const refreshCalculos = useCallback(async () => {
-    const { data } = await getCalculos({ page: 1, limit: 1 });
-    const latest = data.data?.[0] ?? null;
-    setUltimoCalculo(latest);
-    return latest;
+    setCalculosLoading(true);
+    try {
+      const { data } = await getCalculos({ page: 1, limit: 1 });
+      const latest = data.data?.[0] ?? null;
+      setUltimoCalculo(latest);
+      return latest;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      setCalculosLoading(false);
+    }
   }, []);
 
   const refreshAll = useCallback(async () => {
-    setLoading(true);
     try {
       await Promise.all([refreshPreview(), refreshCalculos()]);
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
   }, [refreshPreview, refreshCalculos]);
 
@@ -72,10 +86,14 @@ export function CalculoProvider({ children }) {
 
   const hasEquipos = (preview?.resumenGeneral?.cantidadEquipos ?? 0) > 0;
 
+  const loading = previewLoading && preview === null;
+
   const value = useMemo(() => ({
     preview,
     ultimoCalculo,
     loading,
+    previewLoading,
+    calculosLoading,
     calculating,
     hasEquipos,
     hasCambiosSinGuardar,
@@ -93,7 +111,7 @@ export function CalculoProvider({ children }) {
     dispositivos: preview?.dispositivos ?? [],
     excedentesPotencia: preview?.excedentesPotencia ?? [],
   }), [
-    preview, ultimoCalculo, loading, calculating, hasEquipos, hasCambiosSinGuardar,
+    preview, ultimoCalculo, loading, previewLoading, calculosLoading, calculating, hasEquipos, hasCambiosSinGuardar,
     tarifaCambiada, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
   ]);
 

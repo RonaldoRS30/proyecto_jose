@@ -64,6 +64,10 @@ export default function LoginPage() {
     try {
       const { data } = await clienteLogin(codigo.toUpperCase());
       login(data.data.token, { ...data.data.cliente, role: 'cliente' });
+      await Promise.all([
+        import('../../layouts/ClientLayout'),
+        import('../../pages/client/ClientDashboard'),
+      ]).catch(() => {});
       navigate('/cliente');
     } catch (err) {
       setError(err.response?.data?.message || 'Código inválido');
@@ -131,7 +135,7 @@ export default function LoginPage() {
               />
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Validando...' : 'Ingresar'}
+              {loading ? 'Entrando...' : 'Ingresar'}
             </button>
             <p className="auth-form-hint">
               Ingrese el código entregado por el administrador tras realizar el pago.

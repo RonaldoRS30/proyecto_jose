@@ -23,7 +23,17 @@ const ComparacionPage = lazy(() => import('../pages/client/ComparacionPage'));
 const PerfilPage = lazy(() => import('../pages/client/PerfilPage'));
 
 function RouteFallback() {
-  return <div className="loading">Cargando módulo...</div>;
+  return (
+    <div className="page-skeleton page-skeleton--route" aria-busy="true" aria-live="polite">
+      <div className="page-skeleton-sidebar" />
+      <div className="page-skeleton-main">
+        <div className="page-skeleton-block page-skeleton-block--title" />
+        <div className="page-skeleton-card" />
+        <div className="page-skeleton-card" />
+        <p className="page-skeleton-hint">Cargando módulo…</p>
+      </div>
+    </div>
+  );
 }
 
 export default function AppRoutes() {
