@@ -91,6 +91,7 @@ export function CalculoProvider({ children }) {
     tarifaFuente: preview?.tarifa?.fuente ?? 'global',
     tarifaGlobal: preview?.tarifa?.globalPrecio,
     dispositivos: preview?.dispositivos ?? [],
+    excedentesPotencia: preview?.excedentesPotencia ?? [],
   }), [
     preview, ultimoCalculo, loading, calculating, hasEquipos, hasCambiosSinGuardar,
     tarifaCambiada, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,

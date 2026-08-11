@@ -75,7 +75,7 @@ export default function ClienteDetallePage() {
     <div>
       <PageHeader
         title={nombre}
-        subtitle={`Código interno: ${cliente.codigo_interno}`}
+        
       />
 
       <Link to="/admin/clientes" className="btn btn-secondary btn-sm" style={{ marginBottom: '1.25rem' }}>

@@ -54,7 +54,36 @@ function getEquiposExcedenPotenciaReferencia(detalles, recomendaciones, electroM
   return items.sort((a, b) => b.consumo_mes - a.consumo_mes);
 }
 
+function mapDispositivosToDetalles(dispositivos = []) {
+  return dispositivos.map((d) => ({
+    nombre: d.nombre,
+    modulo: d.modulo,
+    potencia_w: d.potenciaW ?? d.potencia_w,
+    consumo_mes: d.consumoMes ?? d.consumo_mes,
+    gasto_mensual: d.gastoMensual ?? d.gasto_mensual,
+    recomendacion_id: d.recomendacion_id ?? null,
+    electrodomestico_id: d.id ?? d.electrodomestico_id ?? null,
+  }));
+}
+
+function buildElectroRecomendacionMap(electrodomesticos = []) {
+  return Object.fromEntries(
+    electrodomesticos
+      .filter((e) => e.recomendacion_id)
+      .map((e) => [e.id, e.recomendacion_id]),
+  );
+}
+
+function getExcedentesFromDispositivos(dispositivos, electrodomesticos, recomendaciones) {
+  const detalles = mapDispositivosToDetalles(dispositivos);
+  const electroMap = buildElectroRecomendacionMap(electrodomesticos);
+  return getEquiposExcedenPotenciaReferencia(detalles, recomendaciones, electroMap);
+}
+
 module.exports = {
   MODULO_LABEL,
   getEquiposExcedenPotenciaReferencia,
+  getExcedentesFromDispositivos,
+  mapDispositivosToDetalles,
+  buildElectroRecomendacionMap,
 };

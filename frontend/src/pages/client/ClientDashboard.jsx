@@ -15,6 +15,7 @@ import {
   GastoPorEquipoChart, GastoResumenChart,
 } from '../../components/ConsumoCharts';
 import FacturaBreakdown from '../../components/FacturaBreakdown';
+import ExcedentesPotenciaAlert from '../../components/ExcedentesPotenciaAlert';
 import { useCalculo } from '../../contexts/CalculoContext';
 import { useAlert } from '../../contexts/ConfirmContext';
 import { getCalculos } from '../../services/api';
@@ -85,6 +86,7 @@ export default function ClientDashboard() {
     tarifaFuente,
     dispositivos,
     ultimoCalculo,
+    excedentesPotencia,
   } = useCalculo();
 
   const [preset, setPreset] = useState('6meses');
@@ -219,6 +221,10 @@ export default function ClientDashboard() {
           </Link>
         </div>
       </div>
+
+      {hasEquipos && excedentesPotencia.length > 0 && (
+        <ExcedentesPotenciaAlert items={excedentesPotencia} />
+      )}
 
       {/* Stats actuales */}
       <div className="cards-grid">

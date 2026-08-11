@@ -390,10 +390,7 @@ export default function PerfilPage() {
                 disabled={extractingTarifa}
               />
             </div>
-            <div className="profile-field">
-              <span className="profile-field-label">Código interno</span>
-              <code className="code-display">{cliente.codigo_interno}</code>
-            </div>
+
           </div>
         </div>
 

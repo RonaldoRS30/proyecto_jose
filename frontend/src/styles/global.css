@@ -3166,3 +3166,239 @@ tr:hover td { background: rgba(37,99,235,0.03); }
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Alerta: equipos sobre potencia de referencia ── */
+.excedentes-potencia-alert {
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-left: 4px solid var(--danger);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, var(--bg-card) 45%);
+  overflow: hidden;
+}
+
+.excedentes-potencia-alert__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 1.15rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.excedentes-potencia-alert__icon-wrap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.excedentes-potencia-alert__titles h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+
+.excedentes-potencia-alert__titles p {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 52rem;
+}
+
+.excedentes-potencia-alert__summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: rgba(26, 74, 176, 0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.excedentes-potencia-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.excedentes-potencia-stat__label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.excedentes-potencia-stat__value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.excedentes-potencia-stat__value--warn {
+  color: var(--danger);
+}
+
+.excedentes-potencia-guide {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 1.25rem 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(26, 74, 176, 0.06);
+  border: 1px solid rgba(26, 74, 176, 0.15);
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.excedentes-potencia-guide svg {
+  flex-shrink: 0;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.excedentes-potencia-guide strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.excedentes-potencia-guide p {
+  margin: 0;
+}
+
+.excedentes-guide-chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.excedentes-guide-chip--ref {
+  background: rgba(148, 163, 184, 0.25);
+  color: #64748b;
+}
+
+.excedentes-guide-chip--warn {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.excedentes-potencia-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0 1.25rem 1rem;
+}
+
+.excedentes-potencia-chart-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1rem 0.75rem;
+  min-width: 0;
+}
+
+.excedentes-potencia-chart-panel__head {
+  margin-bottom: 0.5rem;
+}
+
+.excedentes-potencia-chart-panel__head h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.excedentes-potencia-chart-panel__head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.excedentes-potencia-details {
+  margin: 0 1.25rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.excedentes-potencia-details summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(26, 74, 176, 0.04);
+  list-style: none;
+}
+
+.excedentes-potencia-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.excedentes-potencia-details summary::after {
+  content: ' ▾';
+  float: right;
+  opacity: 0.6;
+}
+
+.excedentes-potencia-details[open] summary::after {
+  content: ' ▴';
+}
+
+.excedentes-potencia-details .table-responsive {
+  padding: 0 0.5rem 0.75rem;
+}
+
+.excedentes-potencia-td-excess {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.excedentes-potencia-footnote {
+  margin: 0;
+  padding: 0.75rem 1.25rem 1.15rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  border-top: 1px solid var(--border);
+  background: rgba(26, 74, 176, 0.02);
+}
+
+@media (max-width: 900px) {
+  .excedentes-potencia-alert__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .excedentes-potencia-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .excedentes-potencia-guide {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+
+  .excedentes-potencia-charts-grid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

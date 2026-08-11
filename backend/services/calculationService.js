@@ -6,6 +6,8 @@ const { listarPorCliente, toCalcInput } = require('./electrodomesticoService');
 const { buildFacturaParaCalculo, enrichCalculo, enrichCalculos } = require('./facturaHelper');
 const { applyConfigTarifa } = require('./tarifaService');
 const { AppError } = require('../utils/errorHandler');
+const recomendacionService = require('./recomendacionService');
+const { getExcedentesFromDispositivos } = require('../helpers/potenciaReferenciaHelper');
 
 const ejecutarCalculo = async (clienteId) => {
   const cliente = await Cliente.findByPk(clienteId);
@@ -83,7 +85,13 @@ const previewCalculo = async (clienteId) => {
   const iluminacion = toCalcInput(electrodomesticos.filter((e) => e.modulo === 'iluminacion'));
 
   const resultado = calcularCompleto({ aparatos, fantasma, iluminacion }, configConTarifa);
-  return { ...resultado, tarifa };
+  const catalogoReferencia = await recomendacionService.listar({ soloActivas: true });
+  const excedentesPotencia = getExcedentesFromDispositivos(
+    resultado.dispositivos,
+    electrodomesticos,
+    catalogoReferencia,
+  );
+  return { ...resultado, tarifa, excedentesPotencia };
 };
 
 const listarCalculos = async (filters = {}) => {
