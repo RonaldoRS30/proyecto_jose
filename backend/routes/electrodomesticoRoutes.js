@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authenticate);
 router.use(authorizeRoles('admin', 'cliente'));
 
+router.get('/catalogo-marca-modelo', electroController.catalogoMarcaModelo);
 router.get('/', electroController.listar);
 router.post('/', electroController.crear);
 router.put('/:id', electroController.actualizar);

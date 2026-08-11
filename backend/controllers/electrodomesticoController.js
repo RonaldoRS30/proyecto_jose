@@ -1,4 +1,5 @@
 const electroService = require('../services/electrodomesticoService');
+const { listCatalog } = require('../services/marcaModeloCatalogService');
 const { asyncHandler } = require('../utils/errorHandler');
 
 const getClienteId = (req) => {
@@ -41,4 +42,9 @@ const eliminar = asyncHandler(async (req, res) => {
   res.json({ success: true, ...result });
 });
 
-module.exports = { listar, crear, actualizar, eliminar };
+const catalogoMarcaModelo = asyncHandler(async (_req, res) => {
+  const data = await listCatalog();
+  res.json({ success: true, data });
+});
+
+module.exports = { listar, crear, actualizar, eliminar, catalogoMarcaModelo };

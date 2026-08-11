@@ -14,6 +14,7 @@ export default function SearchableSelect({
   renderOption,
   disabled = false,
   clearable = true,
+  allowCustom = false,
   onNotFound,
 }) {
   const [open, setOpen] = useState(false);
@@ -92,7 +93,19 @@ export default function SearchableSelect({
     ? query
     : selectedOption
       ? getOptionLabel(selectedOption)
-      : '';
+      : (value || '');
+
+  const showCustomOption = allowCustom
+    && query.trim()
+    && !filtered.some((opt) => getOptionLabel(opt).toLowerCase() === query.trim().toLowerCase());
+
+  const useCustomValue = () => {
+    const custom = query.trim();
+    if (!custom) return;
+    onChange(custom, null);
+    setOpen(false);
+    setQuery('');
+  };
 
   return (
     <div
@@ -133,19 +146,25 @@ export default function SearchableSelect({
           {filtered.length === 0 ? (
             <li className="searchable-select-empty">
               No se encontraron resultados
-              {onNotFound && (
-                <button 
-                  type="button" 
-                  className="btn btn-primary btn-sm" 
+              {(onNotFound || allowCustom) && query.trim() && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
                   style={{ display: 'block', margin: '0.75rem auto 0', width: 'auto' }}
-                  onClick={() => { onNotFound(query); setOpen(false); setQuery(''); }}
+                  onClick={() => {
+                    if (onNotFound) onNotFound(query);
+                    else useCustomValue();
+                    setOpen(false);
+                    setQuery('');
+                  }}
                 >
-                  + Agregar manualmente
+                  + Usar «{query.trim()}»
                 </button>
               )}
             </li>
           ) : (
-            filtered.map((opt, index) => (
+            <>
+            {filtered.map((opt, index) => (
               <li
                 key={opt.id ?? getOptionValue(opt)}
                 role="option"
@@ -156,7 +175,17 @@ export default function SearchableSelect({
               >
                 {renderOption ? renderOption(opt) : getOptionLabel(opt)}
               </li>
-            ))
+            ))}
+            {showCustomOption && (
+              <li
+                role="option"
+                className="searchable-select-option searchable-select-option--custom"
+                onClick={useCustomValue}
+              >
+                + Usar «{query.trim()}»
+              </li>
+            )}
+            </>
           )}
         </ul>
       )}

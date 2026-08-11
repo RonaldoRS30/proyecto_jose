@@ -72,6 +72,7 @@ export const updateCodigo = (id, data) => api.put(`/codigos/${id}`, data);
 
 // Electrodomésticos
 export const getElectrodomesticos = (params) => api.get('/electrodomesticos', { params });
+export const getMarcaModeloCatalog = () => api.get('/electrodomesticos/catalogo-marca-modelo');
 export const createElectrodomestico = (data) => api.post('/electrodomesticos', data);
 export const updateElectrodomestico = (id, data) => api.put(`/electrodomesticos/${id}`, data);
 export const deleteElectrodomestico = (id) => api.delete(`/electrodomesticos/${id}`);

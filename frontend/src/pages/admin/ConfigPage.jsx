@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Save, Lock } from 'lucide-react';
+import {
+  Save, Lock, Receipt, Share2, UserCircle,
+} from 'lucide-react';
+import PageHeader from '../../components/PageHeader';
+import DashboardTabs from '../../components/DashboardTabs';
 import {
   getConfiguraciones,
   updateConfiguracion,
@@ -30,9 +34,31 @@ const EMPTY_CONTACTO = {
 
 const iconBase = import.meta.env.BASE_URL || '/';
 
+const LABELS = {
+  precio_kwh: 'Precio kWh (S/)',
+  cargo_fijo: 'Cargo Fijo (S/)',
+  mant_reposicion: 'Mant. y Reposición (S/)',
+  alumbrado_publico: 'Alumbrado Público (S/)',
+  interes_compensatorio: 'Interés Compensatorio (S/)',
+  igv_rate: 'IGV (decimal, ej: 0.18)',
+  electrificacion_rural: 'Electrificación Rural (S/)',
+};
+
+const TARIFA_KEYS = [
+  'precio_kwh', 'cargo_fijo', 'mant_reposicion', 'alumbrado_publico',
+  'interes_compensatorio', 'igv_rate', 'electrificacion_rural',
+];
+
+const TABS = [
+  { id: 'tarifas', label: 'Tarifas', icon: Receipt },
+  { id: 'contacto', label: 'Contacto y PDF', icon: Share2 },
+  { id: 'cuenta', label: 'Mi cuenta', icon: UserCircle },
+];
+
 export default function ConfigPage() {
   const { user } = useAuth();
   const alert = useAlert();
+  const [activeTab, setActiveTab] = useState('tarifas');
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -61,13 +87,17 @@ export default function ConfigPage() {
         });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [alert]);
+
+  const flashSaved = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   const handleSave = async (clave, valor) => {
     try {
       await updateConfiguracion(clave, valor);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      flashSaved();
     } catch (err) {
       await alert({
         title: 'No se pudo guardar',
@@ -95,8 +125,7 @@ export default function ConfigPage() {
       const payload = { ...contacto, ...validation.data };
       const { data } = await updateContactoPdfConfig(payload);
       setContacto(mapContactoFromApi(data.data));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      flashSaved();
       await alert({
         title: 'Contacto guardado',
         message: 'Los datos de contacto y redes sociales se actualizaron correctamente.',
@@ -168,268 +197,247 @@ export default function ConfigPage() {
     }
   };
 
-  if (loading) return <div className="loading">Cargando...</div>;
-
-  const labels = {
-    precio_kwh: 'Precio kWh (S/)',
-    cargo_fijo: 'Cargo Fijo (S/)',
-    mant_reposicion: 'Mant. y Reposición (S/)',
-    alumbrado_publico: 'Alumbrado Público (S/)',
-    interes_compensatorio: 'Interés Compensatorio (S/)',
-    igv_rate: 'IGV (decimal, ej: 0.18)',
-    electrificacion_rural: 'Electrificación Rural (S/)',
-    umbral_alerta_consumo_pct: 'Alerta consumo alto (% sobre promedio)',
-  };
-
-  const tarifaKeys = [
-    'precio_kwh', 'cargo_fijo', 'mant_reposicion', 'alumbrado_publico',
-    'interes_compensatorio', 'igv_rate', 'electrificacion_rural',
-  ];
-  const alertaKeys = ['umbral_alerta_consumo_pct'];
-
-  const renderConfigRow = (c) => (
-    <div key={c.clave} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem' }}>
-      <div className="form-group" style={{ margin: 0, flex: 1 }}>
-        <label>{labels[c.clave] || c.clave}</label>
+  const renderConfigRow = (c, compact = false) => (
+    <div key={c.clave} className={`config-field-row ${compact ? 'config-field-row--compact' : ''}`}>
+      <div className="form-group config-field-row__input">
+        <label>{LABELS[c.clave] || c.clave}</label>
         <input
           className="form-control"
           value={c.valor ?? ''}
           onChange={(e) => updateLocal(c.clave, e.target.value)}
         />
-        {c.clave === 'umbral_alerta_consumo_pct' && (
-          <small style={{ color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
-            Ejemplo: 30 = alerta si el último cálculo supera 130% del consumo promedio del sistema.
-          </small>
-        )}
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => handleSave(c.clave, c.valor ?? '')}>
-        <Save size={16} /> Guardar
+      <button
+        type="button"
+        className="btn btn-primary btn-sm config-field-row__save"
+        onClick={() => handleSave(c.clave, c.valor ?? '')}
+      >
+        <Save size={15} /> Guardar
       </button>
     </div>
   );
 
+  if (loading) return <div className="loading">Cargando...</div>;
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Configuración del Sistema</h1>
-          <p className="page-subtitle">Parámetros de tarifa y facturación (según Excel)</p>
-        </div>
-      </div>
+    <div className="config-page">
+      <PageHeader
+        title="Configuración"
+        subtitle="Parámetros del sistema organizados por sección"
+      />
 
-      {saved && <div className="alert alert-success">Configuración guardada</div>}
+      {saved && (
+        <div className="alert alert-success config-page__flash">Configuración guardada</div>
+      )}
 
-      <div className="card" style={{ marginBottom: '1.25rem' }}>
-        <div className="card-header"><h3>Tarifas y Facturación</h3></div>
-        <div className="card-body">
-          {configs.filter((c) => tarifaKeys.includes(c.clave)).map(renderConfigRow)}
-        </div>
-      </div>
+      <DashboardTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} />
 
-      <div className="card">
-        <div className="card-header"><h3>Alertas administrativas</h3></div>
-        <div className="card-body">
-          {configs.filter((c) => alertaKeys.includes(c.clave)).map(renderConfigRow)}
-        </div>
-      </div>
+      <div className="config-panel card" role="tabpanel">
+        {activeTab === 'tarifas' && (
+          <div className="config-panel__body">
+            <p className="config-panel__intro">
+              Valores de tarifa y facturación del sistema.
+            </p>
+            <div className="config-fields-grid">
+              {configs.filter((c) => TARIFA_KEYS.includes(c.clave)).map((c) => renderConfigRow(c, true))}
+            </div>
+          </div>
+        )}
 
-      <div className="card" style={{ marginTop: '1.25rem' }}>
-        <div className="card-header"><h3>Contacto, publicidad y reportes PDF</h3></div>
-        <div className="card-body">
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-            Estos datos aparecen en el login (publicidad) y en el pie de página de los PDF.
-            Solo el administrador puede editarlos desde esta pantalla.
-          </p>
+        {activeTab === 'contacto' && (
+          <div className="config-panel__body">
+            <p className="config-panel__intro">
+              Datos visibles en el login, publicidad y pie de página de los PDF.
+            </p>
 
-          <div className="contact-config-grid">
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Nombre de la empresa</label>
-              <input
-                className="form-control"
-                value={contacto.empresaNombre}
-                onChange={(e) => setContacto((p) => ({ ...p, empresaNombre: e.target.value }))}
-              />
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Eslogan</label>
-              <input
-                className="form-control"
-                value={contacto.empresaTagline}
-                onChange={(e) => setContacto((p) => ({ ...p, empresaTagline: e.target.value }))}
-              />
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Correo *</label>
-              <input
-                className="form-control"
-                type="email"
-                value={contacto.email}
-                onChange={(e) => {
-                  setContacto((p) => ({ ...p, email: e.target.value }));
-                  if (contactoErrors.email) setContactoErrors((p) => ({ ...p, email: '' }));
-                }}
-                placeholder="contacto@electrixstudio.com"
-              />
-              <small style={{ color: contactoErrors.email ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
-                {contactoErrors.email || 'Debe contener @'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Nombre visible — icono correo</label>
-              <input
-                className="form-control"
-                value={contacto.emailNombre}
-                onChange={(e) => setContacto((p) => ({ ...p, emailNombre: e.target.value }))}
-                placeholder="Opcional — si está vacío usa el correo"
-              />
-            </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>Teléfono *</label>
-              <input
-                className="form-control"
-                inputMode="numeric"
-                maxLength={9}
-                value={contacto.telefono}
-                onChange={(e) => {
-                  setContacto((p) => ({ ...p, telefono: formatTelefonoInput(e.target.value) }));
-                  if (contactoErrors.telefono) setContactoErrors((p) => ({ ...p, telefono: '' }));
-                }}
-                placeholder="987654321"
-              />
-              <small style={{ color: contactoErrors.telefono ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
-                {contactoErrors.telefono || '9 dígitos — se muestra como +51 XXX XXX XXX'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-              <label>Sitio web *</label>
-              <input
-                className="form-control"
-                value={contacto.web}
-                onChange={(e) => {
-                  setContacto((p) => ({ ...p, web: e.target.value }));
-                  if (contactoErrors.web) setContactoErrors((p) => ({ ...p, web: '' }));
-                }}
-                placeholder="www.electrixstudio.com"
-              />
-              <small style={{ color: contactoErrors.web ? '#ef4444' : 'var(--text-muted)', fontSize: '0.75rem' }}>
-                {contactoErrors.web || 'Debe incluir .com'}
-              </small>
-            </div>
-            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
-              <label>Nombre visible — icono página web</label>
-              <input
-                className="form-control"
-                value={contacto.webNombre}
-                onChange={(e) => setContacto((p) => ({ ...p, webNombre: e.target.value }))}
-                placeholder="Opcional — si está vacío usa la URL del sitio"
-              />
+            <div className="contact-config-grid config-contact-grid">
+              <div className="form-group">
+                <label>Nombre de la empresa</label>
+                <input
+                  className="form-control"
+                  value={contacto.empresaNombre}
+                  onChange={(e) => setContacto((p) => ({ ...p, empresaNombre: e.target.value }))}
+                />
+              </div>
+              <div className="form-group">
+                <label>Eslogan</label>
+                <input
+                  className="form-control"
+                  value={contacto.empresaTagline}
+                  onChange={(e) => setContacto((p) => ({ ...p, empresaTagline: e.target.value }))}
+                />
+              </div>
+              <div className="form-group">
+                <label>Correo *</label>
+                <input
+                  className="form-control"
+                  type="email"
+                  value={contacto.email}
+                  onChange={(e) => {
+                    setContacto((p) => ({ ...p, email: e.target.value }));
+                    if (contactoErrors.email) setContactoErrors((p) => ({ ...p, email: '' }));
+                  }}
+                  placeholder="contacto@electrixstudio.com"
+                />
+                <small className={`config-field-hint ${contactoErrors.email ? 'is-error' : ''}`}>
+                  {contactoErrors.email || 'Debe contener @'}
+                </small>
+              </div>
+              <div className="form-group">
+                <label>Nombre visible — correo</label>
+                <input
+                  className="form-control"
+                  value={contacto.emailNombre}
+                  onChange={(e) => setContacto((p) => ({ ...p, emailNombre: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="form-group">
+                <label>Teléfono *</label>
+                <input
+                  className="form-control"
+                  inputMode="numeric"
+                  maxLength={9}
+                  value={contacto.telefono}
+                  onChange={(e) => {
+                    setContacto((p) => ({ ...p, telefono: formatTelefonoInput(e.target.value) }));
+                    if (contactoErrors.telefono) setContactoErrors((p) => ({ ...p, telefono: '' }));
+                  }}
+                  placeholder="987654321"
+                />
+                <small className={`config-field-hint ${contactoErrors.telefono ? 'is-error' : ''}`}>
+                  {contactoErrors.telefono || '9 dígitos — +51 XXX XXX XXX'}
+                </small>
+              </div>
+              <div className="form-group">
+                <label>Sitio web *</label>
+                <input
+                  className="form-control"
+                  value={contacto.web}
+                  onChange={(e) => {
+                    setContacto((p) => ({ ...p, web: e.target.value }));
+                    if (contactoErrors.web) setContactoErrors((p) => ({ ...p, web: '' }));
+                  }}
+                  placeholder="www.electrixstudio.com"
+                />
+                <small className={`config-field-hint ${contactoErrors.web ? 'is-error' : ''}`}>
+                  {contactoErrors.web || 'Debe incluir .com'}
+                </small>
+              </div>
+              <div className="form-group config-contact-grid__full">
+                <label>Nombre visible — sitio web</label>
+                <input
+                  className="form-control"
+                  value={contacto.webNombre}
+                  onChange={(e) => setContacto((p) => ({ ...p, webNombre: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
             </div>
 
-            <div className="contact-config-social-block">
-              <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Redes sociales</h4>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                Correo, teléfono y web se muestran con iconos simples. Instagram, Facebook, TikTok
-                y WhatsApp usan sus logos con nombre visible en login y PDF.
-              </p>
-              {SOCIAL_NETWORKS.map(({ id, label, logo }) => (
-                <div key={id} className="contact-config-social-row">
-                  <div className="contact-config-social-label">
-                    <img
-                      src={contactLogoUrl(id, iconBase)}
-                      alt=""
-                      width={22}
-                      height={22}
-                      style={{ borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-                    />
-                    {label}
+            <div className="config-social-section">
+              <h4 className="config-social-section__title">Redes sociales</h4>
+              <div className="config-social-cards">
+                {SOCIAL_NETWORKS.map(({ id, label, logo }) => (
+                  <div key={id} className="config-social-card">
+                    <div className="config-social-card__head">
+                      <img
+                        src={contactLogoUrl(id, iconBase)}
+                        alt=""
+                        width={22}
+                        height={22}
+                      />
+                      <span>{label}</span>
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre visible</label>
+                      <input
+                        className="form-control"
+                        value={contacto.social[id].nombre}
+                        onChange={(e) => updateSocial(id, 'nombre', e.target.value)}
+                        placeholder="@electrixstudio"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Enlace (URL)</label>
+                      <input
+                        className="form-control"
+                        value={contacto.social[id].url}
+                        onChange={(e) => updateSocial(id, 'url', e.target.value)}
+                        placeholder={id === 'whatsapp' ? 'https://wa.me/519...' : `https://${id}.com/...`}
+                      />
+                    </div>
                   </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label>Nombre visible</label>
-                    <input
-                      className="form-control"
-                      value={contacto.social[id].nombre}
-                      onChange={(e) => updateSocial(id, 'nombre', e.target.value)}
-                      placeholder={`Ej: @electrixstudio`}
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label>Enlace (URL)</label>
-                    <input
-                      className="form-control"
-                      value={contacto.social[id].url}
-                      onChange={(e) => updateSocial(id, 'url', e.target.value)}
-                      placeholder={id === 'whatsapp' ? 'https://wa.me/51967860043' : `https://${id}.com/...`}
-                    />
-                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="config-panel__actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveContacto}
+                disabled={savingContacto}
+              >
+                <Save size={16} />
+                {savingContacto ? 'Guardando...' : 'Guardar contacto y redes'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'cuenta' && (
+          <div className="config-panel__body config-panel__body--narrow">
+            <p className="config-panel__intro">
+              Sesión activa: <strong>{user?.email}</strong>
+            </p>
+            <form className="config-password-form" onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label>Contraseña actual</label>
+                <input
+                  className="form-control"
+                  type="password"
+                  value={passwordForm.passwordActual}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordActual: e.target.value }))}
+                  placeholder="Contraseña actual"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="config-password-grid">
+                <div className="form-group">
+                  <label>Nueva contraseña</label>
+                  <input
+                    className="form-control"
+                    type="password"
+                    value={passwordForm.passwordNueva}
+                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordNueva: e.target.value }))}
+                    placeholder="Mínimo 8 caracteres"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="form-group">
+                  <label>Confirmar contraseña</label>
+                  <input
+                    className="form-control"
+                    type="password"
+                    value={passwordForm.passwordConfirmacion}
+                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordConfirmacion: e.target.value }))}
+                    placeholder="Repita la contraseña"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={changingPassword}>
+                <Lock size={16} /> {changingPassword ? 'Actualizando...' : 'Cambiar contraseña'}
+              </button>
+            </form>
           </div>
-
-          <div style={{ marginTop: '1.25rem' }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSaveContacto}
-              disabled={savingContacto}
-            >
-              <Save size={16} />
-              {savingContacto ? 'Guardando...' : 'Guardar contacto y redes'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: '1.25rem' }}>
-        <div className="card-header"><h3>Cuenta de administrador</h3></div>
-        <div className="card-body">
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem', fontSize: '0.875rem' }}>
-            Sesión activa: <strong>{user?.email}</strong>
-          </p>
-          <form onSubmit={handlePasswordChange}>
-            <div className="form-group">
-              <label>Contraseña actual</label>
-              <input
-                className="form-control"
-                type="password"
-                value={passwordForm.passwordActual}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordActual: e.target.value }))}
-                placeholder="Ingrese su contraseña actual"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="form-group">
-              <label>Nueva contraseña</label>
-              <input
-                className="form-control"
-                type="password"
-                value={passwordForm.passwordNueva}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordNueva: e.target.value }))}
-                placeholder="Mínimo 8 caracteres"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="form-group">
-              <label>Confirmar nueva contraseña</label>
-              <input
-                className="form-control"
-                type="password"
-                value={passwordForm.passwordConfirmacion}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, passwordConfirmacion: e.target.value }))}
-                placeholder="Repita la nueva contraseña"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={changingPassword}>
-              <Lock size={16} /> {changingPassword ? 'Actualizando...' : 'Cambiar contraseña'}
-            </button>
-          </form>
-        </div>
+        )}
       </div>
     </div>
   );

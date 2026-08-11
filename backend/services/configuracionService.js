@@ -9,7 +9,6 @@ const DEFAULT_CONFIG = {
   interes_compensatorio: String(DEFAULT_TARIFF.interesCompensatorio),
   igv_rate: String(DEFAULT_TARIFF.igvRate),
   electrificacion_rural: String(DEFAULT_TARIFF.electrificacionRural),
-  umbral_alerta_consumo_pct: '30',
   pdf_contacto_email: 'contacto@electrixstudio.com',
   pdf_contacto_telefono: '987654321',
   pdf_contacto_web: 'www.electrixstudio.com',
@@ -85,7 +84,6 @@ const getConfigMap = async () => {
     electrificacionRural: parseFloat(
       map.electrificacion_rural || DEFAULT_TARIFF.electrificacionRural
     ),
-    umbralAlertaConsumoPct: parseFloat(map.umbral_alerta_consumo_pct || 30),
   };
 };
 

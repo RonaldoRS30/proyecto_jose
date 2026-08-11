@@ -270,7 +270,6 @@ export default function ClientesPage() {
         c.consumo_anio_kwh ?? '',
         c.gasto_mes ?? '',
         c.factura_estimada ?? '',
-        c.alerta_consumo,
       ]);
       exportToCsv(
         `clientes_${new Date().toISOString().slice(0, 10)}`,
@@ -279,7 +278,7 @@ export default function ClientesPage() {
           'Dirección', 'Distribuidora', 'Tarifa', 'Potencia', 'Medidor',
           'Acceso', 'Códigos activos', 'Equipos activos', 'Total cálculos', 'Último cálculo',
           'Consumo día (kWh)', 'Consumo mes (kWh)', 'Consumo año (kWh)',
-          'Gasto mes (S/)', 'Factura estimada (S/)', 'Alerta consumo alto',
+          'Gasto mes (S/)', 'Factura estimada (S/)',
         ],
         rows,
       );

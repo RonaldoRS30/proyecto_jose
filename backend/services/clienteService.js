@@ -41,34 +41,6 @@ const getUltimosCalculosPorCliente = async () => {
   return map;
 };
 
-const buildAlertasConsumo = (ultimosMap, consumoPromedio, umbralPct = 30) => {
-  if (!consumoPromedio || consumoPromedio <= 0) return [];
-
-  const multiplicador = 1 + (umbralPct / 100);
-  const umbral = consumoPromedio * multiplicador;
-  const alertas = [];
-
-  for (const calc of ultimosMap.values()) {
-    const consumo = parseFloat(calc.consumo_mes_total);
-    if (consumo <= umbral) continue;
-
-    const pct = Math.round(((consumo / consumoPromedio) - 1) * 100);
-    alertas.push({
-      clienteId: calc.cliente_id,
-      clienteNombre: calc.cliente
-        ? `${calc.cliente.nombre} ${calc.cliente.apellido || ''}`.trim()
-        : `Cliente #${calc.cliente_id}`,
-      consumoMes: roundNum(consumo),
-      consumoPromedio: roundNum(consumoPromedio),
-      porcentajeSobrePromedio: pct,
-      calculoId: calc.id,
-      fecha: calc.created_at,
-    });
-  }
-
-  return alertas.sort((a, b) => b.consumoMes - a.consumoMes).slice(0, 10);
-};
-
 const buildAlertasExcedentesPotencia = async (ultimosMap) => {
   const calculos = [...ultimosMap.values()];
   if (!calculos.length) return [];
@@ -482,10 +454,7 @@ const getEstadisticasAdmin = async ({ fechaDesde, fechaHasta } = {}) => {
 };
 
 const getResumenExportClientes = async () => {
-  const config = await getConfigMap();
-  const umbralPct = config.umbralAlertaConsumoPct || 30;
-
-  const [clientes, ultimosPorCliente, conteosRaw, equiposRaw, calculosAll] = await Promise.all([
+  const [clientes, ultimosPorCliente, conteosRaw, equiposRaw] = await Promise.all([
     Cliente.findAll({
       include: [{ model: CodigoAcceso, as: 'codigos', required: false }],
       order: [['nombre', 'ASC'], ['apellido', 'ASC']],
@@ -502,7 +471,6 @@ const getResumenExportClientes = async () => {
       group: ['cliente_id'],
       raw: true,
     }),
-    Calculo.findAll({ attributes: ['consumo_mes_total'] }),
   ]);
 
   const conteos = new Map(
@@ -511,15 +479,10 @@ const getResumenExportClientes = async () => {
   const equipos = new Map(
     equiposRaw.map((row) => [row.cliente_id, parseInt(row.total, 10)]),
   );
-  const consumoPromedio = calculosAll.length
-    ? calculosAll.reduce((s, c) => s + parseFloat(c.consumo_mes_total), 0) / calculosAll.length
-    : 0;
-  const umbral = consumoPromedio * (1 + umbralPct / 100);
 
   return clientes.map((c) => {
     const ultimo = ultimosPorCliente.get(c.id);
     const codigosActivos = c.codigos?.filter((cod) => cod.activo).length || 0;
-    const consumoMes = ultimo ? parseFloat(ultimo.consumo_mes_total) : 0;
     return {
       codigo_interno: c.codigo_interno,
       nombre: c.nombre,
@@ -542,7 +505,6 @@ const getResumenExportClientes = async () => {
       consumo_anio_kwh: ultimo ? roundNum(ultimo.consumo_anio_total) : null,
       gasto_mes: ultimo ? roundNum(ultimo.gasto_mensual_total) : null,
       factura_estimada: ultimo ? roundNum(ultimo.factura_total_mes) : null,
-      alerta_consumo: ultimo && consumoPromedio > 0 && consumoMes > umbral ? 'Sí' : 'No',
     };
   });
 };

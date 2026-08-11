@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import SearchableSelect from './SearchableSelect';
+import { useMarcaModeloCatalog } from '../hooks/useMarcaModeloCatalog';
 
 export default function ElectroForm({
   isOpen, onClose, onSubmit, form, setForm, editId,
@@ -9,6 +10,7 @@ export default function ElectroForm({
   const [presetKey, setPresetKey] = useState('');
   const [selectedConsejo, setSelectedConsejo] = useState('');
   const [isManual, setIsManual] = useState(false);
+  const { marcas, modelos } = useMarcaModeloCatalog(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -117,14 +119,30 @@ export default function ElectroForm({
         </div>
         <div className="form-group">
           <label>Marca</label>
-          <input className="form-control" value={form.marca || ''} onChange={(e) => setForm({ ...form, marca: e.target.value })} />
+          <SearchableSelect
+            options={marcas.map((m) => ({ value: m, label: m }))}
+            value={form.marca || ''}
+            placeholder="Buscar marca..."
+            onChange={(val) => setForm({ ...form, marca: val })}
+            getOptionLabel={(opt) => opt.label}
+            getOptionValue={(opt) => opt.value}
+            allowCustom
+          />
         </div>
       </div>
 
       <div className="form-row">
         <div className="form-group">
           <label>Modelo</label>
-          <input className="form-control" value={form.modelo || ''} onChange={(e) => setForm({ ...form, modelo: e.target.value })} />
+          <SearchableSelect
+            options={modelos.map((m) => ({ value: m, label: m }))}
+            value={form.modelo || ''}
+            placeholder="Buscar modelo..."
+            onChange={(val) => setForm({ ...form, modelo: val })}
+            getOptionLabel={(opt) => opt.label}
+            getOptionValue={(opt) => opt.value}
+            allowCustom
+          />
         </div>
         <div className="form-group">
           <label>Potencia (Watts) *</label>
@@ -139,7 +157,7 @@ export default function ElectroForm({
         </div>
         <div className="form-group">
           <label>Horas de uso por día *</label>
-          <input className="form-control" type="number" min="0" step="0.5" value={form.horas_uso_dia} onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })} required />
+          <input className="form-control" type="number" min="0.01" step="0.5" value={form.horas_uso_dia} onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })} required />
         </div>
       </div>
 
