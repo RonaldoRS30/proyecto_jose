@@ -15,6 +15,7 @@ import FantasmaPage from '../pages/client/FantasmaPage';
 import IluminacionPage from '../pages/client/IluminacionPage';
 import HistorialPage from '../pages/client/HistorialPage';
 import ReportesPage from '../pages/client/ReportesPage';
+import ComparacionPage from '../pages/client/ComparacionPage';
 import PerfilPage from '../pages/client/PerfilPage';
 
 export default function AppRoutes() {
@@ -54,6 +55,7 @@ export default function AppRoutes() {
                 <Route path="iluminacion" element={<IluminacionPage />} />
                 <Route path="historial" element={<HistorialPage />} />
                 <Route path="reportes" element={<ReportesPage />} />
+                <Route path="comparacion" element={<ComparacionPage />} />
                 <Route path="perfil" element={<PerfilPage />} />
               </Routes>
             </ClientLayout>

@@ -597,4 +597,140 @@ function drawChartsSection(doc, {
   }
 }
 
-module.exports = { drawChartsSection };
+function drawComparacionResumenTable(doc, comparacion, formatNum) {
+  const { MARGIN, applyPdfPageMargins, PDF_BOTTOM_MARGIN } = require('./pdfReciboLayout');
+  const rows = [
+    ['Consumo kWh/mes', comparacion.consumoMesKwh],
+    ['Gasto energía S/mes', comparacion.gastoEnergiaMes],
+    ['Gasto energía S/año', comparacion.gastoEnergiaAnio],
+    ['Total factura S/mes', comparacion.facturaTotalMes],
+  ];
+
+  ensureSpace(doc, 30 + rows.length * 18);
+
+  sectionTitle(doc, 'DETALLE NUMÉRICO', 'Actual − Referencia · % ahorro sobre referencia');
+
+  const colW = [CONTENT_W * 0.28, CONTENT_W * 0.18, CONTENT_W * 0.18, CONTENT_W * 0.18, CONTENT_W * 0.18];
+  const headers = ['Concepto', 'Actual', 'Referencia', 'Diferencia', '% ahorro'];
+  let x = MARGIN;
+  let y = doc.y;
+
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.primary);
+  headers.forEach((h, i) => {
+    doc.text(h, x, y, { width: colW[i], lineBreak: false });
+    x += colW[i];
+  });
+  y += 16;
+
+  rows.forEach(([label, m], idx) => {
+    x = MARGIN;
+    const isCurrency = label.includes('S/');
+    const fmt = (v) => (isCurrency ? `${formatNum(v)} S/` : `${formatNum(v)} kWh`);
+    const cells = [
+      label,
+      isCurrency ? `${formatNum(m.actual)} S/` : `${formatNum(m.actual)} kWh`,
+      isCurrency ? `${formatNum(m.referencia)} S/` : `${formatNum(m.referencia)} kWh`,
+      isCurrency ? `${formatNum(m.diferencia)} S/` : `${formatNum(m.diferencia)} kWh`,
+      m.pctAhorro != null ? `${formatNum(m.pctAhorro)}%` : '—',
+    ];
+
+    if (idx % 2 === 0) {
+      doc.rect(MARGIN, y - 2, CONTENT_W, 16).fill(C.bgAlt);
+    }
+
+    doc.font('Helvetica').fontSize(7.5).fillColor(C.text);
+    cells.forEach((cell, i) => {
+      doc.text(String(cell), x, y, { width: colW[i], lineBreak: false });
+      x += colW[i];
+    });
+    y += 16;
+  });
+
+  doc.y = y + 10;
+}
+
+function drawComparacionSection(doc, { comparacion, actualFecha, referenciaFecha, formatNum }) {
+  sectionTitle(
+    doc,
+    'COMPARACIÓN DE REPORTES',
+    `Actual: ${actualFecha}  ·  Referencia: ${referenciaFecha}`,
+  );
+
+  if (comparacion.tarifaDistinta) {
+    doc.font('Helvetica').fontSize(7.5).fillColor(C.amber)
+      .text('Nota: los cálculos usaron tarifas distintas; la comparación en soles puede incluir cambio de precio kWh.', MARGIN, doc.y, {
+        width: CONTENT_W,
+      });
+    doc.moveDown(0.8);
+  }
+
+  drawCleanHBars(doc, {
+    title: 'CONSUMO MENSUAL (kWh)',
+    sub: 'Barras: Actual vs Referencia',
+    items: [
+      { label: 'Actual', value: comparacion.consumoMesKwh.actual },
+      { label: 'Referencia', value: comparacion.consumoMesKwh.referencia },
+    ],
+    unit: 'kWh',
+    color: C.primary,
+    color2: C.muted,
+    maxBars: 2,
+    allowZeroValues: true,
+  });
+
+  drawCleanHBars(doc, {
+    title: 'GASTO POR ENERGÍA MENSUAL (S/)',
+    sub: 'Costo de energía (kWh × tarifa)',
+    items: [
+      { label: 'Actual', value: comparacion.gastoEnergiaMes.actual },
+      { label: 'Referencia', value: comparacion.gastoEnergiaMes.referencia },
+    ],
+    unit: 'S/',
+    color: C.green,
+    color2: C.muted,
+    maxBars: 2,
+    allowZeroValues: true,
+  });
+
+  const ahorroKwh = comparacion.consumoMesKwh.ahorro;
+  const ahorroMes = comparacion.gastoEnergiaMes.ahorro;
+  const ahorroAnio = comparacion.gastoEnergiaAnio.ahorro;
+
+  drawCleanHBars(doc, {
+    title: 'VARIACIÓN (AHORRO O AUMENTO)',
+    sub: 'Valores absolutos respecto a la referencia',
+    items: [
+      {
+        label: 'kWh/mes',
+        value: Math.abs(ahorroKwh),
+        sublabel: ahorroKwh >= 0 ? 'Ahorro' : 'Aumento',
+      },
+      {
+        label: 'S/ energía/mes',
+        value: Math.abs(ahorroMes),
+        sublabel: ahorroMes >= 0 ? 'Ahorro' : 'Aumento',
+      },
+      {
+        label: 'S/ energía/año',
+        value: Math.abs(ahorroAnio),
+        sublabel: ahorroAnio >= 0 ? 'Ahorro' : 'Aumento',
+      },
+    ],
+    unit: '',
+    color: [
+      ahorroKwh >= 0 ? C.green : C.red,
+      ahorroMes >= 0 ? C.green : C.red,
+      ahorroAnio >= 0 ? C.green : C.red,
+    ],
+    legend: [
+      { color: C.green, label: 'Ahorro (consumiste menos)' },
+      { color: C.red, label: 'Aumento (consumiste más)' },
+    ],
+    maxBars: 3,
+    allowZeroValues: true,
+  });
+
+  drawComparacionResumenTable(doc, comparacion, formatNum);
+}
+
+module.exports = { drawChartsSection, drawComparacionSection };

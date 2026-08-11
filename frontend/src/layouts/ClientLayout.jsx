@@ -2,7 +2,7 @@ import {
 
   LayoutDashboard, Plug, Ghost, Lightbulb, History,
 
-  FileText, User,
+  FileText, User, GitCompare,
 
 } from 'lucide-react';
 
@@ -27,6 +27,8 @@ const clientNav = [
   { path: '/cliente/historial', label: 'Historial', shortLabel: 'Historial', icon: History },
 
   { path: '/cliente/reportes', label: 'Reportes', shortLabel: 'Reportes', icon: FileText },
+
+  { path: '/cliente/comparacion', label: 'Comparación', shortLabel: 'Comparar', icon: GitCompare },
 
   { path: '/cliente/perfil', label: 'Mi Perfil', shortLabel: 'Perfil', icon: User },
 

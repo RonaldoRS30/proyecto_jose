@@ -13,6 +13,26 @@ const generarPDF = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: reporte });
 });
 
+const generarPDFComparacion = asyncHandler(async (req, res) => {
+  const clienteId =
+    req.user.role === 'cliente' ? req.user.clienteId || req.user.id : req.body.cliente_id;
+  const { calculo_id_actual, calculo_id_referencia } = req.body;
+
+  if (!calculo_id_actual || !calculo_id_referencia) {
+    return res.status(400).json({
+      success: false,
+      message: 'calculo_id_actual y calculo_id_referencia son requeridos',
+    });
+  }
+
+  const reporte = await reporteService.generarComparacionPDF(
+    calculo_id_actual,
+    calculo_id_referencia,
+    clienteId,
+  );
+  res.status(201).json({ success: true, data: reporte });
+});
+
 const descargar = asyncHandler(async (req, res) => {
   const clienteId = req.user.role === 'cliente' ? req.user.clienteId || req.user.id : null;
   const reporte = await reporteService.obtenerReporte(req.params.id, clienteId);
@@ -85,6 +105,7 @@ const generarExcel = asyncHandler(async (req, res) => {
 
 module.exports = {
   generarPDF,
+  generarPDFComparacion,
   descargar,
   listarConfig,
   actualizarConfig,

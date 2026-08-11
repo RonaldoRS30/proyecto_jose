@@ -91,6 +91,11 @@ export const getCalculo = (id) => api.get(`/calculos/${id}`);
 
 // Reportes
 export const generarPDF = (calculoId) => api.post('/reportes/pdf', { calculo_id: calculoId });
+export const generarPDFComparacion = (calculoIdActual, calculoIdReferencia) =>
+  api.post('/reportes/pdf-comparacion', {
+    calculo_id_actual: calculoIdActual,
+    calculo_id_referencia: calculoIdReferencia,
+  });
 export const downloadReporte = (id) =>
   api.get(`/reportes/${id}/download`, { responseType: 'blob' });
 export const downloadExcelReporte = (calculoId) =>
