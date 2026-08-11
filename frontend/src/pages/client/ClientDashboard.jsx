@@ -1,20 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plug, Zap, DollarSign, Calculator, Ghost, Lightbulb,
-  Receipt, BarChart3, AlertTriangle, History, ChevronRight, BarChart2, TrendingUp,
+  Receipt, BarChart3, AlertTriangle, History, ChevronRight,
 } from 'lucide-react';
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import DashboardTabs from '../../components/DashboardTabs';
 import DashboardChartFilters from '../../components/DashboardChartFilters';
+import ClientHistorialCharts from '../../components/ClientHistorialCharts';
+import { DashboardChartPanel } from '../../components/DashboardChartPanel';
+import ExcelCalculoChartsBlock from '../../components/ExcelCalculoCharts';
+import {
+  facturaFromPreview,
+} from '../../utils/excelChartData';
 import {
   ConsumoPorEquipoChart, ConsumoPorCategoriaChart, ConsumoMensualChart,
-  GastoPorEquipoChart, GastoResumenChart, EvolucionHistoricaChart,
+  GastoPorEquipoChart, GastoResumenChart,
 } from '../../components/ConsumoCharts';
 import FacturaBreakdown from '../../components/FacturaBreakdown';
 import ExcedentesPotenciaAlert from '../../components/ExcedentesPotenciaAlert';
@@ -28,51 +30,15 @@ import {
   getChartPresetDates, aggregateCalculosByMonth,
 } from '../../utils/chartPeriodFilters';
 
-const ACTUAL_CHART_OPTIONS = [
-  { id: 'gasto-equipo', label: 'Gasto por equipo' },
-  { id: 'consumo-equipo', label: 'Consumo por equipo' },
-  { id: 'categoria', label: 'Por categoría' },
-  { id: 'modulo', label: 'Por módulo' },
-  { id: 'resumen-gasto', label: 'Resumen de gastos' },
-];
-
-const HISTORIAL_CHART_OPTIONS = [
-  { id: 'evolucion', label: 'Evolución por cálculo' },
-  { id: 'consumo-promedio', label: 'Consumo promedio / mes' },
-  { id: 'gasto-periodo', label: 'Gasto y n° cálculos' },
-];
-
 const MODULO_LINKS = [
   { key: 'aparatos', path: '/cliente/electrodomesticos', icon: Plug, modKey: 'aparato' },
   { key: 'iluminacion', path: '/cliente/iluminacion', icon: Lightbulb, modKey: 'iluminacion' },
   { key: 'fantasma', path: '/cliente/fantasma', icon: Ghost, modKey: 'fantasma' },
 ];
 
-const historialTooltipStyle = {
-  background: 'var(--bg-card)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  fontSize: '13px',
-};
-
-function HistorialTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={historialTooltipStyle}>
-      <p style={{ color: 'var(--text-muted)', margin: '0 0 6px' }}>{label}</p>
-      {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color, margin: '2px 0' }}>
-          {entry.name}: <strong>{entry.value}</strong>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 export default function ClientDashboard() {
   const alert = useAlert();
   const [activeTab, setActiveTab] = useState('resumen');
-  const [activeChart, setActiveChart] = useState('gasto-equipo');
   const [dataSource, setDataSource] = useState('actual');
   const [moduloFilter, setModuloFilter] = useState('todos');
   const [preset, setPreset] = useState('6meses');
@@ -138,7 +104,6 @@ export default function ClientDashboard() {
 
   const handleDataSourceChange = (source) => {
     setDataSource(source);
-    setActiveChart(source === 'historial' ? 'evolucion' : 'gasto-equipo');
   };
 
   const handlePreset = (p) => {
@@ -162,8 +127,6 @@ export default function ClientDashboard() {
       });
     }
   };
-
-  if (loading) return <div className="loading">Cargando dashboard...</div>;
 
   const filteredDispositivos = moduloFilter === 'todos'
     ? dispositivos
@@ -202,17 +165,21 @@ export default function ClientDashboard() {
       gastoMensual: val.totales?.gastoMensual || 0,
     })) : [];
 
-  const evolucionData = historialRaw.map((c) => ({
-    fecha: new Date(c.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }),
-    consumoMes: parseFloat(c.consumo_mes_total) || 0,
-    gastoDiario: parseFloat(c.gasto_diario_total) || 0,
-    gastoMensual: parseFloat(c.gasto_mensual_total) || 0,
-    gastoAnual: parseFloat(c.gasto_anual_total) || 0,
-  }));
+  const chartGastosCategoria = hasEquipos ? Object.entries(
+    filteredDispositivos.reduce((acc, d) => {
+      acc[d.categoria] = (acc[d.categoria] || 0) + (d.gastoMensual || 0);
+      return acc;
+    }, {}),
+  ).map(([name, value]) => ({ name, value: roundNumber(value) })) : [];
+
+  const facturaPreview = useMemo(
+    () => facturaFromPreview(factura, precioKwh, rg.consumoMes, filteredDispositivos.length),
+    [factura, precioKwh, rg.consumoMes, filteredDispositivos.length],
+  );
 
   const alertCount = excedentesPotencia?.length ?? 0;
-  const chartOptions = dataSource === 'historial' ? HISTORIAL_CHART_OPTIONS : ACTUAL_CHART_OPTIONS;
-  const showModuloFilter = ['gasto-equipo', 'consumo-equipo', 'categoria'].includes(activeChart);
+
+  if (loading) return <div className="loading">Cargando dashboard...</div>;
 
   const tabs = [
     { id: 'resumen', label: 'Resumen', icon: Zap },
@@ -221,7 +188,7 @@ export default function ClientDashboard() {
     { id: 'alertas', label: 'Alertas', icon: AlertTriangle, badge: alertCount },
   ];
 
-  const renderActualChart = () => {
+  const renderActualCharts = () => {
     if (!hasEquipos) {
       return (
         <div className="dashboard-empty">
@@ -229,90 +196,47 @@ export default function ClientDashboard() {
         </div>
       );
     }
-    if (chartEquipos.length === 0 && showModuloFilter && moduloFilter !== 'todos') {
+    if (chartEquipos.length === 0 && moduloFilter !== 'todos') {
       return (
         <div className="dashboard-empty">
           <p>No hay equipos en el módulo seleccionado.</p>
         </div>
       );
     }
-    switch (activeChart) {
-      case 'consumo-equipo':
-        return <ConsumoPorEquipoChart data={chartEquipos} />;
-      case 'categoria':
-        return <ConsumoPorCategoriaChart data={chartCategorias} />;
-      case 'modulo':
-        return <ConsumoMensualChart data={chartModulos} />;
-      case 'resumen-gasto':
-        return <GastoResumenChart data={chartGastosResumen} />;
-      default:
-        return <GastoPorEquipoChart data={chartEquipos} />;
-    }
-  };
 
-  const renderHistorialChart = () => {
-    if (historialLoading) {
-      return <div className="loading" style={{ minHeight: 200 }}>Cargando historial...</div>;
-    }
-    if (!historialRaw.length) {
-      return (
-        <div className="dashboard-empty">
-          <BarChart2 size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.4 }} />
-          <p>No hay cálculos en el período seleccionado.</p>
-          <p style={{ fontSize: '0.8125rem', marginTop: '0.5rem' }}>
-            Cambie el filtro de período o ejecute un cálculo desde Inicio.
-          </p>
+    return (
+      <div className="dashboard-charts-stack">
+        <p className="dashboard-chart-meta">
+          Cálculo actual · {filteredDispositivos.length} equipo{filteredDispositivos.length !== 1 ? 's' : ''} · Desglose de factura estimada
+        </p>
+        <div className="dashboard-charts-grid">
+          <ExcelCalculoChartsBlock
+            facturaPromedio={facturaPreview}
+            precioKwh={precioKwh}
+            showTrends={false}
+          />
+
+          <DashboardChartPanel title="Gasto por equipo" subtitle="Gasto mensual estimado (S/) por equipo">
+            <GastoPorEquipoChart data={chartEquipos} />
+          </DashboardChartPanel>
+          <DashboardChartPanel title="Consumo por equipo" subtitle="Consumo mensual (kWh) por equipo">
+            <ConsumoPorEquipoChart data={chartEquipos} />
+          </DashboardChartPanel>
+          <DashboardChartPanel title="Consumo por categoría" subtitle="kWh/mes agrupados por tipo de equipo">
+            <ConsumoPorCategoriaChart data={chartCategorias} />
+          </DashboardChartPanel>
+          <DashboardChartPanel title="Gasto por categoría" subtitle="Gasto mensual (S/) por categoría — barras">
+            <GastoPorEquipoChart data={chartGastosCategoria.map((c) => ({ nombre: c.name, gastoMensual: c.value }))} />
+          </DashboardChartPanel>
+          <DashboardChartPanel title="Consumo y gasto por módulo" subtitle="Electrodomésticos, iluminación y consumo fantasma">
+            <ConsumoMensualChart data={chartModulos} />
+          </DashboardChartPanel>
+          <DashboardChartPanel title="Resumen de gastos" subtitle="Totales diario, mensual y anual" wide>
+            <GastoResumenChart data={chartGastosResumen} />
+          </DashboardChartPanel>
         </div>
-      );
-    }
-    switch (activeChart) {
-      case 'consumo-promedio':
-        return (
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={historialByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
-              <defs>
-                <linearGradient id="dashColorKwh" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1A4AB0" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#1A4AB0" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <Tooltip content={<HistorialTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="consumoMes"
-                name="kWh prom."
-                stroke="#1A4AB0"
-                fill="url(#dashColorKwh)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        );
-      case 'gasto-periodo':
-        return (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={historialByMonth} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="mes" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <Tooltip content={<HistorialTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar yAxisId="left" dataKey="gastoMensual" name="Gasto (S/)" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar yAxisId="right" dataKey="totalCalculos" name="N° cálculos" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      default:
-        return (
-          <div className="chart-evolucion-wrap">
-            <EvolucionHistoricaChart data={evolucionData} />
-          </div>
-        );
-    }
+      </div>
+    );
   };
 
   return (
@@ -443,36 +367,18 @@ export default function ClientDashboard() {
               isCustom={isCustom}
               moduloFilter={moduloFilter}
               onModuloFilterChange={setModuloFilter}
-              showModuloFilter={showModuloFilter}
+              showModuloFilter={dataSource === 'actual'}
               onRefresh={fetchHistorial}
               loading={historialLoading}
             />
 
-            <div className="dashboard-chart-chips">
-              {chartOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`dashboard-chart-chip ${activeChart === opt.id ? 'active' : ''}`}
-                  onClick={() => setActiveChart(opt.id)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {dataSource === 'historial' && historialRaw.length > 0 && (
-              <p className="dashboard-chart-meta">
-                <TrendingUp size={14} aria-hidden />
-                {historialRaw.length} cálculo{historialRaw.length !== 1 ? 's' : ''} en el período seleccionado
-              </p>
-            )}
-
-            <div className="card card-chart dashboard-chart-card">
-              <div className="card-body">
-                {dataSource === 'historial' ? renderHistorialChart() : renderActualChart()}
-              </div>
-            </div>
+            {dataSource === 'historial' ? (
+              <ClientHistorialCharts
+                historialRaw={historialRaw}
+                historialByMonth={historialByMonth}
+                loading={historialLoading}
+              />
+            ) : renderActualCharts()}
 
             <Link to="/cliente/historial" className="dashboard-link-center">
               Ver listado completo en Historial →

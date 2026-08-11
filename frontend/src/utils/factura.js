@@ -75,24 +75,67 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
   };
 }
 
+/** Misma lógica que backend facturaHelper.getCantidadEquiposCalculo */
+function getCantidadEquiposCalculo(calculo) {
+  if (!calculo) return 0;
+
+  const fromResumen = calculo.resumen_json?.resumenGeneral?.cantidadEquipos;
+  if (fromResumen != null && fromResumen > 0) return fromResumen;
+
+  const fromDispositivos = calculo.resumen_json?.dispositivos?.length ?? 0;
+  if (fromDispositivos > 0) return fromDispositivos;
+
+  const fromDetalles = calculo.detalles?.length ?? 0;
+  if (fromDetalles > 0) return fromDetalles;
+
+  const consumoMes = parseFloat(calculo.consumo_mes_total ?? 0);
+  if (consumoMes > 0) return 1;
+
+  return fromResumen ?? 0;
+}
+
+function normalizeFacturaResult(factura) {
+  if (!factura) return factura;
+  const totalMes = parseFloat(factura.totalMes);
+  return {
+    ...factura,
+    totalMes: Number.isFinite(totalMes) ? totalMes : 0,
+  };
+}
+
 /** Total factura recalculado desde un registro de cálculo (historial/reportes). */
 export function buildFacturaFromCalculo(calculo) {
-  const cantidadEquipos = (
-    calculo.resumen_json?.resumenGeneral?.cantidadEquipos
-    ?? calculo.resumen_json?.dispositivos?.length
-    ?? calculo.detalles?.length
-    ?? 0
-  );
+  if (!calculo) {
+    return buildFactura(null, DEFAULT_TARIFF.precioKwh, 0, { cantidadEquipos: 0 });
+  }
+
   const precioKwh = (
     calculo.tarifa?.precioKwh
     ?? calculo.resumen_json?.precioKwh
     ?? calculo.precio_kwh
   );
+  const storedFactura = calculo.resumen_json?.factura;
+  const storedTotal = parseFloat(storedFactura?.totalMes);
+  if (Number.isFinite(storedTotal) && storedTotal > 0) {
+    return normalizeFacturaResult(storedFactura);
+  }
+
+  const columnTotal = parseFloat(calculo.factura_total_mes);
+  if (Number.isFinite(columnTotal) && columnTotal > 0) {
+    const base = buildFactura(
+      storedFactura,
+      precioKwh,
+      calculo.consumo_mes_total,
+      { cantidadEquipos: Math.max(getCantidadEquiposCalculo(calculo), 1) },
+    );
+    return { ...base, totalMes: columnTotal };
+  }
+
   return buildFactura(
-    calculo.resumen_json?.factura,
+    storedFactura,
     precioKwh,
     calculo.consumo_mes_total,
-    { cantidadEquipos }
+    { cantidadEquipos: getCantidadEquiposCalculo(calculo) },
   );
 }
 

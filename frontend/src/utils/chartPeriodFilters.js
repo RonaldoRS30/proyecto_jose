@@ -8,6 +8,11 @@ export const CHART_PERIOD_PRESETS = [
   { label: 'Todo', value: 'todo' },
 ];
 
+export const ADMIN_PERIOD_PRESETS = [
+  { label: 'Hoy', value: 'hoy' },
+  ...CHART_PERIOD_PRESETS,
+];
+
 export function getChartPresetDates(preset) {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -16,6 +21,8 @@ export function getChartPresetDates(preset) {
   const fmt = (d) => d.toISOString().slice(0, 10);
 
   switch (preset) {
+    case 'hoy':
+      return { desde: fmt(new Date(yyyy, mm, dd)), hasta: fmt(new Date(yyyy, mm, dd)) };
     case 'semana': {
       const day = now.getDay();
       return {

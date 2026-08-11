@@ -3213,6 +3213,16 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   max-width: 52rem;
 }
 
+.excedentes-potencia-alert__titles--compact {
+  width: 100%;
+}
+
+.excedentes-potencia-admin-client__report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .excedentes-potencia-alert__summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3790,6 +3800,138 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   color: var(--text-muted);
 }
 
+.dashboard-charts-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.dashboard-chart-panel--wide {
+  grid-column: 1 / -1;
+}
+
+.dashboard-chart-panel__head {
+  padding: 0.85rem 1rem 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-chart-panel__head h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dashboard-chart-panel__head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dashboard-chart-panel__body {
+  min-height: 260px;
+  padding: 0.65rem 0.75rem 1rem !important;
+}
+
+.excel-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.excel-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.excel-chart-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dashboard-empty--compact {
+  min-height: 120px;
+  padding: 1.5rem 1rem;
+}
+
+.dashboard-chart-tooltip {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  min-width: 130px;
+}
+
+.dashboard-chart-tooltip__title {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dashboard-chart-tooltip__value {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dashboard-chart-tooltip__value strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.dashboard-chart-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.dashboard-chart-tooltip__row strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.dashboard-chart-tooltip__label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.dashboard-chart-tooltip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard-link-center {
   display: block;
   text-align: center;
@@ -3825,6 +3967,288 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 
 .dashboard-alertas .excedentes-potencia-alert {
   margin-bottom: 0;
+}
+
+.admin-excedentes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-excedentes-panel__overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-excedentes-stat-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 0.15rem;
+}
+
+.admin-excedentes-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-excedentes-picker {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-excedentes-picker__label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-excedentes-picker__select {
+  min-width: 0;
+}
+
+.admin-excedentes-picker__select .searchable-select {
+  width: 100%;
+}
+
+.admin-excedentes-picker__option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.admin-excedentes-picker__option-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-excedentes-picker__option-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-excedentes-picker__controls {
+  min-width: 160px;
+}
+
+.admin-excedentes-picker__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+}
+
+.admin-excedentes-picker__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.admin-excedentes-picker__counter {
+  min-width: 3.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.admin-excedentes-search {
+  flex: 1;
+  min-width: min(100%, 220px);
+  max-width: none;
+}
+
+.admin-excedentes-sort {
+  width: 100%;
+  min-width: 160px;
+  font-size: 0.8125rem;
+}
+
+.admin-excedentes-detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-excedentes-detail__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.admin-excedentes-detail__link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-excedentes-detail__link:hover {
+  text-decoration: underline;
+}
+
+.admin-excedentes-detail .excedentes-potencia-charts-grid {
+  min-width: 0;
+}
+
+.admin-excedentes-detail .excedentes-potencia-chart-panel {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.excedentes-potencia-alert--admin {
+  margin-bottom: 0;
+}
+
+.excedentes-potencia-admin-client {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(26, 74, 176, 0.06);
+  border-bottom: 1px solid var(--border);
+}
+
+.excedentes-potencia-admin-client__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.excedentes-potencia-admin-client__main svg {
+  flex-shrink: 0;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.excedentes-potencia-admin-client__name {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.excedentes-potencia-admin-client__name:hover {
+  text-decoration: underline;
+}
+
+.excedentes-potencia-admin-client__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.excedentes-potencia-admin-client__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+@media (max-width: 1023px) {
+  .admin-excedentes-panel__overview {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .admin-excedentes-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-excedentes-picker__nav {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .excedentes-potencia-admin-client {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .excedentes-potencia-admin-client__stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-excedentes-panel__overview {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-excedentes-picker__nav-btn span {
+    display: none;
+  }
+
+  .admin-excedentes-detail__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-excedentes-detail__link {
+    align-self: flex-start;
+  }
+
+  .excedentes-potencia-admin-client__report-text {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .admin-excedentes-panel__overview {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    grid-template-columns: unset;
+  }
+
+  .admin-excedentes-panel__overview .excedentes-potencia-stat {
+    min-width: 140px;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  .excedentes-potencia-alert__summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -3864,6 +4288,48 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   .dashboard-link-sm {
     width: 100%;
     margin-left: 0;
+    margin-top: 0.25rem;
+  }
+}
+
+/* ── Dashboard Admin (pestañas) ── */
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.admin-dashboard-kpi {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.dashboard-period-applied {
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.dashboard-actividad {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .admin-dashboard-kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-period-applied {
+    width: 100%;
+    order: 3;
     margin-top: 0.25rem;
   }
 }

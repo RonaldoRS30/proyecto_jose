@@ -4,20 +4,14 @@ import {
 } from 'recharts';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { formatChartCurrency, formatChartKwh, formatNumber } from '../utils/helpers';
+import { DashboardSimpleTooltip, DashboardMultiTooltip } from './DashboardChartPanel';
 
 const COLORS = ['#1A4AB0', '#2563d4', '#C0C0C0', '#10b981', '#f59e0b', '#64748b'];
 
-const chartTooltipStyle = {
-  background: 'var(--bg-card)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  fontSize: '13px',
-};
-
 const formatTooltipValue = (value, name) => {
-  if (name === 'kWh/mes') return [formatChartKwh(value), name];
-  if (name === 'S/ mes') return [formatChartCurrency(value), name];
-  return [formatNumber(value), name];
+  if (name === 'kWh/mes' || name === 'Consumo mensual') return formatChartKwh(value);
+  if (name === 'S/ mes' || name?.includes('Gasto')) return formatChartCurrency(value);
+  return formatNumber(value);
 };
 
 export function ConsumoPorEquipoChart({ data }) {
@@ -28,8 +22,8 @@ export function ConsumoPorEquipoChart({ data }) {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(v) => formatNumber(v)} />
         <YAxis dataKey="nombre" type="category" width={120} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-        <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [formatChartKwh(v), 'Consumo mensual']} />
-        <Bar dataKey="consumoMes" name="kWh/mes" fill="#1A4AB0" radius={[0, 4, 4, 0]} />
+        <Tooltip content={<DashboardSimpleTooltip formatValue={formatChartKwh} valueLabel="Consumo mensual" titleKey="nombre" />} />
+        <Bar dataKey="consumoMes" name="Consumo mensual" fill="#1A4AB0" radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -53,7 +47,7 @@ export function ConsumoPorCategoriaChart({ data }) {
             <Cell key={i} fill={COLORS[i % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [formatNumber(v), 'kWh/mes']} />
+        <Tooltip content={<DashboardSimpleTooltip formatValue={(v) => `${formatNumber(v)} kWh`} valueLabel="Consumo mensual" />} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>
@@ -68,10 +62,10 @@ export function ConsumoMensualChart({ data }) {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis dataKey="modulo" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(v) => formatNumber(v)} />
-        <Tooltip contentStyle={chartTooltipStyle} formatter={formatTooltipValue} />
+        <Tooltip content={<DashboardMultiTooltip formatValue={formatTooltipValue} />} />
         <Legend />
-        <Bar dataKey="consumoMes" name="kWh/mes" fill="#10b981" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="gastoMensual" name="S/ mes" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="consumoMes" name="Consumo (kWh/mes)" fill="#10b981" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="gastoMensual" name="Gasto (S/ mes)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -85,7 +79,7 @@ export function GastoPorEquipoChart({ data }) {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="nombre" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} />
-        <Tooltip contentStyle={chartTooltipStyle} formatter={(v, name) => [formatChartCurrency(v), name]} />
+        <Tooltip content={<DashboardMultiTooltip formatValue={formatTooltipValue} />} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar dataKey="gastoDiario" name="Gasto diario" fill="#2563d4" radius={[4, 4, 0, 0]} />
         <Bar dataKey="gastoMensual" name="Gasto mensual" fill="#1A4AB0" radius={[4, 4, 0, 0]} />
@@ -103,8 +97,8 @@ export function GastoResumenChart({ data }) {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="periodo" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} />
-        <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [formatChartCurrency(v), 'Gasto']} />
-        <Bar dataKey="gasto" name="Gasto (S/)" fill="#1A4AB0" radius={[6, 6, 0, 0]} />
+        <Tooltip content={<DashboardSimpleTooltip formatValue={formatChartCurrency} valueLabel="Gasto" titleKey="periodo" />} />
+        <Bar dataKey="gasto" name="Gasto" fill="#1A4AB0" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -174,11 +168,7 @@ export function EvolucionHistoricaChart({ data }) {
             axisLine={false}
             tickFormatter={(v) => (isMobile ? formatNumber(v) : formatChartCurrency(v))}
           />
-          <Tooltip
-            contentStyle={chartTooltipStyle}
-            formatter={formatTooltipValue}
-            labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
-          />
+          <Tooltip content={<DashboardMultiTooltip formatValue={formatTooltipValue} />} />
           {!isMobile && (
             <Legend
               verticalAlign="bottom"

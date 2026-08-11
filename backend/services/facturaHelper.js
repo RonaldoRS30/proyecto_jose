@@ -244,6 +244,93 @@ function getTotalesPorModulo(calculo) {
   }).filter(Boolean);
 }
 
+const FACTURA_AGG_KEYS = [
+  'consumoKwh',
+  'gastoEnergia',
+  'cargoFijo',
+  'mantReposicion',
+  'alumbradoPublico',
+  'interesCompensatorio',
+  'subtotal',
+  'igv',
+  'electrificacionRural',
+  'totalMes',
+];
+
+function facturaFieldsFromCalculo(calculo) {
+  const f = calculo.resumen_json?.factura || buildFacturaParaCalculo(calculo);
+  return {
+    consumoKwh: f.consumoEnergiaKwh ?? f.consumoEnergiaLinea ?? 0,
+    gastoEnergia: f.gastoEnergiaMensual ?? 0,
+    cargoFijo: f.cargoFijo ?? 0,
+    mantReposicion: f.mantReposicion ?? 0,
+    alumbradoPublico: f.alumbradoPublico ?? 0,
+    interesCompensatorio: f.interesCompensatorio ?? 0,
+    subtotal: f.subtotal ?? 0,
+    igv: f.igv ?? 0,
+    electrificacionRural: f.electrificacionRural ?? 0,
+    totalMes: f.totalMes ?? 0,
+  };
+}
+
+function averageFacturaFromCalculos(calculos) {
+  if (!calculos?.length) return null;
+  const sums = Object.fromEntries(FACTURA_AGG_KEYS.map((k) => [k, 0]));
+  calculos.forEach((c) => {
+    const f = facturaFieldsFromCalculo(c);
+    FACTURA_AGG_KEYS.forEach((k) => {
+      sums[k] += parseFloat(f[k]) || 0;
+    });
+  });
+  const n = calculos.length;
+  return Object.fromEntries(
+    FACTURA_AGG_KEYS.map((k) => [k, roundNum(sums[k] / n)]),
+  );
+}
+
+function buildFacturaPorMes(calculos) {
+  if (!calculos?.length) return [];
+  const byMes = new Map();
+  calculos.forEach((c) => {
+    const plain = c?.toJSON ? c.toJSON() : c;
+    const d = plain.created_at ? new Date(plain.created_at) : null;
+    if (!d || Number.isNaN(d.getTime())) return;
+    const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!byMes.has(mes)) byMes.set(mes, []);
+    byMes.get(mes).push(c);
+  });
+
+  return Array.from(byMes.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([mes, group]) => ({
+      mes,
+      ...averageFacturaFromCalculos(group),
+      totalCalculos: group.length,
+    }));
+}
+
+function averageModulosFromCalculos(calculos) {
+  const sums = { aparato: 0, iluminacion: 0, fantasma: 0 };
+  let count = 0;
+
+  calculos.forEach((c) => {
+    const mods = getTotalesPorModulo(c);
+    if (!mods.length) return;
+    mods.forEach((m) => {
+      if (sums[m.key] != null) sums[m.key] += m.totales.consumoMes || 0;
+    });
+    count += 1;
+  });
+
+  if (count === 0) return [];
+
+  return [
+    { key: 'aparato', name: MOD_LABELS.aparato, consumoMes: roundNum(sums.aparato / count) },
+    { key: 'iluminacion', name: MOD_LABELS.iluminacion, consumoMes: roundNum(sums.iluminacion / count) },
+    { key: 'fantasma', name: MOD_LABELS.fantasma, consumoMes: roundNum(sums.fantasma / count) },
+  ].filter((row) => row.consumoMes > 0);
+}
+
 module.exports = {
   aplicarTarifaDinamica,
   buildFacturaParaCalculo,
@@ -253,4 +340,7 @@ module.exports = {
   getResumenParaCalculo,
   getTotalesPorModulo,
   MOD_LABELS,
+  averageFacturaFromCalculos,
+  buildFacturaPorMes,
+  averageModulosFromCalculos,
 };

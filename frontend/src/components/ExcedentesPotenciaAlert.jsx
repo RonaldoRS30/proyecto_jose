@@ -1,8 +1,9 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { AlertTriangle, Info } from 'lucide-react';
-import { formatCurrency, formatNumber, formatChartKwh } from '../utils/helpers';
+import { AlertTriangle, User, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { formatCurrency, formatNumber, formatChartKwh, formatDate } from '../utils/helpers';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { ListCard } from './ResponsiveList';
 
@@ -59,9 +60,10 @@ function ConsumoTooltip({ active, payload }) {
   );
 }
 
-export default function ExcedentesPotenciaAlert({ items = [] }) {
+export default function ExcedentesPotenciaAlert({ items = [], adminCliente = null, compact = false }) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
+  const isTablet = bp === 'tablet';
   const useDetailCards = bp !== 'desktop';
 
   if (!items.length) return null;
@@ -81,21 +83,62 @@ export default function ExcedentesPotenciaAlert({ items = [] }) {
 
   const totalConsumo = items.reduce((s, i) => s + (i.consumo_mes || 0), 0);
   const totalExcesoW = items.reduce((s, i) => s + (i.exceso_w || 0), 0);
-  const chartHeight = Math.max(220, chartData.length * (isMobile ? 52 : 46) + 72);
+  const chartHeight = Math.max(
+    isMobile ? 200 : 220,
+    chartData.length * (isMobile ? 52 : isTablet ? 48 : 46) + (isMobile ? 64 : 72),
+  );
 
   return (
-    <div className="card excedentes-potencia-alert">
+    <div className={`card excedentes-potencia-alert ${adminCliente ? 'excedentes-potencia-alert--admin' : ''}`}>
+      {adminCliente && (
+        <div className="excedentes-potencia-admin-client">
+          <div className="excedentes-potencia-admin-client__main">
+            <User size={18} aria-hidden />
+            <div>
+              <Link to={`/admin/clientes/${adminCliente.clienteId}`} className="excedentes-potencia-admin-client__name">
+                {adminCliente.clienteNombre}
+              </Link>
+              <p className="excedentes-potencia-admin-client__meta">
+                {adminCliente.clienteDocumento && <>DNI/RUC: {adminCliente.clienteDocumento} · </>}
+                Último cálculo: {formatDate(adminCliente.fecha)}
+              </p>
+            </div>
+          </div>
+          <div className="excedentes-potencia-admin-client__stats">
+            <span>{formatChartKwh(adminCliente.consumoMesTotal)}</span>
+            <span>{formatCurrency(adminCliente.gastoMensualTotal)}</span>
+            <Link
+              to={`/admin/reportes?cliente_id=${adminCliente.clienteId}`}
+              className="btn btn-secondary btn-sm excedentes-potencia-admin-client__report-btn"
+            >
+              <ExternalLink size={13} aria-hidden />
+              <span className="excedentes-potencia-admin-client__report-text">Reportes</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="excedentes-potencia-alert__header">
-        <div className="excedentes-potencia-alert__icon-wrap">
-          <AlertTriangle size={22} aria-hidden />
-        </div>
-        <div className="excedentes-potencia-alert__titles">
-          <h3>Equipos que superan la potencia normal de referencia</h3>
-          <p>
-            Estos equipos tienen una potencia (W) mayor al límite recomendado en el catálogo.
-            Revise los gráficos para comparar su registro con la referencia.
-          </p>
-        </div>
+        {!compact && (
+          <>
+            <div className="excedentes-potencia-alert__icon-wrap">
+              <AlertTriangle size={22} aria-hidden />
+            </div>
+            <div className="excedentes-potencia-alert__titles">
+              <h3>Equipos que superan la potencia normal de referencia</h3>
+              <p>
+                Estos equipos tienen una potencia (W) mayor al límite recomendado en el catálogo.
+                Revise los gráficos para comparar su registro con la referencia.
+              </p>
+            </div>
+          </>
+        )}
+        {compact && (
+          <div className="excedentes-potencia-alert__titles excedentes-potencia-alert__titles--compact">
+            <h3>Detalle de equipos en alerta</h3>
+            <p>Gráficos y comparación con la potencia de referencia del catálogo.</p>
+          </div>
+        )}
       </div>
 
       <div className="excedentes-potencia-alert__summary">

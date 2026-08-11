@@ -5,6 +5,7 @@ const {
   CodigoAcceso,
   Electrodomestico,
   Calculo,
+  DetalleCalculo,
   Reporte,
   HistorialAcceso,
 } = require('../models');
@@ -12,9 +13,16 @@ const { generarCodigoInterno } = require('../helpers/codigoHelper');
 const { normalizeClientePayload, inferTipoCliente } = require('../helpers/clienteTipoHelper');
 const { verificarCodigoAccesoCliente } = require('./codigoLoginService');
 const { roundNum } = require('../utils/format');
-const { enrichCalculos } = require('./facturaHelper');
+const {
+  enrichCalculos,
+  averageFacturaFromCalculos,
+  buildFacturaPorMes,
+  averageModulosFromCalculos,
+} = require('./facturaHelper');
 const { getConfigMap } = require('./configuracionService');
 const { AppError } = require('../utils/errorHandler');
+const recomendacionService = require('./recomendacionService');
+const { getEquiposExcedenPotenciaReferencia } = require('../helpers/potenciaReferenciaHelper');
 
 const hasAccesoHabilitado = (cliente) => cliente.codigos?.some((c) => c.activo);
 
@@ -59,6 +67,113 @@ const buildAlertasConsumo = (ultimosMap, consumoPromedio, umbralPct = 30) => {
   }
 
   return alertas.sort((a, b) => b.consumoMes - a.consumoMes).slice(0, 10);
+};
+
+const buildAlertasExcedentesPotencia = async (ultimosMap) => {
+  const calculos = [...ultimosMap.values()];
+  if (!calculos.length) return [];
+
+  const calculoIds = calculos.map((c) => c.id);
+  const detallesAll = await DetalleCalculo.findAll({
+    where: { calculo_id: calculoIds },
+  });
+
+  const detallesByCalculo = new Map();
+  const electroIds = new Set();
+  for (const detalle of detallesAll) {
+    if (!detallesByCalculo.has(detalle.calculo_id)) {
+      detallesByCalculo.set(detalle.calculo_id, []);
+    }
+    detallesByCalculo.get(detalle.calculo_id).push(detalle);
+    if (detalle.electrodomestico_id) electroIds.add(detalle.electrodomestico_id);
+  }
+
+  let electroMap = {};
+  if (electroIds.size > 0) {
+    const electros = await Electrodomestico.findAll({
+      where: { id: [...electroIds] },
+      attributes: ['id', 'recomendacion_id'],
+    });
+    electroMap = Object.fromEntries(electros.map((e) => [e.id, e.recomendacion_id]));
+  }
+
+  const catalogoReferencia = await recomendacionService.listar({ soloActivas: true });
+  const alertas = [];
+
+  for (const calc of calculos) {
+    const detalles = detallesByCalculo.get(calc.id) || [];
+    const items = getEquiposExcedenPotenciaReferencia(detalles, catalogoReferencia, electroMap);
+    if (!items.length) continue;
+
+    const totalExcesoW = items.reduce((s, i) => s + (i.exceso_w || 0), 0);
+    alertas.push({
+      clienteId: calc.cliente_id,
+      clienteNombre: calc.cliente
+        ? `${calc.cliente.nombre} ${calc.cliente.apellido || ''}`.trim()
+        : `Cliente #${calc.cliente_id}`,
+      clienteDocumento: calc.cliente?.documento || null,
+      clienteEmail: calc.cliente?.email || null,
+      calculoId: calc.id,
+      fecha: calc.created_at,
+      consumoMesTotal: roundNum(parseFloat(calc.consumo_mes_total) || 0),
+      gastoMensualTotal: roundNum(parseFloat(calc.gasto_mensual_total) || 0),
+      totalEquipos: items.length,
+      totalExcesoW: roundNum(totalExcesoW),
+      items,
+    });
+  }
+
+  return alertas.sort((a, b) => b.totalExcesoW - a.totalExcesoW);
+};
+
+const buildCalculosPorCliente = async (calculoWhere) => {
+  const rows = await Calculo.findAll({
+    where: calculoWhere,
+    attributes: [
+      'cliente_id',
+      [sequelize.fn('COUNT', sequelize.col('Calculo.id')), 'total_calculos'],
+      [sequelize.fn('SUM', sequelize.col('consumo_mes_total')), 'consumo_total'],
+    ],
+    group: ['cliente_id'],
+    order: [[sequelize.literal('total_calculos'), 'DESC']],
+    raw: true,
+  });
+
+  if (!rows.length) return [];
+
+  const clienteIds = rows.map((r) => r.cliente_id).filter(Boolean);
+  const clientes = await Cliente.findAll({
+    where: { id: clienteIds },
+    attributes: ['id', 'nombre', 'apellido'],
+  });
+  const clienteMap = Object.fromEntries(clientes.map((c) => [c.id, c]));
+
+  const mapped = rows.map((r) => ({
+    clienteId: r.cliente_id,
+    nombre: clienteMap[r.cliente_id]
+      ? `${clienteMap[r.cliente_id].nombre} ${clienteMap[r.cliente_id].apellido || ''}`.trim()
+      : `Cliente #${r.cliente_id}`,
+    totalCalculos: parseInt(r.total_calculos, 10) || 0,
+    consumoTotal: roundNum(parseFloat(r.consumo_total) || 0),
+  }));
+
+  const top = mapped.slice(0, 7);
+  const rest = mapped.slice(7);
+  if (!rest.length) return top;
+
+  const otrosCalculos = rest.reduce((s, r) => s + r.totalCalculos, 0);
+  const otrosConsumo = rest.reduce((s, r) => s + r.consumoTotal, 0);
+  if (otrosCalculos <= 0) return top;
+
+  return [
+    ...top,
+    {
+      clienteId: null,
+      nombre: 'Otros clientes',
+      totalCalculos: otrosCalculos,
+      consumoTotal: roundNum(otrosConsumo),
+    },
+  ];
 };
 
 const listarClientes = async ({ search, activo, acceso, page = 1, limit = 10 }) => {
@@ -273,9 +388,6 @@ const toggleCliente = async (id) => {
 };
 
 const getEstadisticasAdmin = async ({ fechaDesde, fechaHasta } = {}) => {
-  const config = await getConfigMap();
-  const umbralPct = config.umbralAlertaConsumoPct || 30;
-
   // Build date filter for calculos
   const calculoWhere = {};
   if (fechaDesde || fechaHasta) {
@@ -336,7 +448,20 @@ const getEstadisticasAdmin = async ({ fechaDesde, fechaHasta } = {}) => {
   }));
 
   const ultimosPorCliente = await getUltimosCalculosPorCliente();
-  const alertasConsumo = buildAlertasConsumo(ultimosPorCliente, consumoPromedio, umbralPct);
+  const [alertasExcedentesPotencia, calculosPorCliente, calculosParaFactura, configMap] = await Promise.all([
+    buildAlertasExcedentesPotencia(ultimosPorCliente),
+    buildCalculosPorCliente(calculoWhere),
+    Calculo.findAll({
+      where: calculoWhere,
+      attributes: ['id', 'consumo_mes_total', 'precio_kwh', 'resumen_json', 'created_at', 'cliente_id'],
+    }),
+    getConfigMap(),
+  ]);
+
+  const enrichedParaFactura = enrichCalculos(calculosParaFactura, configMap);
+  const facturaPromedio = averageFacturaFromCalculos(enrichedParaFactura);
+  const facturaPorMes = buildFacturaPorMes(enrichedParaFactura);
+  const modulosPromedio = averageModulosFromCalculos(enrichedParaFactura);
 
   return {
     totalClientes,
@@ -345,11 +470,13 @@ const getEstadisticasAdmin = async ({ fechaDesde, fechaHasta } = {}) => {
     totalCalculos,
     totalReportes,
     consumoPromedio: roundNum(consumoPromedio),
-    umbralAlertaConsumo: roundNum(consumoPromedio * (1 + umbralPct / 100)),
-    umbralAlertaConsumoPct: umbralPct,
     actividadReciente: enrichCalculos(actividadReciente),
-    alertasConsumo,
+    alertasExcedentesPotencia,
+    calculosPorCliente,
     consumoPorMes,
+    facturaPromedio,
+    facturaPorMes,
+    modulosPromedio,
     filtrosAplicados: { fechaDesde: fechaDesde || null, fechaHasta: fechaHasta || null },
   };
 };

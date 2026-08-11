@@ -137,7 +137,7 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           <span className="factura-bar-cargos" style={{ width: `${pctCargos}%` }} />
         </div>
         <div className="factura-composition-legend">
-          <span><i className="dot dot-energia" /> Consumo kWh (C43)</span>
+          <span><i className="dot dot-energia" /> Consumo kWh</span>
           <span><i className="dot dot-cargos" /> Cargos fijos</span>
         </div>
       </div>
