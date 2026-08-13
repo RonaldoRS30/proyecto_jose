@@ -29,8 +29,22 @@ export const formatKwhYear = (num) => formatNumber(num, DECIMALS_KWH_YEAR);
 export const formatCurrency = (num, decimals = DECIMALS_MONEY) => `S/ ${formatNumber(num, decimals)}`;
 
 /** Valores para tooltips de gráficos */
-export const formatChartCurrency = (value) => `S/ ${Number(value).toFixed(DECIMALS)}`;
-export const formatChartKwh = (value) => `${Number(value).toFixed(DECIMALS)} kWh`;
+export const formatChartCurrency = (value) => `S/ ${Number(value).toFixed(DECIMALS_MONEY)}`;
+export const formatChartKwh = (value) => `${Number(value).toFixed(DECIMALS_KWH_MONTH)} kWh`;
+
+/** Etiquetas compactas en ejes Y (soles, sin decimales) */
+export const formatChartAxisSoles = (value, { compact = false } = {}) => {
+  const n = Number(value);
+  if (Number.isNaN(n)) return '0';
+  if (compact && Math.abs(n) >= 1000) {
+    const k = n / 1000;
+    return `${k >= 10 ? Math.round(k) : k.toFixed(1)}k`;
+  }
+  return n.toLocaleString('es-PE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+};
 
 export const formatDate = (date) => {
   if (!date) return '-';

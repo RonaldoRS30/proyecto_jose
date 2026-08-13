@@ -26,13 +26,21 @@ const formatPeriodoFactura = (calculo) => {
   return d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
 };
 
-const formatFechaChart = (calculo) => {
+const formatFechaChartFull = (calculo) => {
   const d = new Date(calculo.created_at);
-  const dia = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+  const dia = d.toLocaleDateString('es-PE', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
   const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-  if (isReciboRegistro(calculo)) {
-    return `${dia} ${hora} · Recibo`;
-  }
+  const tipo = isReciboRegistro(calculo) ? 'Recibo real' : 'Cálculo estimado';
+  return `${dia}, ${hora} · ${tipo}`;
+};
+
+const formatFechaChartShort = (calculo, sameCalendarDay) => {
+  const d = new Date(calculo.created_at);
+  const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  if (sameCalendarDay) return hora;
+  const dia = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
   return `${dia} ${hora}`;
 };
 
@@ -120,13 +128,25 @@ export default function HistorialPage() {
     }
   };
 
-  const chartData = [...chartCalculos].reverse().map((c) => ({
-    fecha: formatFechaChart(c),
-    consumoMes: parseFloat(c.consumo_mes_total) || 0,
-    gastoDiario: parseFloat(c.gasto_diario_total) || 0,
-    gastoMensual: getFacturaTotal(c),
-    gastoAnual: parseFloat(c.gasto_anual_total) || 0,
-  }));
+  const chartCalculosAsc = useMemo(
+    () => [...chartCalculos].reverse(),
+    [chartCalculos],
+  );
+
+  const chartData = useMemo(() => {
+    const days = new Set(
+      chartCalculosAsc.map((c) => new Date(c.created_at).toDateString()),
+    );
+    const sameCalendarDay = days.size <= 1;
+    return chartCalculosAsc.map((c) => ({
+      fecha: formatFechaChartShort(c, sameCalendarDay),
+      fechaFull: formatFechaChartFull(c),
+      consumoMes: parseFloat(c.consumo_mes_total) || 0,
+      gastoDiario: parseFloat(c.gasto_diario_total) || 0,
+      gastoMensual: getFacturaTotal(c),
+      gastoAnual: parseFloat(c.gasto_anual_total) || 0,
+    }));
+  }, [chartCalculosAsc]);
 
   const chartGastosActual = [
     { periodo: 'Diario', gasto: resumenGeneral.gastoDiario ?? 0 },
