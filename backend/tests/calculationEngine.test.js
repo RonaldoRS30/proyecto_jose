@@ -30,17 +30,42 @@ const ref = calcularDispositivo({ cantidad: 1, horasDiarias: 24, potenciaW: 200 
 assertEqual(ref.consumoDia, 4.8, 'Refrigerador consumo día');
 assertEqual(ref.consumoMes, 144, 'Refrigerador consumo mes (F*30)');
 assertEqual(ref.consumoAnio, 1752, 'Refrigerador consumo año (F*365)');
-assertEqual(ref.gastoDiario, 0.613 * 4.8, 'Refrigerador gasto diario');
-assertEqual(ref.gastoMensual, 0.613 * 144, 'Refrigerador gasto mensual');
-assertEqual(ref.gastoAnual, 0.613 * 1752, 'Refrigerador gasto anual');
+assertEqual(ref.gastoDiario, 2.94, 'Refrigerador gasto diario');
+assertEqual(ref.gastoMensual, 88.27, 'Refrigerador gasto mensual');
+assertEqual(ref.gastoAnual, 1073.98, 'Refrigerador gasto anual');
+
+// Lavadora 1067 W — réplica fila Excel (G=32, F=1.0667, J=19.62)
+const lav = calcularDispositivo({ cantidad: 1, horasDiarias: 1, potenciaW: 1067 });
+assertEqual(lav.consumoDia, 1.0667, 'Lavadora consumo día');
+assertEqual(lav.consumoMes, 32, 'Lavadora consumo mes');
+assertEqual(lav.consumoAnio, 389.33, 'Lavadora consumo año');
+assertEqual(lav.gastoDiario, 0.65, 'Lavadora gasto diario');
+assertEqual(lav.gastoMensual, 19.62, 'Lavadora gasto mensual');
+
+// 3 equipos ejemplo Excel (Lavadora + Horno + Licuadora)
+const ejemploExcel = calcularCompleto({
+  aparatos: [
+    { nombre: 'Lavadora', cantidad: 1, horasDiarias: 1, potenciaW: 1067, categoria: 'Lavandería' },
+    { nombre: 'Horno', cantidad: 1, horasDiarias: 1, potenciaW: 1100, categoria: 'Cocina' },
+    { nombre: 'Licuadora', cantidad: 1, horasDiarias: 1, potenciaW: 300, categoria: 'Cocina' },
+  ],
+  fantasma: [],
+  iluminacion: [],
+});
+assertEqual(ejemploExcel.resumenGeneral.consumoMes, 74, 'Excel total kWh/mes');
+assertEqual(ejemploExcel.resumenGeneral.consumoDia, 2.47, 'Excel total kWh/día');
+assertEqual(ejemploExcel.resumenGeneral.gastoMensual, 45.36, 'Excel total gasto/mes');
+assertEqual(ejemploExcel.factura.subtotal, 67.76, 'Excel subtotal factura');
+assertEqual(ejemploExcel.factura.totalMes, 84.967, 'Excel total del mes');
 
 // Factura Excel solo refrigerador (144 kWh/mes)
 const facturaRef = calcularFacturaMensual(144);
 assertEqual(facturaRef.consumoEnergiaKwh, 144, 'Factura consumo kWh mes');
-assertEqual(facturaRef.gastoEnergiaMensual, 88.272, 'Gasto energía mensual S/');
-assertEqual(facturaRef.subtotal, 166.4, 'Subtotal factura');
-assertEqual(facturaRef.igv, 29.952, 'IGV 18%');
-assertEqual(facturaRef.totalMes, 201.362, 'Total del mes');
+assertEqual(facturaRef.consumoEnergiaLinea, 88.27, 'Factura línea consumo energía (J41 S/)');
+assertEqual(facturaRef.gastoEnergiaMensual, 88.27, 'Gasto energía mensual S/');
+assertEqual(facturaRef.subtotal, 110.67, 'Subtotal factura');
+assertEqual(facturaRef.igv, 19.921, 'IGV 18%');
+assertEqual(facturaRef.totalMes, 135.601, 'Total del mes');
 
 // Cálculo completo multi-equipo
 const resultado = calcularCompleto({
@@ -51,9 +76,9 @@ const resultado = calcularCompleto({
   iluminacion: [],
 });
 
-assertEqual(resultado.resumenGeneral.gastoDiario, 2.9424, 'Resumen gasto diario');
-assertEqual(resultado.resumenGeneral.gastoMensual, 88.272, 'Resumen gasto mensual');
-assertEqual(resultado.factura.totalMes, 201.362, 'Total factura refrigerador');
+assertEqual(resultado.resumenGeneral.gastoDiario, 2.94, 'Resumen gasto diario');
+assertEqual(resultado.resumenGeneral.gastoMensual, 88.27, 'Resumen gasto mensual');
+assertEqual(resultado.factura.totalMes, 135.601, 'Total factura refrigerador');
 
 // 3 equipos activos hoja CALCULADORA (Refrigerador + Lavadora + Secadora)
 const tresEquipos = calcularCompleto({
@@ -66,11 +91,11 @@ const tresEquipos = calcularCompleto({
   iluminacion: [],
 });
 assertEqual(tresEquipos.resumenGeneral.consumoMes, 249, 'Excel G41 kWh/mes');
-assertEqual(tresEquipos.resumenGeneral.gastoMensual, 152.637, 'Excel J41 gasto/mes (× tarifa)');
+assertEqual(tresEquipos.resumenGeneral.gastoMensual, 152.64, 'Excel J41 gasto/mes (× tarifa)');
 assertEqual(tresEquipos.resumenGeneral.consumoDia, 8.3, 'Excel F total día');
-assertEqual(tresEquipos.factura.subtotal, 271.4, 'Excel C48 subtotal');
-assertEqual(tresEquipos.factura.igv, 48.852, 'Excel C49 IGV');
-assertEqual(tresEquipos.factura.totalMes, 325.262, 'Excel C51 total mes');
+assertEqual(tresEquipos.factura.subtotal, 175.03, 'Excel C48 subtotal');
+assertEqual(tresEquipos.factura.igv, 31.505, 'Excel C49 IGV');
+assertEqual(tresEquipos.factura.totalMes, 211.545, 'Excel C51 total mes');
 
 const vacio = calcularCompleto({ aparatos: [], fantasma: [], iluminacion: [] });
 assertEqual(vacio.resumenGeneral.cantidadEquipos, 0, 'Sin equipos cantidad');

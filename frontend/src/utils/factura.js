@@ -12,8 +12,8 @@ const DEFAULT_TARIFF = {
 
 /**
  * Recalcula subtotal, IGV y total según Excel (C43–C51).
- * C43 = kWh mes; subtotal = kWh + cargos fijos.
- * gastoEnergia = kWh × tarifa (columnas J del Excel, referencia tarifaria).
+ * C43 = suma gasto mensual (J) de apartados + fantasma + luces.
+ * gastoEnergia = suma columnas GASTO MENSUAL por equipo.
  */
 export function buildFactura(factura, precioKwh, consumoMesFallback, options = {}) {
   const cantidadEquipos = options.cantidadEquipos ?? null;
@@ -38,7 +38,6 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
     Number(
       factura?.consumoEnergiaKwh
       ?? consumoMesFallback
-      ?? factura?.consumoEnergia
       ?? 0
     )
   );
@@ -49,10 +48,14 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
   const igvRate = factura?.igvRate ?? DEFAULT_TARIFF.igvRate;
   const electrificacionRural = factura?.electrificacionRural ?? DEFAULT_TARIFF.electrificacionRural;
   const precio = parseFloat(precioKwh ?? factura?.precioKwh) || DEFAULT_TARIFF.precioKwh;
-  const gastoEnergia = roundNumber(consumoKwh * precio);
+  const gastoEnergia = roundNumber(
+    factura?.gastoEnergiaMensual
+    ?? factura?.consumoEnergiaLinea
+    ?? consumoKwh * precio
+  );
 
   const subtotal = roundNumber(
-    consumoKwh + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
+    gastoEnergia + cargoFijo + mantReposicion + alumbradoPublico + interesCompensatorio
   );
   const igv = roundNumber(subtotal * igvRate);
   const totalMes = roundNumber(subtotal + igv + electrificacionRural);
@@ -62,7 +65,7 @@ export function buildFactura(factura, precioKwh, consumoMesFallback, options = {
     precioKwh: precio,
     gastoEnergia,
     gastoEnergiaMensual: gastoEnergia,
-    consumoEnergiaLinea: consumoKwh,
+    consumoEnergiaLinea: gastoEnergia,
     cargoFijo,
     mantReposicion,
     alumbradoPublico,

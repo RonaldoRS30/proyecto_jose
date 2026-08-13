@@ -343,7 +343,7 @@ function drawFacturaLineRow(doc, opts) {
 function measureFacturaBlockHeight(doc, factura, formatNum) {
   const pad = 14;
   const rowW = CONTENT_W - pad * 2;
-  const kwh = factura.consumoEnergiaKwh ?? factura.consumoEnergiaLinea ?? 0;
+  const kwh = factura.consumoEnergiaKwh ?? 0;
   const precio = factura.precioKwh ?? 0.613;
 
   doc.font('Helvetica').fontSize(7.5);
@@ -405,9 +405,9 @@ function drawFacturaRecibo(doc, factura, formatNum) {
 
   let y = boxY + 50;
 
-  const kwh = factura.consumoEnergiaKwh ?? factura.consumoEnergiaLinea ?? 0;
+  const kwh = factura.consumoEnergiaKwh ?? 0;
   const precio = factura.precioKwh ?? 0.613;
-  const importeEnergia = factura.consumoEnergiaLinea ?? kwh;
+  const importeEnergia = factura.gastoEnergiaMensual ?? factura.consumoEnergiaLinea ?? (kwh * precio);
 
   y = drawFacturaLineRow(doc, {
     label: 'Consumo de energía',

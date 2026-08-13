@@ -3,23 +3,24 @@
  * Fuente: CÁLCULO - CONSUMO ELÉCTRICO.xlsx
  *
  * Fórmulas por dispositivo (filas 5+ en todas las hojas):
- *   F = (C * E * D) / 1000          → Consumo diario kWh
- *   G = F * 30                      → Consumo mensual kWh
- *   H = F * 365                     → Consumo anual kWh
- *   I = precioKwh * F               → Gasto diario
- *   J = precioKwh * G               → Gasto mensual
- *   K = precioKwh * H               → Gasto anual
+ *   G = ROUND((C * E * D) / 1000 * 30, 0)  → Consumo mensual kWh
+ *   F = ROUND(G / 30, 4)                   → Consumo diario kWh (derivado del mes)
+ *   H = ROUND(G / 30 * 365, 2)             → Consumo anual kWh
+ *   I = ROUND(precioKwh * F, 2)            → Gasto diario S/
+ *   J = ROUND(precioKwh * G, 2)            → Gasto mensual S/
+ *   K = ROUND(precioKwh * H, 2)            → Gasto anual S/
+ *
+ * Fila TOTALES: consumo con 2 decimales; gastos = ROUND(consumo_total * precioKwh, 2)
  *
  * Hoja CALCULADORA - Facturación mensual (C43-C51):
- *   C43 = G41 → kWh mensual (valor numérico en la suma del subtotal)
+ *   C43 = J41 → suma gasto mensual (S/) de electrodomésticos + fantasma + luces
  *   C44-C47 → cargos fijos en S/
  *   C48 = C43+C44+C45+C46+C47 → SUBTOTAL
  *   C49 = C48*0.18 → IGV
  *   C50 → Electrificación Rural
  *   C51 = C49+C50+C48 → TOTAL DEL MES
  *
- * Tarifa J1: multiplica columnas I,J,K (gastos por equipo). La fila C43 del recibo
- * usa G41 (kWh), no J41 — réplica exacta del Excel.
+ * G41 sigue siendo kWh/mes (referencia). J41 = suma columna GASTO MENSUAL por equipo.
  */
 
 const DEFAULT_TARIFF = {
@@ -45,26 +46,21 @@ function calcularDispositivo(device, precioKwh = DEFAULT_TARIFF.precioKwh) {
   const horasDiarias = Number(device.horasDiarias ?? device.horas_diarias) || 0;
   const potenciaW = Number(device.potenciaW ?? device.potencia_w) || 0;
 
-  // F = (C * E * D) / 1000
-  const consumoDia = (cantidad * potenciaW * horasDiarias) / 1000;
-  // G = F * 30
-  const consumoMes = consumoDia * DEFAULT_TARIFF.diasMes;
-  // H = F * 365
-  const consumoAnio = consumoDia * DEFAULT_TARIFF.diasAnio;
-  // I = precioKwh * F
-  const gastoDiario = precioKwh * consumoDia;
-  // J = precioKwh * G
-  const gastoMensual = precioKwh * consumoMes;
-  // K = precioKwh * H
-  const gastoAnual = precioKwh * consumoAnio;
+  const consumoDiaRaw = (cantidad * potenciaW * horasDiarias) / 1000;
+  const consumoMes = round(consumoDiaRaw * DEFAULT_TARIFF.diasMes, KWH_MONTH);
+  const consumoDia = round(consumoMes / DEFAULT_TARIFF.diasMes, KWH_DAY);
+  const consumoAnio = round((consumoMes / DEFAULT_TARIFF.diasMes) * DEFAULT_TARIFF.diasAnio, KWH_YEAR);
+  const gastoDiario = round(precioKwh * consumoDia, MONEY);
+  const gastoMensual = round(precioKwh * consumoMes, MONEY);
+  const gastoAnual = round(precioKwh * consumoAnio, MONEY);
 
   return {
-    consumoDia: round(consumoDia),
-    consumoMes: round(consumoMes),
-    consumoAnio: round(consumoAnio),
-    gastoDiario: round(gastoDiario),
-    gastoMensual: round(gastoMensual),
-    gastoAnual: round(gastoAnual),
+    consumoDia,
+    consumoMes,
+    consumoAnio,
+    gastoDiario,
+    gastoMensual,
+    gastoAnual,
     demandaKw: round((cantidad * potenciaW) / 1000),
   };
 }
@@ -102,9 +98,13 @@ function calcularTotales(devices, precioKwh = DEFAULT_TARIFF.precioKwh) {
     }
   );
 
-  Object.keys(totales).forEach((k) => {
-    totales[k] = round(totales[k]);
-  });
+  totales.consumoDia = round(totales.consumoDia, KWH_TOTAL);
+  totales.consumoMes = round(totales.consumoMes, KWH_TOTAL);
+  totales.consumoAnio = round(totales.consumoAnio, KWH_TOTAL);
+  totales.gastoDiario = round(totales.consumoDia * precioKwh, MONEY);
+  totales.gastoMensual = round(totales.consumoMes * precioKwh, MONEY);
+  totales.gastoAnual = round(totales.consumoAnio * precioKwh, MONEY);
+  totales.demandaKw = round(totales.demandaKw);
 
   return { detalles, totales };
 }
@@ -129,13 +129,17 @@ function crearFacturaVacia() {
   };
 }
 
-function calcularFacturaMensual(consumoMensualTotal, tariff = {}) {
+function calcularFacturaMensual(consumoMensualTotal, tariff = {}, gastoMensualTotal = null) {
   const t = { ...DEFAULT_TARIFF, ...tariff };
-  const kwhMes = round(Number(consumoMensualTotal));
-
-  const gastoEnergiaMensual = round(kwhMes * t.precioKwh);
-  // C43 = G41 (Excel): kWh mensual entra al subtotal como valor numérico
-  const consumoEnergiaLinea = kwhMes;
+  const kwhMes = round(Number(consumoMensualTotal) || 0, KWH_TOTAL);
+  const gastoEnergiaMensual = round(
+    gastoMensualTotal != null && gastoMensualTotal !== ''
+      ? Number(gastoMensualTotal)
+      : kwhMes * t.precioKwh,
+    MONEY
+  );
+  // C43 = J41 (Excel): suma gasto mensual de todos los equipos listados
+  const consumoEnergiaLinea = gastoEnergiaMensual;
 
   const cargoFijo = t.cargoFijo;
   const mantReposicion = t.mantReposicion;
@@ -201,32 +205,36 @@ function calcularCompleto({ aparatos = [], fantasma = [], iluminacion = [] }, co
     moduloFantasma.totales.consumoMes +
     moduloIluminacion.totales.consumoMes;
 
+  const consumoDiarioTotal =
+    moduloAparatos.totales.consumoDia +
+    moduloFantasma.totales.consumoDia +
+    moduloIluminacion.totales.consumoDia;
+
   const resumenGeneral = {
-    consumoDia: round(
-      moduloAparatos.totales.consumoDia +
-        moduloFantasma.totales.consumoDia +
-        moduloIluminacion.totales.consumoDia
-    ),
-    consumoMes: round(consumoMensualTotal),
+    consumoDia: round(consumoDiarioTotal, KWH_TOTAL),
+    consumoMes: round(consumoMensualTotal, KWH_TOTAL),
     consumoAnio: round(
       moduloAparatos.totales.consumoAnio +
         moduloFantasma.totales.consumoAnio +
-        moduloIluminacion.totales.consumoAnio
+        moduloIluminacion.totales.consumoAnio,
+      KWH_TOTAL
     ),
     gastoDiario: round(
-      moduloAparatos.totales.gastoDiario +
-        moduloFantasma.totales.gastoDiario +
-        moduloIluminacion.totales.gastoDiario
+      round(consumoDiarioTotal, KWH_TOTAL) * precioKwh,
+      MONEY
     ),
     gastoMensual: round(
-      moduloAparatos.totales.gastoMensual +
-        moduloFantasma.totales.gastoMensual +
-        moduloIluminacion.totales.gastoMensual
+      round(consumoMensualTotal, KWH_TOTAL) * precioKwh,
+      MONEY
     ),
     gastoAnual: round(
-      moduloAparatos.totales.gastoAnual +
-        moduloFantasma.totales.gastoAnual +
-        moduloIluminacion.totales.gastoAnual
+      round(
+        moduloAparatos.totales.consumoAnio +
+          moduloFantasma.totales.consumoAnio +
+          moduloIluminacion.totales.consumoAnio,
+        KWH_TOTAL
+      ) * precioKwh,
+      MONEY
     ),
     demandaTotal: round(
       moduloAparatos.totales.demandaKw +
@@ -238,7 +246,7 @@ function calcularCompleto({ aparatos = [], fantasma = [], iluminacion = [] }, co
 
   const factura = todosDispositivos.length === 0
     ? crearFacturaVacia()
-    : calcularFacturaMensual(consumoMensualTotal, tariff);
+    : calcularFacturaMensual(consumoMensualTotal, tariff, resumenGeneral.gastoMensual);
 
   return {
     precioKwh,
@@ -253,7 +261,14 @@ function calcularCompleto({ aparatos = [], fantasma = [], iluminacion = [] }, co
   };
 }
 
-const { roundNum } = require('../utils/format');
+const {
+  roundNum,
+  DECIMALS_KWH_DAY: KWH_DAY,
+  DECIMALS_KWH_MONTH: KWH_MONTH,
+  DECIMALS_KWH_YEAR: KWH_YEAR,
+  DECIMALS_KWH_TOTAL: KWH_TOTAL,
+  DECIMALS_MONEY: MONEY,
+} = require('../utils/format');
 
 const round = roundNum;
 

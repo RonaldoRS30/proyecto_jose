@@ -1,5 +1,9 @@
-/** Decimales estándar en todo el sistema (Excel / reportes) */
+/** Decimales estándar — réplica Excel */
 export const DECIMALS = 3;
+export const DECIMALS_KWH_DAY = 4;
+export const DECIMALS_KWH_MONTH = 3;
+export const DECIMALS_KWH_YEAR = 2;
+export const DECIMALS_MONEY = 2;
 
 export const roundNumber = (num, decimals = DECIMALS) => {
   const factor = 10 ** decimals;
@@ -19,7 +23,10 @@ export const formatNumber = (num, decimals = DECIMALS) => {
   });
 };
 
-export const formatCurrency = (num, decimals = DECIMALS) => `S/ ${formatNumber(num, decimals)}`;
+export const formatKwhDay = (num) => formatNumber(num, DECIMALS_KWH_DAY);
+export const formatKwhMonth = (num) => formatNumber(num, DECIMALS_KWH_MONTH);
+export const formatKwhYear = (num) => formatNumber(num, DECIMALS_KWH_YEAR);
+export const formatCurrency = (num, decimals = DECIMALS_MONEY) => `S/ ${formatNumber(num, decimals)}`;
 
 /** Valores para tooltips de gráficos */
 export const formatChartCurrency = (value) => `S/ ${Number(value).toFixed(DECIMALS)}`;

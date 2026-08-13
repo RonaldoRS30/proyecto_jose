@@ -1,6 +1,6 @@
 import { Zap, DollarSign } from 'lucide-react';
 import StatCard from './StatCard';
-import { formatNumber, formatCurrency } from '../utils/helpers';
+import { formatKwhDay, formatKwhMonth, formatKwhYear, formatCurrency } from '../utils/helpers';
 
 /**
  * Tarjetas de resumen por módulo (electrodomésticos, fantasma, iluminación).
@@ -10,9 +10,9 @@ export default function ModuloResumenCards({ totales, color = '#1A4AB0', Icon = 
 
   return (
     <div className="cards-grid">
-      <StatCard icon={Icon} label="Consumo Diario" value={`${formatNumber(totales.consumoDia)} kWh`} color={color} />
-      <StatCard icon={Icon} label="Consumo Mensual" value={`${formatNumber(totales.consumoMes)} kWh`} color={color} />
-      <StatCard icon={Icon} label="Consumo Anual" value={`${formatNumber(totales.consumoAnio)} kWh`} color={color} />
+      <StatCard icon={Icon} label="Consumo Diario" value={`${formatKwhDay(totales.consumoDia)} kWh`} color={color} />
+      <StatCard icon={Icon} label="Consumo Mensual" value={`${formatKwhMonth(totales.consumoMes)} kWh`} color={color} />
+      <StatCard icon={Icon} label="Consumo Anual" value={`${formatKwhYear(totales.consumoAnio)} kWh`} color={color} />
       <StatCard icon={DollarSign} label="Gasto Diario" value={formatCurrency(totales.gastoDiario)} color="#2563d4" />
       <StatCard icon={DollarSign} label="Gasto Mensual" value={formatCurrency(totales.gastoMensual)} color="#1A4AB0" />
       <StatCard icon={DollarSign} label="Gasto Anual" value={formatCurrency(totales.gastoAnual)} color="#10b981" />
@@ -33,9 +33,9 @@ export function getEquipoListFields(calc) {
     ];
   }
   return [
-    { label: 'Consumo/día', value: `${formatNumber(calc.consumoDia)} kWh` },
-    { label: 'Consumo/mes', value: `${formatNumber(calc.consumoMes)} kWh` },
-    { label: 'Consumo/año', value: `${formatNumber(calc.consumoAnio)} kWh` },
+    { label: 'Consumo/día', value: `${formatKwhDay(calc.consumoDia)} kWh` },
+    { label: 'Consumo/mes', value: `${formatKwhMonth(calc.consumoMes)} kWh` },
+    { label: 'Consumo/año', value: `${formatKwhYear(calc.consumoAnio)} kWh` },
     { label: 'Gasto/día', value: formatCurrency(calc.gastoDiario) },
     { label: 'Gasto/mes', value: formatCurrency(calc.gastoMensual), highlight: true },
     { label: 'Gasto/año', value: formatCurrency(calc.gastoAnual) },
@@ -53,9 +53,9 @@ export function renderEquipoDataCells(calc) {
   }
   return (
     <>
-      <td>{formatNumber(calc.consumoDia)} kWh</td>
-      <td>{formatNumber(calc.consumoMes)} kWh</td>
-      <td>{formatNumber(calc.consumoAnio)} kWh</td>
+      <td>{formatKwhDay(calc.consumoDia)} kWh</td>
+      <td>{formatKwhMonth(calc.consumoMes)} kWh</td>
+      <td>{formatKwhYear(calc.consumoAnio)} kWh</td>
       <td>{formatCurrency(calc.gastoDiario)}</td>
       <td>{formatCurrency(calc.gastoMensual)}</td>
       <td>{formatCurrency(calc.gastoAnual)}</td>

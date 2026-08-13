@@ -53,7 +53,7 @@ Fuente: 4 hojas analizadas — `CALCULADORA`, `1.CONSUMO APARATOS`, `2.CONSUMO F
 
 | Concepto | Valor Excel |
 |----------|-------------|
-| Consumo Energía | Total kWh mes × precio kWh |
+| Consumo Energía | Suma gasto mensual (S/) de apartados + fantasma + luces |
 | Cargo Fijo | S/ 2.26 |
 | Mant. Reposición | S/ 1.68 |
 | Alumbrado Público | S/ 17.64 |

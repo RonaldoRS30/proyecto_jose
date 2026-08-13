@@ -46,11 +46,14 @@ function buildFacturaParaCalculo(calculo) {
   const consumoMes = parseFloat(
     plain.consumo_mes_total ?? plain.resumen_json?.resumenGeneral?.consumoMes ?? 0
   );
-  return calcularFacturaMensual(consumoMes, tariffFromCalculo(plain));
+  const gastoMes = parseFloat(
+    plain.gasto_mensual_total ?? plain.resumen_json?.resumenGeneral?.gastoMensual ?? 0
+  );
+  return calcularFacturaMensual(consumoMes, tariffFromCalculo(plain), gastoMes || null);
 }
 
 /**
- * Enriquece un cálculo con factura recalculada (subtotal = kWh × tarifa + cargos).
+ * Enriquece un cálculo con factura recalculada (subtotal = gasto mensual equipos + cargos).
  */
 function enrichCalculo(calculo, options = {}) {
   const configMap = options.configMap || {};
@@ -260,8 +263,8 @@ const FACTURA_AGG_KEYS = [
 function facturaFieldsFromCalculo(calculo) {
   const f = calculo.resumen_json?.factura || buildFacturaParaCalculo(calculo);
   return {
-    consumoKwh: f.consumoEnergiaKwh ?? f.consumoEnergiaLinea ?? 0,
-    gastoEnergia: f.gastoEnergiaMensual ?? 0,
+    consumoKwh: f.consumoEnergiaKwh ?? 0,
+    gastoEnergia: f.gastoEnergiaMensual ?? f.consumoEnergiaLinea ?? 0,
     cargoFijo: f.cargoFijo ?? 0,
     mantReposicion: f.mantReposicion ?? 0,
     alumbradoPublico: f.alumbradoPublico ?? 0,

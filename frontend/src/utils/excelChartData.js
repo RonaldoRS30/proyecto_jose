@@ -36,12 +36,12 @@ export function normalizeFacturaChart(factura) {
   const consumoKwh = Number(
     factura.consumoKwh
     ?? factura.consumoEnergiaKwh
-    ?? factura.consumoEnergiaLinea
     ?? 0,
   );
   const gastoEnergia = Number(
     factura.gastoEnergia
     ?? factura.gastoEnergiaMensual
+    ?? factura.consumoEnergiaLinea
     ?? 0,
   );
   return {

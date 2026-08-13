@@ -82,7 +82,7 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
     {
       icon: Zap,
       label: 'Consumo de Energía',
-      value: data.consumoKwh,
+      value: data.gastoEnergia,
       unit: 'currency',
       subtext: `${formatNumber(data.consumoKwh)} kWh`,
     },
@@ -92,7 +92,7 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
     { icon: Receipt, label: 'Interés Compensatorio', value: data.interesCompensatorio },
   ];
 
-  const pctEnergia = data.subtotal > 0 ? (data.consumoKwh / data.subtotal) * 100 : 0;
+  const pctEnergia = data.subtotal > 0 ? (data.gastoEnergia / data.subtotal) * 100 : 0;
   const pctCargos = data.subtotal > 0
     ? ((data.cargoFijo + data.mantReposicion + data.alumbradoPublico + data.interesCompensatorio) / data.subtotal) * 100
     : 0;
@@ -137,7 +137,7 @@ export default function FacturaBreakdown({ factura, precioKwh, consumoMesFallbac
           <span className="factura-bar-cargos" style={{ width: `${pctCargos}%` }} />
         </div>
         <div className="factura-composition-legend">
-          <span><i className="dot dot-energia" /> Consumo kWh</span>
+          <span><i className="dot dot-energia" /> Gasto energía (S/)</span>
           <span><i className="dot dot-cargos" /> Cargos fijos</span>
         </div>
       </div>
