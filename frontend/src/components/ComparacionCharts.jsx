@@ -2,6 +2,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { formatNumber, formatCurrency } from '../utils/helpers';
+import { hasComparacionVariacion } from '../utils/compareCalculos';
 import { DashboardSimpleTooltip, DashboardChartPanel } from './DashboardChartPanel';
 
 const formatKwh = (v) => `${formatNumber(v)} kWh`;
@@ -51,11 +52,16 @@ function VariacionTooltip({ active, payload, formatValue }) {
   );
 }
 
-function ComparacionVariacionPanel({ data }) {
-  if (!data?.length) {
+function ComparacionVariacionPanel({ data, sinVariacion = false }) {
+  if (sinVariacion || !data?.length || data.every((d) => (d.value ?? 0) < 0.001)) {
     return (
       <DashboardChartPanel title="Variación (ahorro o aumento)" subtitle="Respecto al reporte de referencia" wide>
-        <div className="dashboard-empty dashboard-empty--compact"><p>Sin datos para comparar.</p></div>
+        <div className="dashboard-empty dashboard-empty--compact">
+          <p>Sin variación entre los cálculos seleccionados.</p>
+          <p style={{ fontSize: '0.8125rem', marginTop: '0.35rem' }}>
+            Elija otro cálculo de referencia para ver diferencias.
+          </p>
+        </div>
       </DashboardChartPanel>
     );
   }
@@ -94,6 +100,8 @@ function ComparacionVariacionPanel({ data }) {
 export default function ComparacionCharts({ comparison }) {
   if (!comparison) return null;
 
+  const sinVariacion = !hasComparacionVariacion(comparison);
+
   const kwhData = [
     { name: 'Actual', value: comparison.consumoMesKwh.actual, fill: '#1A4AB0' },
     { name: 'Referencia', value: comparison.consumoMesKwh.referencia, fill: '#64748b' },
@@ -112,10 +120,10 @@ export default function ComparacionCharts({ comparison }) {
       tipo: comparison.consumoMesKwh.ahorro >= 0 ? 'Ahorro' : 'Aumento',
     },
     {
-      name: 'S/ energía/mes',
-      value: Math.abs(comparison.gastoEnergiaMes.ahorro),
-      fill: comparison.gastoEnergiaMes.ahorro >= 0 ? '#10b981' : '#ef4444',
-      tipo: comparison.gastoEnergiaMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
+      name: 'S/ factura/mes',
+      value: Math.abs(comparison.facturaTotalMes.ahorro),
+      fill: comparison.facturaTotalMes.ahorro >= 0 ? '#10b981' : '#ef4444',
+      tipo: comparison.facturaTotalMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
     },
     {
       name: 'S/ energía/año',
@@ -141,7 +149,7 @@ export default function ComparacionCharts({ comparison }) {
         formatValue={formatSoles}
         valueLabel="Total factura"
       />
-      <ComparacionVariacionPanel data={ahorroData} />
+      <ComparacionVariacionPanel data={ahorroData} sinVariacion={sinVariacion} />
     </div>
   );
 }

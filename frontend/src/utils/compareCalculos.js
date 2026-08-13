@@ -58,7 +58,7 @@ export function compareCalculos(actual, referencia) {
   const B = extractCalculoMetrics(referencia);
   if (!A || !B) return null;
 
-  return {
+  const result = {
     actual: A,
     referencia: B,
     tarifaDistinta: Math.abs(A.precioKwh - B.precioKwh) > 0.001,
@@ -68,6 +68,47 @@ export function compareCalculos(actual, referencia) {
     gastoEnergiaAnio: buildMetricPair(A.gastoEnergiaAnio, B.gastoEnergiaAnio),
     facturaTotalMes: buildMetricPair(A.facturaTotalMes, B.facturaTotalMes),
   };
+  result.tieneVariacion = hasComparacionVariacion(result);
+  return result;
+}
+
+/** Elige par por defecto: el más reciente vs el primer cálculo con datos distintos. */
+export function pickComparacionDefaults(calculos) {
+  if (!calculos?.length) return { actualId: '', referenciaId: '' };
+  const list = [...calculos].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  );
+  if (list.length === 1) {
+    return { actualId: String(list[0].id), referenciaId: '' };
+  }
+  const actual = list[0];
+  const actualM = extractCalculoMetrics(actual);
+  const referencia = list.find((c) => {
+    if (String(c.id) === String(actual.id)) return false;
+    const m = extractCalculoMetrics(c);
+    return m.consumoMesKwh !== actualM.consumoMesKwh
+      || m.facturaTotalMes !== actualM.facturaTotalMes;
+  }) ?? list[1];
+  return {
+    actualId: String(actual.id),
+    referenciaId: String(referencia.id),
+  };
+}
+
+export function hasComparacionVariacion(comparison) {
+  if (!comparison) return false;
+  const keys = ['consumoMesKwh', 'gastoEnergiaMes', 'gastoEnergiaAnio', 'facturaTotalMes'];
+  return keys.some((k) => Math.abs(comparison[k]?.diferencia ?? 0) > 0.001);
+}
+
+export function formatAhorroLabel(ahorro, pct, unit = '') {
+  const abs = Math.abs(ahorro ?? 0);
+  if (abs < 0.001) return 'Sin variación';
+  const sign = ahorro >= 0 ? 'Ahorro' : 'Aumento';
+  const pctTxt = pct != null ? ` (${Math.abs(pct).toFixed(1)}%)` : '';
+  if (unit === 'kWh') return `${sign}: ${roundNumber(abs)} kWh${pctTxt}`;
+  if (unit === 'S/') return `${sign}: S/ ${roundNumber(abs)}${pctTxt}`;
+  return `${sign}: ${roundNumber(abs)}${pctTxt}`;
 }
 
 export function buildComparacionBarData(comparison) {
@@ -95,13 +136,4 @@ export function buildComparacionBarData(comparison) {
       },
     ],
   };
-}
-
-export function formatAhorroLabel(ahorro, pct, unit = '') {
-  const sign = ahorro >= 0 ? 'Ahorro' : 'Aumento';
-  const abs = Math.abs(ahorro);
-  const pctTxt = pct != null ? ` (${Math.abs(pct).toFixed(1)}%)` : '';
-  if (unit === 'kWh') return `${sign}: ${roundNumber(abs)} kWh${pctTxt}`;
-  if (unit === 'S/') return `${sign}: S/ ${roundNumber(abs)}${pctTxt}`;
-  return `${sign}: ${roundNumber(abs)}${pctTxt}`;
 }

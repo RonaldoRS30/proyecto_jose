@@ -15,6 +15,7 @@ import {
   compareCalculos,
   formatCalculoOptionLabel,
   formatAhorroLabel,
+  pickComparacionDefaults,
 } from '../../utils/compareCalculos';
 
 export default function ComparacionPage() {
@@ -33,8 +34,9 @@ export default function ComparacionPage() {
         (a, b) => new Date(b.created_at) - new Date(a.created_at),
       );
       setCalculos(list);
-      if (list.length >= 1) setActualId(String(list[0].id));
-      if (list.length >= 2) setReferenciaId(String(list[1].id));
+      const { actualId: aId, referenciaId: rId } = pickComparacionDefaults(list);
+      if (aId) setActualId(aId);
+      if (rId) setReferenciaId(rId);
     } catch {
       await alert({
         title: 'Error',
@@ -47,6 +49,14 @@ export default function ComparacionPage() {
   }, [alert]);
 
   useEffect(() => { fetchCalculos(); }, [fetchCalculos]);
+
+  useEffect(() => {
+    if (calculos.length < 2 || !actualId || !referenciaId) return;
+    if (actualId === referenciaId) {
+      const { referenciaId: rId } = pickComparacionDefaults(calculos);
+      if (rId && rId !== actualId) setReferenciaId(rId);
+    }
+  }, [calculos, actualId, referenciaId]);
 
   const options = useMemo(
     () => calculos.map((c) => ({
@@ -121,10 +131,12 @@ export default function ComparacionPage() {
   }
 
   const kwhAhorro = comparison?.consumoMesKwh.ahorro ?? 0;
-  const solesAhorro = comparison?.gastoEnergiaMes.ahorro ?? 0;
+  const facturaAhorro = comparison?.facturaTotalMes.ahorro ?? 0;
   const solesAnualAhorro = comparison?.gastoEnergiaAnio.ahorro ?? 0;
+  const sinVariacion = comparison && !comparison.tieneVariacion;
   const KwhIcon = kwhAhorro >= 0 ? TrendingDown : TrendingUp;
-  const SolesIcon = solesAhorro >= 0 ? TrendingDown : TrendingUp;
+  const SolesIcon = facturaAhorro >= 0 ? TrendingDown : TrendingUp;
+  const neutralColor = '#64748b';
 
   return (
     <div className="comparacion-page">
@@ -178,6 +190,13 @@ export default function ComparacionPage() {
         </div>
       )}
 
+      {sinVariacion && (
+        <div className="comparacion-alert comparacion-alert--info">
+          <AlertTriangle size={18} aria-hidden />
+          Los dos cálculos seleccionados tienen los mismos valores. Elija otro cálculo de referencia en el selector de arriba para ver diferencias.
+        </div>
+      )}
+
       {comparison?.tarifaDistinta && (
         <div className="comparacion-alert comparacion-alert--info">
           <AlertTriangle size={18} aria-hidden />
@@ -196,33 +215,39 @@ export default function ComparacionPage() {
                 comparison.consumoMesKwh.pctAhorro,
                 'kWh',
               )}
-              color={kwhAhorro >= 0 ? '#10b981' : '#ef4444'}
+              color={sinVariacion ? neutralColor : (kwhAhorro >= 0 ? '#10b981' : '#ef4444')}
               subtext={`Actual: ${formatNumber(comparison.consumoMesKwh.actual)} kWh · Ref.: ${formatNumber(comparison.consumoMesKwh.referencia)} kWh`}
             />
             <StatCard
               icon={SolesIcon}
-              label="Variación energía S/mes"
+              label="Variación total factura S/mes"
               value={formatAhorroLabel(
-                comparison.gastoEnergiaMes.ahorro,
-                comparison.gastoEnergiaMes.pctAhorro,
+                comparison.facturaTotalMes.ahorro,
+                comparison.facturaTotalMes.pctAhorro,
                 'S/',
               )}
-              color={solesAhorro >= 0 ? '#10b981' : '#ef4444'}
-              subtext={`Actual: ${formatCurrency(comparison.gastoEnergiaMes.actual)} · Ref.: ${formatCurrency(comparison.gastoEnergiaMes.referencia)}`}
+              color={sinVariacion ? neutralColor : (facturaAhorro >= 0 ? '#10b981' : '#ef4444')}
+              subtext={`Actual: ${formatCurrency(comparison.facturaTotalMes.actual)} · Ref.: ${formatCurrency(comparison.facturaTotalMes.referencia)}`}
             />
             <StatCard
               icon={DollarSign}
               label="Variación energía S/año"
-              value={formatAhorroLabel(comparison.gastoEnergiaAnio.ahorro, null, 'S/')}
-              color={solesAnualAhorro >= 0 ? '#10b981' : '#ef4444'}
+              value={formatAhorroLabel(
+                comparison.gastoEnergiaAnio.ahorro,
+                comparison.gastoEnergiaAnio.pctAhorro,
+                'S/',
+              )}
+              color={sinVariacion ? neutralColor : (solesAnualAhorro >= 0 ? '#10b981' : '#ef4444')}
               subtext={`Actual: ${formatCurrency(comparison.gastoEnergiaAnio.actual)} · Ref.: ${formatCurrency(comparison.gastoEnergiaAnio.referencia)}`}
             />
             <StatCard
               icon={KwhIcon}
               label="Diferencia directa (actual − ref.)"
-              value={`${formatNumber(comparison.consumoMesKwh.diferencia)} kWh`}
-              color="#1A4AB0"
-              subtext={`Energía: ${formatCurrency(comparison.gastoEnergiaMes.diferencia)}`}
+              value={sinVariacion
+                ? 'Sin variación'
+                : `${formatNumber(comparison.consumoMesKwh.diferencia)} kWh`}
+              color={sinVariacion ? neutralColor : '#1A4AB0'}
+              subtext={`Factura: ${formatCurrency(comparison.facturaTotalMes.diferencia)}`}
             />
           </div>
 
@@ -231,9 +256,8 @@ export default function ComparacionPage() {
           <div className="card comparacion-tabla">
             <div className="card-header">
               <h3>Detalle de la comparación</h3>
-              <p>Fórmula: Actual − Referencia. Ahorro positivo = consumiste menos que antes.</p>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap table-dual-scroll">
               <table className="data-table comparacion-table">
                 <thead>
                   <tr>
@@ -264,7 +288,7 @@ export default function ComparacionPage() {
                     <td>{formatCurrency(comparison.gastoEnergiaAnio.actual)}</td>
                     <td>{formatCurrency(comparison.gastoEnergiaAnio.referencia)}</td>
                     <td>{formatCurrency(comparison.gastoEnergiaAnio.diferencia)}</td>
-                    <td>—</td>
+                    <td>{comparison.gastoEnergiaAnio.pctAhorro != null ? `${comparison.gastoEnergiaAnio.pctAhorro}%` : '—'}</td>
                   </tr>
                   <tr>
                     <td>Total factura S/mes</td>

@@ -122,7 +122,7 @@ export default function SearchableSelect({
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
-            if (!e.target.value && selectedOption) onChange('', null);
+            if (!e.target.value && selectedOption && clearable) onChange('', null);
           }}
           onFocus={() => !disabled && setOpen(true)}
           onKeyDown={handleKeyDown}
