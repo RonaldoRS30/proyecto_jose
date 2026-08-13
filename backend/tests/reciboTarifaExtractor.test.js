@@ -232,3 +232,42 @@ for (const sample of totalSamples) {
 }
 
 console.log(`reciboTarifaExtractor totales: ${totalPassed}/${totalSamples.length} OK`);
+
+const { extractConsumoKwhFromText } = require('../helpers/reciboTarifaExtractor');
+
+const consumoSamples = [
+  {
+    name: 'PLUZ Consumo kWh factor',
+    text: 'Lectura Actual Lectura Anterior (FactorConsumo kWh 1)663 FISE (23/06/2026)',
+    consumo: 663,
+  },
+  {
+    name: 'PLUZ kWh al precio de',
+    text: '663kWh al precio de S/ 0.6291 Días de Lectura',
+    consumo: 663,
+  },
+  {
+    name: 'Luz del Sur formula lecturas',
+    text: '22703.20 - 22247.70 = 455.50X1.0000 = 455.50X0.6130Consumo de energía',
+    consumo: 455.5,
+  },
+  {
+    name: 'Luz del Sur mes facturado',
+    text: 'MES FACTURADO JULIO 2026 455.50 kWh 0 153 306',
+    consumo: 455.5,
+  },
+  {
+    name: 'Luz del Sur energia a facturar',
+    text: 'Energía a facturar (kWh) Precio kWh (S/.) 22703.20 - 22247.70 = 455.50X1.0000 = 455.50X0.6130',
+    consumo: 455.5,
+  },
+];
+
+let consumoPassed = 0;
+for (const sample of consumoSamples) {
+  const result = extractConsumoKwhFromText(sample.text.replace(/\s+/g, ' '));
+  assert.strictEqual(result.consumo_kwh, sample.consumo, `${sample.name}: ${result.consumo_kwh} (${result.metodo})`);
+  consumoPassed += 1;
+}
+
+console.log(`reciboTarifaExtractor consumo: ${consumoPassed}/${consumoSamples.length} OK`);

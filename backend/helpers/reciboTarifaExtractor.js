@@ -255,6 +255,12 @@ function extractAlumbradoPublicoFromText(source) {
 
 const MIN_TOTAL_PAGAR = 10;
 const MAX_TOTAL_PAGAR = 50000;
+const MIN_CONSUMO_KWH = 1;
+const MAX_CONSUMO_KWH = 50000;
+
+function parseConsumoKwh(raw) {
+  return parseDecimalNumber(raw, { min: MIN_CONSUMO_KWH, max: MAX_CONSUMO_KWH, decimals: 2 });
+}
 
 function parseTotalAPagar(raw) {
   return parseDecimalNumber(raw, { min: MIN_TOTAL_PAGAR, max: MAX_TOTAL_PAGAR, decimals: 2 });
@@ -339,15 +345,77 @@ function extractTotalAPagarFromText(source) {
   return { total_a_pagar: null, metodo: null };
 }
 
+/**
+ * Consumo mensual de energía (kWh) del recibo — informativo para historial.
+ * PLUZ: «Consumo kWh (Factor 1) 663» o «663kWh al precio de».
+ * Luz del Sur: «Energía a facturar (kWh) … = 455.50 X …» o «MES FACTURADO … 455.50 kWh».
+ */
+function extractConsumoKwhFromText(source) {
+  const normalized = String(source || '').replace(/\s+/g, ' ');
+
+  const pluzPrecio = normalized.match(/(\d+(?:[.,]\d+)?)\s*kWh\s+al\s+precio\s+de/i);
+  if (pluzPrecio) {
+    const value = parseConsumoKwh(pluzPrecio[1]);
+    if (value != null) {
+      return { consumo_kwh: value, metodo: 'pluz_kwh_al_precio' };
+    }
+  }
+
+  const pluzDetalle = normalized.match(
+    /Consumo\s+kWh\s*(?:\(?\s*Factor\s*)?\(?\s*[\d.,]+\s*\)?\s*(\d+(?:[.,]\d+)?)/i,
+  );
+  if (pluzDetalle) {
+    const value = parseConsumoKwh(pluzDetalle[1]);
+    if (value != null) {
+      return { consumo_kwh: value, metodo: 'pluz_consumo_kwh_factor' };
+    }
+  }
+
+  const ldsFormula = normalized.match(
+    /[\d.,]+\s*-\s*[\d.,]+\s*=\s*([\d.,]+)\s*[xX×]\s*[\d.,]+\s*=\s*([\d.,]+)\s*[xX×]/i,
+  );
+  if (ldsFormula) {
+    const value = parseConsumoKwh(ldsFormula[1]);
+    const confirm = parseConsumoKwh(ldsFormula[2]);
+    if (value != null && (confirm == null || Math.abs(value - confirm) < 0.05)) {
+      return { consumo_kwh: value, metodo: 'luz_del_sur_formula_lecturas' };
+    }
+  }
+
+  const ldsEnergia = normalized.match(
+    /Energ[ií]a\s+a\s+facturar\s*\(?\s*kWh\s*\)?[\s\S]{0,180}?=\s*([\d.,]+)\s*[xX×]/i,
+  );
+  if (ldsEnergia) {
+    const value = parseConsumoKwh(ldsEnergia[1]);
+    if (value != null) {
+      return { consumo_kwh: value, metodo: 'luz_del_sur_energia_facturar' };
+    }
+  }
+
+  const mesFacturado = normalized.match(
+    /MES\s+FACTURADO\s+[A-ZÁÉÍÓÚÑ]+\s+\d{4}\s+([\d.,]+)\s*kWh/i,
+  );
+  if (mesFacturado) {
+    const value = parseConsumoKwh(mesFacturado[1]);
+    if (value != null) {
+      return { consumo_kwh: value, metodo: 'luz_del_sur_mes_facturado' };
+    }
+  }
+
+  return { consumo_kwh: null, metodo: null };
+}
+
 function buildReciboMessage({
   tarifa_kwh,
   potencia_contratada,
   alumbrado_publico,
   empresa_distribuidora,
   total_a_pagar,
+  consumo_kwh,
 }) {
   const parts = [];
   if (empresa_distribuidora) parts.push(`Distribuidora: ${empresa_distribuidora}`);
+  if (consumo_kwh != null) parts.push(`Consumo: ${consumo_kwh} kWh/mes`);
   if (tarifa_kwh != null) parts.push(`Tarifa: S/ ${tarifa_kwh.toFixed(4)}/kWh`);
   if (potencia_contratada) parts.push(`Potencia: ${potencia_contratada}`);
   if (alumbrado_publico != null) parts.push(`Alumbrado público: S/ ${alumbrado_publico.toFixed(2)}`);
@@ -421,6 +489,7 @@ function extractDatosReciboFromText(text) {
       empresa_distribuidora: null,
       total_a_pagar: null,
       periodo_facturacion: null,
+      consumo_kwh: null,
       metodo: null,
       message: 'No se pudo leer texto del archivo',
     };
@@ -455,6 +524,7 @@ function extractDatosReciboFromText(text) {
   const { empresa_distribuidora, metodo: distribuidoraMetodo } = extractEmpresaDistribuidoraFromText(source);
   const { total_a_pagar, metodo: totalMetodo } = extractTotalAPagarFromText(source);
   const periodo_facturacion = extractPeriodoFacturacionFromText(source);
+  const { consumo_kwh, metodo: consumoMetodo } = extractConsumoKwhFromText(source);
 
   const message = buildReciboMessage({
     tarifa_kwh,
@@ -462,10 +532,12 @@ function extractDatosReciboFromText(text) {
     alumbrado_publico,
     empresa_distribuidora,
     total_a_pagar,
+    consumo_kwh,
   });
 
   if (tarifa_kwh == null) {
-    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora || total_a_pagar != null;
+    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora
+      || total_a_pagar != null || consumo_kwh != null;
     return {
       tarifa_kwh: null,
       potencia_contratada,
@@ -473,6 +545,7 @@ function extractDatosReciboFromText(text) {
       empresa_distribuidora,
       total_a_pagar,
       periodo_facturacion,
+      consumo_kwh,
       metodo: null,
       metodos: {
         tarifa: null,
@@ -480,6 +553,7 @@ function extractDatosReciboFromText(text) {
         alumbrado: alumbradoMetodo,
         distribuidora: distribuidoraMetodo,
         total: totalMetodo,
+        consumo: consumoMetodo,
       },
       message: hasPartial
         ? `${message}. No se encontró la tarifa en el recibo.`
@@ -494,6 +568,7 @@ function extractDatosReciboFromText(text) {
     empresa_distribuidora,
     total_a_pagar,
     periodo_facturacion,
+    consumo_kwh,
     metodo: tarifaMetodo,
     metodos: {
       tarifa: tarifaMetodo,
@@ -501,6 +576,7 @@ function extractDatosReciboFromText(text) {
       alumbrado: alumbradoMetodo,
       distribuidora: distribuidoraMetodo,
       total: totalMetodo,
+      consumo: consumoMetodo,
     },
     message,
   };
@@ -511,10 +587,12 @@ module.exports = {
   extractDatosReciboFromText,
   extractTotalAPagarFromText,
   extractPeriodoFacturacionFromText,
+  extractConsumoKwhFromText,
   parseTarifaNumber,
   parseAlumbradoNumber,
   parsePotenciaKw,
   parseTotalAPagar,
+  parseConsumoKwh,
   formatPotenciaContratada,
   TARIFA_PATTERNS,
   POTENCIA_PATTERNS,

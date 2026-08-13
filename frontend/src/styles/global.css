@@ -350,6 +350,24 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   gap: 0.35rem;
 }
 
+.pagination-page {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.pagination-btn-label {
+  margin: 0 0.15rem;
+}
+
+@media (max-width: 480px) {
+  .pagination-btn-label {
+    display: none;
+  }
+}
+
 .pagination-btn {
   min-width: 36px;
   height: 36px;
@@ -2580,7 +2598,32 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   font-size: 1.1rem;
 }
 
-.actions { display: flex; gap: 0.5rem; }
+.actions { display: flex; gap: 0.5rem; align-items: center; }
+
+/* Historial — acciones alineadas en tabla (desktop) */
+.historial-records-card table tbody td {
+  vertical-align: middle;
+}
+
+.historial-records-card table th:last-child,
+.historial-records-card table td.cell-actions {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.historial-records-card table td.cell-actions .actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 10rem;
+  flex-wrap: nowrap;
+}
+
+.historial-records-card table td.cell-actions .actions .btn {
+  flex-shrink: 0;
+}
 
 /* Banner estado del cálculo unificado */
 .calculo-status-banner {
@@ -3057,6 +3100,51 @@ tr:hover td { background: rgba(37,99,235,0.03); }
     padding: 0.75rem;
     padding-bottom: 0.25rem;
     gap: 0.875rem;
+  }
+}
+
+/* Historial: en PC/tablet tabla con todas las columnas; cards solo ≤767px */
+@media (min-width: 768px) {
+  .historial-records-card.card {
+    overflow: visible;
+  }
+
+  .historial-records-card .view-mobile {
+    display: none !important;
+  }
+
+  .historial-records-card .view-desktop {
+    display: block !important;
+  }
+
+  .historial-records-card .table-scroll-hint {
+    display: none !important;
+  }
+
+  .historial-records-card .table-dual-scroll {
+    overflow-x: visible;
+  }
+
+  .historial-records-card .table-dual-scroll table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: auto;
+  }
+
+  .historial-records-card .table-dual-scroll th:first-child,
+  .historial-records-card .table-dual-scroll td:first-child {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .historial-records-card .view-desktop:not(.table-only) {
+    display: none !important;
+  }
+
+  .historial-records-card .view-mobile {
+    display: grid !important;
   }
 }
 

@@ -11,6 +11,7 @@ export default function ResponsiveList({
   renderCard,
   tableOnly = false,
   mobileGridClass = 'data-cards-grid',
+  tableClassName = '',
 }) {
   if (loading) return <div className="loading">Cargando...</div>;
 
@@ -36,7 +37,7 @@ export default function ResponsiveList({
           <p className="table-scroll-hint">Desliza horizontalmente para ver más columnas</p>
         )}
         <div className={tableOnly ? 'table-wrapper' : 'table-mobile-scroll table-dual-scroll'}>
-          <table>
+          <table className={tableClassName || undefined}>
             <thead>{tableHead}</thead>
             <tbody>{items.map((item, index) => renderTableRow(item, index))}</tbody>
           </table>

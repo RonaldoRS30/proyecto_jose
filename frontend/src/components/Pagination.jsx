@@ -8,39 +8,47 @@ export default function Pagination({
   onPageChange,
   label = 'registros',
 }) {
-  if (totalPages <= 1) return null;
+  if (total <= 0) return null;
 
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
+  const hasMultiplePages = totalPages > 1;
 
   return (
     <div className="pagination">
       <span className="pagination-info">
-        {from}-{to} de {total} {label}
+        Mostrando <strong>{from}-{to}</strong> de <strong>{total}</strong> {label}
+        {hasMultiplePages && (
+          <> · Página <strong>{page}</strong> de <strong>{totalPages}</strong></>
+        )}
       </span>
-      <div className="pagination-controls">
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          aria-label="Página anterior"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <span className="pagination-page">
-          Página {page} / {totalPages}
-        </span>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          aria-label="Página siguiente"
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
+      {hasMultiplePages && (
+        <div className="pagination-controls">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            aria-label="Página anterior"
+          >
+            <ChevronLeft size={16} />
+            <span className="pagination-btn-label">Anterior</span>
+          </button>
+          <span className="pagination-page" aria-current="page">
+            {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            aria-label="Página siguiente"
+          >
+            <span className="pagination-btn-label">Siguiente</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -26,9 +26,14 @@ async function registrarReciboEnHistorial(clienteId, datos, filename = null) {
   if (!clienteId || !total || total <= 0) return null;
 
   const periodo = normalizePeriodo(datos.periodo_facturacion);
+  const consumoKwh = datos.consumo_kwh != null
+    ? roundNum(Number(datos.consumo_kwh), 3)
+    : null;
+
   const resumenRecibo = {
     origen: 'recibo',
     total_a_pagar: total,
+    consumo_kwh: consumoKwh,
     tarifa_kwh: datos.tarifa_kwh ?? null,
     potencia_contratada: datos.potencia_contratada ?? null,
     alumbrado_publico: datos.alumbrado_publico ?? null,
@@ -43,6 +48,7 @@ async function registrarReciboEnHistorial(clienteId, datos, filename = null) {
     origen: 'recibo',
     periodo_facturacion: periodo,
     precio_kwh: datos.tarifa_kwh ?? null,
+    consumo_mes_total: consumoKwh,
     factura_total_mes: total,
     gasto_mensual_total: total,
     resumen_json: resumenRecibo,

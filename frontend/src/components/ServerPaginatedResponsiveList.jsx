@@ -9,6 +9,7 @@ export default function ServerPaginatedResponsiveList({
   pageSize = 8,
   onPageChange,
   label = 'registros',
+  tableClassName = '',
   ...listProps
 }) {
   const listRef = useRef(null);
@@ -21,7 +22,7 @@ export default function ServerPaginatedResponsiveList({
   return (
     <>
       <div ref={listRef}>
-        <ResponsiveList {...listProps} items={items} />
+        <ResponsiveList {...listProps} items={items} tableClassName={tableClassName} />
       </div>
       {total > 0 && (
         <Pagination

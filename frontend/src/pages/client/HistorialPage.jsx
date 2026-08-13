@@ -15,6 +15,16 @@ import { buildFacturaFromCalculo } from '../../utils/factura';
 
 const getFacturaTotal = (calculo) => buildFacturaFromCalculo(calculo).totalMes;
 
+const getConsumoMes = (calculo) => {
+  if (isReciboRegistro(calculo)) {
+    const raw = calculo.consumo_mes_total ?? calculo.resumen_json?.consumo_kwh;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const n = parseFloat(calculo.consumo_mes_total);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const isReciboRegistro = (calculo) =>
   calculo?.origen === 'recibo' || calculo?.resumen_json?.origen === 'recibo';
 
@@ -141,7 +151,7 @@ export default function HistorialPage() {
     return chartCalculosAsc.map((c) => ({
       fecha: formatFechaChartShort(c, sameCalendarDay),
       fechaFull: formatFechaChartFull(c),
-      consumoMes: parseFloat(c.consumo_mes_total) || 0,
+      consumoMes: getConsumoMes(c) ?? 0,
       gastoDiario: parseFloat(c.gasto_diario_total) || 0,
       gastoMensual: getFacturaTotal(c),
       gastoAnual: parseFloat(c.gasto_anual_total) || 0,
@@ -241,7 +251,7 @@ export default function HistorialPage() {
         </div>
       )}
 
-      <div className="card">
+      <div className="card card-list historial-records-card">
         <div className="card-header view-desktop">
           <h3>{total} registro{total !== 1 ? 's' : ''} en historial</h3>
         </div>
@@ -256,6 +266,7 @@ export default function HistorialPage() {
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
           label="registros"
+          mobileGridClass="data-cards-single"
           tableHead={
             <tr>
               <th>Fecha</th><th>Tipo</th><th>Cons. Mes</th><th>Total factura</th><th>Acciones</th>
@@ -280,9 +291,17 @@ export default function HistorialPage() {
                 {c.id === ultimoCalculo?.id && <span className="badge badge-success" style={{ marginLeft: '0.35rem' }}>Reciente</span>}
               </td>
               <td><TipoBadge calculo={c} /></td>
-              <td>{isReciboRegistro(c) ? '-' : `${formatNumber(c.consumo_mes_total)} kWh`}</td>
+              <td>{(() => {
+                const cons = getConsumoMes(c);
+                if (isReciboRegistro(c)) {
+                  return cons != null ? `${formatNumber(cons)} kWh` : '-';
+                }
+                return `${formatNumber(cons ?? 0)} kWh`;
+              })()}</td>
               <td><strong>{formatCurrency(getFacturaTotal(c))}</strong></td>
-              <td className="actions">{renderActions(c)}</td>
+              <td className="cell-actions">
+                <div className="actions">{renderActions(c)}</div>
+              </td>
             </tr>
             );
           }}
@@ -295,7 +314,13 @@ export default function HistorialPage() {
               badge={<TipoBadge calculo={c} />}
               fields={[
                 { label: 'Total factura', value: formatCurrency(getFacturaTotal(c)), highlight: true },
-                { label: 'Consumo/mes', value: isReciboRegistro(c) ? '— (recibo real)' : `${formatNumber(c.consumo_mes_total)} kWh` },
+                { label: 'Consumo/mes', value: (() => {
+                  const cons = getConsumoMes(c);
+                  if (isReciboRegistro(c)) {
+                    return cons != null ? `${formatNumber(cons)} kWh (recibo real)` : '— (no detectado en PDF)';
+                  }
+                  return `${formatNumber(cons ?? 0)} kWh`;
+                })(), highlight: !isReciboRegistro(c) },
                 ...(isReciboRegistro(c) && periodoFactura
                   ? [{ label: 'Período factura', value: periodoFactura }]
                   : []),
@@ -319,6 +344,9 @@ export default function HistorialPage() {
               <p><strong>Período del recibo:</strong> {formatPeriodoFactura(selected)}</p>
             )}
             <p><strong>Total factura:</strong> {formatCurrency(getFacturaTotal(selected))}</p>
+            {isReciboRegistro(selected) && getConsumoMes(selected) != null && (
+              <p><strong>Consumo del recibo:</strong> {formatNumber(getConsumoMes(selected))} kWh/mes</p>
+            )}
             {isReciboRegistro(selected) ? (
               <>
                 {selected.resumen_json?.empresa_distribuidora && <p><strong>Distribuidora:</strong> {selected.resumen_json.empresa_distribuidora}</p>}
