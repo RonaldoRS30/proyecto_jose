@@ -269,6 +269,7 @@ export default function ClientDashboard() {
           icon: Calculator,
           onClick: handleCalcular,
           disabled: calculating || !hasEquipos,
+          loading: calculating,
           loadingLabel: 'Calculando...',
         }}
       />

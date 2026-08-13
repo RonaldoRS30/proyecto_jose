@@ -19,7 +19,7 @@ export default function PageHeader({ title, subtitle, action, children }) {
             disabled={action.disabled}
           >
             {action.icon && <action.icon size={16} />}
-            {action.disabled && action.loadingLabel ? action.loadingLabel : action.label}
+            {action.loading && action.loadingLabel ? action.loadingLabel : action.label}
           </button>
           <button
             type="button"
@@ -29,7 +29,7 @@ export default function PageHeader({ title, subtitle, action, children }) {
             aria-label={action.label}
           >
             {action.icon && <action.icon size={16} />}
-            {action.disabled && action.loadingLabel ? action.loadingLabel : action.label}
+            {action.loading && action.loadingLabel ? action.loadingLabel : action.label}
           </button>
         </>
       )}

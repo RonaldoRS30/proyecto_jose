@@ -8,6 +8,7 @@ const { applyConfigTarifa } = require('./tarifaService');
 const { AppError } = require('../utils/errorHandler');
 const recomendacionService = require('./recomendacionService');
 const { registrarReciboEnHistorial, currentPeriodoFacturacion } = require('./reciboHistorialService');
+const { getExcedentesFromDispositivos } = require('../helpers/potenciaReferenciaHelper');
 
 const ejecutarCalculo = async (clienteId) => {
   const cliente = await Cliente.findByPk(clienteId);
