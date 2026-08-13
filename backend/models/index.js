@@ -92,6 +92,11 @@ const Calculo = sequelize.define(
     gasto_anual_total: { type: DataTypes.DECIMAL(12, 4), defaultValue: 0 },
     demanda_total: { type: DataTypes.DECIMAL(12, 4), defaultValue: 0 },
     factura_total_mes: { type: DataTypes.DECIMAL(12, 4), defaultValue: 0 },
+    origen: {
+      type: DataTypes.ENUM('calculo', 'recibo'),
+      defaultValue: 'calculo',
+    },
+    periodo_facturacion: { type: DataTypes.DATEONLY, allowNull: true },
     resumen_json: { type: DataTypes.JSON, allowNull: true },
   },
   { tableName: 'calculos' }

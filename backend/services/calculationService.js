@@ -7,7 +7,7 @@ const { buildFacturaParaCalculo, enrichCalculo, enrichCalculos } = require('./fa
 const { applyConfigTarifa } = require('./tarifaService');
 const { AppError } = require('../utils/errorHandler');
 const recomendacionService = require('./recomendacionService');
-const { getExcedentesFromDispositivos } = require('../helpers/potenciaReferenciaHelper');
+const { registrarReciboEnHistorial, currentPeriodoFacturacion } = require('./reciboHistorialService');
 
 const ejecutarCalculo = async (clienteId) => {
   const cliente = await Cliente.findByPk(clienteId);
@@ -30,6 +30,8 @@ const ejecutarCalculo = async (clienteId) => {
 
   const calculo = await Calculo.create({
     cliente_id: clienteId,
+    origen: 'calculo',
+    periodo_facturacion: currentPeriodoFacturacion(),
     precio_kwh: configConTarifa.precioKwh,
     consumo_dia_total: resultado.resumenGeneral.consumoDia,
     consumo_mes_total: resultado.resumenGeneral.consumoMes,
@@ -39,13 +41,13 @@ const ejecutarCalculo = async (clienteId) => {
     gasto_anual_total: resultado.resumenGeneral.gastoAnual,
     demanda_total: resultado.resumenGeneral.demandaTotal,
     factura_total_mes: resultado.factura.totalMes,
-    resumen_json: { ...resultado, tarifa },
+    resumen_json: { ...resultado, tarifa, origen: 'calculo' },
   });
 
   const facturaFinal = buildFacturaParaCalculo(calculo);
   await calculo.update({
     factura_total_mes: facturaFinal.totalMes,
-    resumen_json: { ...resultado, factura: facturaFinal, tarifa },
+    resumen_json: { ...resultado, factura: facturaFinal, tarifa, origen: 'calculo' },
   });
 
   const detalles = resultado.dispositivos.map((d) => ({
@@ -100,6 +102,9 @@ const listarCalculos = async (filters = {}) => {
     search = null,
     fechaDesde = null,
     fechaHasta = null,
+    mes = null,
+    anio = null,
+    origen = null,
     page = null,
     limit = null,
   } = typeof filters === 'number' || filters === 'string'
@@ -108,11 +113,36 @@ const listarCalculos = async (filters = {}) => {
 
   const where = {};
   if (clienteId) where.cliente_id = clienteId;
+  if (origen) where.origen = origen;
+
+  if (mes && anio) {
+    const month = String(mes).padStart(2, '0');
+    const lastDay = new Date(Number(anio), Number(mes), 0).getDate();
+    const monthStart = `${anio}-${month}-01`;
+    const monthEnd = `${anio}-${month}-${String(lastDay).padStart(2, '0')}`;
+    where.created_at = where.created_at || {};
+    where.created_at[Op.gte] = new Date(`${monthStart}T00:00:00`);
+    where.created_at[Op.lte] = new Date(`${monthEnd}T23:59:59`);
+  } else if (anio) {
+    where.created_at = where.created_at || {};
+    where.created_at[Op.gte] = new Date(`${anio}-01-01T00:00:00`);
+    where.created_at[Op.lte] = new Date(`${anio}-12-31T23:59:59`);
+  }
 
   if (fechaDesde || fechaHasta) {
-    where.created_at = {};
-    if (fechaDesde) where.created_at[Op.gte] = new Date(`${fechaDesde}T00:00:00`);
-    if (fechaHasta) where.created_at[Op.lte] = new Date(`${fechaHasta}T23:59:59`);
+    where.created_at = where.created_at || {};
+    if (fechaDesde) {
+      const desde = new Date(`${fechaDesde}T00:00:00`);
+      if (!where.created_at[Op.gte] || desde > where.created_at[Op.gte]) {
+        where.created_at[Op.gte] = desde;
+      }
+    }
+    if (fechaHasta) {
+      const hasta = new Date(`${fechaHasta}T23:59:59`);
+      if (!where.created_at[Op.lte] || hasta < where.created_at[Op.lte]) {
+        where.created_at[Op.lte] = hasta;
+      }
+    }
   }
 
   const clienteInclude = {

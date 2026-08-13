@@ -112,6 +112,14 @@ export function buildFacturaFromCalculo(calculo) {
     return buildFactura(null, DEFAULT_TARIFF.precioKwh, 0, { cantidadEquipos: 0 });
   }
 
+  if (calculo.origen === 'recibo' || calculo.resumen_json?.origen === 'recibo') {
+    const total = parseFloat(calculo.factura_total_mes ?? calculo.resumen_json?.total_a_pagar ?? 0);
+    return normalizeFacturaResult({
+      ...buildFactura(null, DEFAULT_TARIFF.precioKwh, 0, { cantidadEquipos: 0 }),
+      totalMes: Number.isFinite(total) ? total : 0,
+    });
+  }
+
   const precioKwh = (
     calculo.tarifa?.precioKwh
     ?? calculo.resumen_json?.precioKwh

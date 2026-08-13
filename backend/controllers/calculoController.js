@@ -33,12 +33,22 @@ const preview = asyncHandler(async (req, res) => {
 
 const listar = asyncHandler(async (req, res) => {
   const filters = req.user?.role === 'cliente'
-    ? { clienteId: getClienteIdForList(req) }
+    ? {
+        clienteId: getClienteIdForList(req),
+        mes: req.query?.mes || null,
+        anio: req.query?.anio || null,
+        origen: req.query?.origen || null,
+        fechaDesde: req.query?.fecha_desde || null,
+        fechaHasta: req.query?.fecha_hasta || null,
+      }
     : {
         clienteId: req.query?.cliente_id || null,
         search: req.query?.search || null,
         fechaDesde: req.query?.fecha_desde || null,
         fechaHasta: req.query?.fecha_hasta || null,
+        mes: req.query?.mes || null,
+        anio: req.query?.anio || null,
+        origen: req.query?.origen || null,
       };
 
   if (req.query?.page || req.query?.limit) {

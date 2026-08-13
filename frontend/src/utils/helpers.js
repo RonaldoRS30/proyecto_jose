@@ -43,6 +43,16 @@ export const formatDate = (date) => {
   });
 };
 
+/** Solo día (sin hora) — recibos y gráficos */
+export const formatDateDay = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('es-PE', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 export const MODULOS = {
   aparato: { label: 'Electrodomésticos', color: '#3b82f6' },
   fantasma: { label: 'Consumo Fantasma', color: '#f59e0b' },

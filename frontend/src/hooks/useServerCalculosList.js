@@ -3,21 +3,30 @@ import { getCalculos, getElectrodomesticos } from '../services/api';
 
 export const PAGE_SIZE = 8;
 
-export function useServerCalculosList({ pageSize = PAGE_SIZE, syncKey } = {}) {
+export function useServerCalculosList({ pageSize = PAGE_SIZE, syncKey, filters = {} } = {}) {
   const [calculos, setCalculos] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshToken, setRefreshToken] = useState(0);
 
+  const { mes, anio, origen, fechaDesde, fechaHasta } = filters;
+
   useEffect(() => {
     setPage(1);
-  }, [syncKey]);
+  }, [syncKey, mes, anio, origen, fechaDesde, fechaHasta]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getCalculos({ page, limit: pageSize })
+    const params = { page, limit: pageSize };
+    if (mes) params.mes = mes;
+    if (anio) params.anio = anio;
+    if (origen) params.origen = origen;
+    if (fechaDesde) params.fecha_desde = fechaDesde;
+    if (fechaHasta) params.fecha_hasta = fechaHasta;
+
+    getCalculos(params)
       .then(({ data }) => {
         if (cancelled) return;
         setCalculos(data.data ?? []);
@@ -33,19 +42,27 @@ export function useServerCalculosList({ pageSize = PAGE_SIZE, syncKey } = {}) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [page, pageSize, syncKey, refreshToken]);
+  }, [page, pageSize, syncKey, refreshToken, mes, anio, origen, fechaDesde, fechaHasta]);
 
   const reload = () => setRefreshToken((t) => t + 1);
 
   return { calculos, total, page, setPage, loading, pageSize, reload };
 }
 
-export function useCalculosChart(limit = 10, syncKey) {
+export function useCalculosChart(limit = 10, syncKey, filters = {}) {
   const [chartCalculos, setChartCalculos] = useState([]);
+  const { mes, anio, origen, fechaDesde, fechaHasta } = filters;
 
   useEffect(() => {
     let cancelled = false;
-    getCalculos({ page: 1, limit })
+    const params = { page: 1, limit };
+    if (mes) params.mes = mes;
+    if (anio) params.anio = anio;
+    if (origen) params.origen = origen;
+    if (fechaDesde) params.fecha_desde = fechaDesde;
+    if (fechaHasta) params.fecha_hasta = fechaHasta;
+
+    getCalculos(params)
       .then(({ data }) => {
         if (!cancelled) setChartCalculos(data.data ?? []);
       })
@@ -53,7 +70,7 @@ export function useCalculosChart(limit = 10, syncKey) {
         if (!cancelled) setChartCalculos([]);
       });
     return () => { cancelled = true; };
-  }, [limit, syncKey]);
+  }, [limit, syncKey, mes, anio, origen, fechaDesde, fechaHasta]);
 
   return chartCalculos;
 }

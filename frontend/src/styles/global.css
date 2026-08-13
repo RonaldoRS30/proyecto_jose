@@ -2108,6 +2108,26 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   white-space: nowrap;
 }
 
+.historial-filters {
+  align-items: flex-end;
+}
+
+.historial-date-wrap {
+  max-width: 180px;
+  min-width: 140px;
+}
+
+.historial-filter-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.historial-date-wrap .search-input {
+  padding-left: 0.75rem !important;
+}
+
 .code-display {
   font-family: monospace;
   font-size: 1.05rem;

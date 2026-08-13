@@ -7,6 +7,8 @@ export default function ReciboTarifaUploader({
   onTarifaDetected,
   onDatosDetected,
   onExtractingChange,
+  onHistorialRegistered,
+  clienteId = null,
   disabled = false,
 }) {
   const [extracting, setExtracting] = useState(false);
@@ -41,22 +43,34 @@ export default function ReciboTarifaUploader({
     setError('');
 
     try {
-      const { data } = await extraerTarifaRecibo(file);
+      const { data } = await extraerTarifaRecibo(file, clienteId);
       const datos = data.data || {};
+      if (data.historial_recibo?.id) {
+        onHistorialRegistered?.(data.historial_recibo);
+      }
       if (datos.tarifa_kwh == null) {
         setError(data.message || datos.message || 'No se encontró la tarifa en el recibo.');
         if (
           datos.potencia_contratada
           || datos.alumbrado_publico != null
           || datos.empresa_distribuidora
+          || datos.total_a_pagar != null
         ) {
           emitDatos(datos);
-          setMessage(datos.message || 'Se detectaron algunos datos del recibo.');
+          setMessage(
+            datos.total_a_pagar != null
+              ? `${datos.message || 'Datos detectados.'} Registrado en historial.`
+              : (datos.message || 'Se detectaron algunos datos del recibo.'),
+          );
         }
         return;
       }
       emitDatos(datos);
-      setMessage(datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`);
+      setMessage(
+        datos.total_a_pagar != null
+          ? `${datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`}. Total a pagar registrado en historial.`
+          : (datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`),
+      );
     } catch (err) {
       setError(
         err.response?.data?.message || 'No se pudo leer el recibo. Intente con otro archivo o ingrese los datos manualmente.',
@@ -140,7 +154,8 @@ export default function ReciboTarifaUploader({
         </div>
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
-        Extrae empresa distribuidora, tarifa (S/kWh), potencia contratada y alumbrado público del recibo.
+        Extrae empresa distribuidora, tarifa (S/kWh), potencia, alumbrado y total a pagar del recibo.
+        El total se guarda en su historial como referencia mensual.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

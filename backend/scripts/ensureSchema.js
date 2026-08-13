@@ -20,6 +20,16 @@ const MIGRATIONS = [
     column: 'alumbrado_publico',
     sql: 'ALTER TABLE clientes ADD COLUMN alumbrado_publico DECIMAL(10,2) NULL AFTER potencia_contratada',
   },
+  {
+    table: 'calculos',
+    column: 'origen',
+    sql: "ALTER TABLE calculos ADD COLUMN origen ENUM('calculo','recibo') NOT NULL DEFAULT 'calculo' AFTER factura_total_mes",
+  },
+  {
+    table: 'calculos',
+    column: 'periodo_facturacion',
+    sql: 'ALTER TABLE calculos ADD COLUMN periodo_facturacion DATE NULL AFTER origen',
+  },
 ];
 
 async function columnExists(conn, dbName, table, column) {

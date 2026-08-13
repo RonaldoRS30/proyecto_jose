@@ -262,8 +262,9 @@ export default function PerfilPage() {
           </div>
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <ReciboTarifaUploader
-              onDatosDetected={(datos) => {
+              <ReciboTarifaUploader
+                onHistorialRegistered={() => refreshCalculos()}
+                onDatosDetected={(datos) => {
                 setForm((prev) => ({
                   ...prev,
                   ...(datos.tarifa_kwh != null ? { tarifa_kwh: String(datos.tarifa_kwh) } : {}),

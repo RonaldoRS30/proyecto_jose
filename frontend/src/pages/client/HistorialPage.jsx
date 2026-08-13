@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Eye, Download, History } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Eye, Download, History, FileText, Calculator } from 'lucide-react';
 import Modal from '../../components/Modal';
 import FacturaBreakdown from '../../components/FacturaBreakdown';
 import PageHeader from '../../components/PageHeader';
@@ -10,22 +10,91 @@ import { useCalculo } from '../../contexts/CalculoContext';
 import { useAlert } from '../../contexts/ConfirmContext';
 import { useCalculosChart, useServerCalculosList, PAGE_SIZE } from '../../hooks/useServerCalculosList';
 import { getCalculo, generarPDF, downloadReporte } from '../../services/api';
-import { formatNumber, formatCurrency, formatDate } from '../../utils/helpers';
+import { formatNumber, formatCurrency, formatDate, formatDateDay } from '../../utils/helpers';
 import { buildFacturaFromCalculo } from '../../utils/factura';
 
 const getFacturaTotal = (calculo) => buildFacturaFromCalculo(calculo).totalMes;
+
+const isReciboRegistro = (calculo) =>
+  calculo?.origen === 'recibo' || calculo?.resumen_json?.origen === 'recibo';
+
+const formatPeriodoFactura = (calculo) => {
+  const raw = calculo?.periodo_facturacion || calculo?.resumen_json?.periodo_facturacion;
+  if (!raw) return null;
+  const d = new Date(`${raw}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+};
+
+const formatFechaChart = (calculo) => {
+  const d = new Date(calculo.created_at);
+  const dia = d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+  const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  if (isReciboRegistro(calculo)) {
+    return `${dia} ${hora} · Recibo`;
+  }
+  return `${dia} ${hora}`;
+};
+
+const MONTHS = [
+  { value: '', label: 'Todos los meses' },
+  { value: '1', label: 'Enero' },
+  { value: '2', label: 'Febrero' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Mayo' },
+  { value: '6', label: 'Junio' },
+  { value: '7', label: 'Julio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+];
+
+function buildYearOptions() {
+  const current = new Date().getFullYear();
+  return [
+    { value: '', label: 'Todos los años' },
+    ...Array.from({ length: 4 }, (_, i) => {
+      const year = current - i;
+      return { value: String(year), label: String(year) };
+    }),
+  ];
+}
+
+function TipoBadge({ calculo }) {
+  if (isReciboRegistro(calculo)) {
+    return <span className="badge badge-warning"><FileText size={12} /> Recibo real</span>;
+  }
+  return <span className="badge badge-info"><Calculator size={12} /> Cálculo</span>;
+}
 
 export default function HistorialPage() {
   const { loading: contextLoading, resumenGeneral, ultimoCalculo } = useCalculo();
   const alert = useAlert();
   const [selected, setSelected] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [mes, setMes] = useState('');
+  const [anio, setAnio] = useState('');
+  const [origen, setOrigen] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+
+  const filters = useMemo(() => ({
+    mes: mes || undefined,
+    anio: anio || undefined,
+    origen: origen || undefined,
+    fechaDesde: fechaDesde || undefined,
+    fechaHasta: fechaHasta || undefined,
+  }), [mes, anio, origen, fechaDesde, fechaHasta]);
 
   const syncKey = ultimoCalculo?.id;
   const {
     calculos, total, page, setPage, loading: listLoading,
-  } = useServerCalculosList({ syncKey });
-  const chartCalculos = useCalculosChart(10, syncKey);
+  } = useServerCalculosList({ syncKey, filters });
+  const chartCalculos = useCalculosChart(20, syncKey, filters);
+  const yearOptions = useMemo(() => buildYearOptions(), []);
 
   const viewDetail = async (id) => {
     const { data } = await getCalculo(id);
@@ -52,11 +121,11 @@ export default function HistorialPage() {
   };
 
   const chartData = [...chartCalculos].reverse().map((c) => ({
-    fecha: new Date(c.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }),
-    consumoMes: parseFloat(c.consumo_mes_total),
-    gastoDiario: parseFloat(c.gasto_diario_total),
-    gastoMensual: parseFloat(c.gasto_mensual_total),
-    gastoAnual: parseFloat(c.gasto_anual_total),
+    fecha: formatFechaChart(c),
+    consumoMes: parseFloat(c.consumo_mes_total) || 0,
+    gastoDiario: parseFloat(c.gasto_diario_total) || 0,
+    gastoMensual: getFacturaTotal(c),
+    gastoAnual: parseFloat(c.gasto_anual_total) || 0,
   }));
 
   const chartGastosActual = [
@@ -70,45 +139,96 @@ export default function HistorialPage() {
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => viewDetail(c.id)}>
         <Eye size={14} /> Ver
       </button>
-      <button type="button" className="btn btn-primary btn-sm" onClick={() => handlePDF(c.id)}>
-        <Download size={14} /> PDF
-      </button>
+      {!isReciboRegistro(c) && (
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => handlePDF(c.id)}>
+          <Download size={14} /> PDF
+        </button>
+      )}
     </>
   );
+
+  const hasActiveFilters = Boolean(mes || anio || origen || fechaDesde || fechaHasta);
+
+  const clearFilters = () => {
+    setMes('');
+    setAnio('');
+    setOrigen('');
+    setFechaDesde('');
+    setFechaHasta('');
+  };
 
   if (contextLoading && total === 0) return <div className="loading">Cargando historial...</div>;
 
   return (
     <div>
       <PageHeader
-        title="Historial de Cálculos"
-        subtitle="Registro de cálculos guardados desde Inicio — vinculado al sistema global"
+        title="Historial de Facturación"
+        subtitle="Compare su recibo real (al subir PDF) con los cálculos estimados del sistema"
       />
 
-      <div className="card card-chart" style={{ marginBottom: '1.5rem' }}>
-        <div className="card-header"><h3>Evolución Histórica</h3></div>
-        <div className="card-body chart-evolucion-body">
-          <EvolucionHistoricaChart data={chartData} />
+      <div className="search-bar historial-filters">
+        <div className="search-input-wrap historial-date-wrap">
+          <label className="historial-filter-label">Desde</label>
+          <input
+            type="date"
+            className="form-control search-input"
+            value={fechaDesde}
+            onChange={(e) => setFechaDesde(e.target.value)}
+            aria-label="Filtrar desde fecha"
+          />
         </div>
+        <div className="search-input-wrap historial-date-wrap">
+          <label className="historial-filter-label">Hasta</label>
+          <input
+            type="date"
+            className="form-control search-input"
+            value={fechaHasta}
+            onChange={(e) => setFechaHasta(e.target.value)}
+            aria-label="Filtrar hasta fecha"
+          />
+        </div>
+        <select className="form-control search-filter" value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Filtrar por mes">
+          {MONTHS.map((m) => <option key={m.value || 'all'} value={m.value}>{m.label}</option>)}
+        </select>
+        <select className="form-control search-filter" value={anio} onChange={(e) => setAnio(e.target.value)} aria-label="Filtrar por año">
+          {yearOptions.map((y) => <option key={y.value || 'all'} value={y.value}>{y.label}</option>)}
+        </select>
+        <select className="form-control search-filter" value={origen} onChange={(e) => setOrigen(e.target.value)} aria-label="Filtrar por tipo">
+          <option value="">Todos los tipos</option>
+          <option value="recibo">Recibo real</option>
+          <option value="calculo">Cálculo estimado</option>
+        </select>
+        {hasActiveFilters && (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters}>
+            Limpiar filtros
+          </button>
+        )}
       </div>
+
+      {chartData.length > 0 && (
+        <div className="card card-chart" style={{ marginBottom: '1.5rem' }}>
+          <div className="card-header"><h3>Evolución del total a pagar</h3></div>
+          <div className="card-body chart-evolucion-body">
+            <EvolucionHistoricaChart data={chartData} showKwh={false} />
+          </div>
+        </div>
+      )}
 
       {chartGastosActual.some((g) => g.gasto > 0) && (
         <div className="card card-chart" style={{ marginBottom: '1.5rem' }}>
-          <div className="card-header">
-            <h3>Gastos actuales (vista en tiempo real)</h3>
-          </div>
+          <div className="card-header"><h3>Gastos actuales (vista en tiempo real)</h3></div>
           <div className="card-body"><GastoResumenChart data={chartGastosActual} /></div>
         </div>
       )}
 
       <div className="card">
         <div className="card-header view-desktop">
-          <h3>{total} registro{total !== 1 ? 's' : ''} guardado{total !== 1 ? 's' : ''}</h3>
+          <h3>{total} registro{total !== 1 ? 's' : ''} en historial</h3>
         </div>
         <ServerPaginatedResponsiveList
           loading={listLoading}
           empty={!listLoading && total === 0}
-          emptyMessage="No hay cálculos guardados. Ejecute el cálculo desde Inicio."
+          emptyMessage={hasActiveFilters ? 'No hay registros con esos filtros.' : 'Suba su recibo en Perfil o ejecute un cálculo desde Inicio para comenzar el historial.'}
           emptyIcon={History}
           items={calculos}
           page={page}
@@ -118,80 +238,95 @@ export default function HistorialPage() {
           label="registros"
           tableHead={
             <tr>
-              <th>Fecha</th><th>Cons. Mes</th><th>Gasto Día</th><th>Gasto Mes</th>
-              <th>Gasto Año</th><th>Factura Est.</th><th>Demanda</th><th>Acciones</th>
+              <th>Fecha</th><th>Tipo</th><th>Cons. Mes</th><th>Total factura</th><th>Acciones</th>
             </tr>
           }
-          renderTableRow={(c) => (
+          renderTableRow={(c) => {
+            const periodoFactura = formatPeriodoFactura(c);
+            return (
             <tr key={c.id} className={c.id === ultimoCalculo?.id ? 'row-active' : ''}>
               <td>
-                {formatDate(c.created_at)}
-                {c.id === ultimoCalculo?.id && (
-                  <span className="badge badge-success" style={{ marginLeft: '0.35rem' }}>Activo</span>
+                <strong>{formatDateDay(c.created_at)}</strong>
+                <br />
+                <small style={{ color: 'var(--text-muted)' }}>
+                  {new Date(c.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                </small>
+                {isReciboRegistro(c) && periodoFactura && (
+                  <>
+                    <br />
+                    <small style={{ color: 'var(--text-muted)' }}>Factura: {periodoFactura}</small>
+                  </>
                 )}
+                {c.id === ultimoCalculo?.id && <span className="badge badge-success" style={{ marginLeft: '0.35rem' }}>Reciente</span>}
               </td>
-              <td>{formatNumber(c.consumo_mes_total)} kWh</td>
-              <td>{formatCurrency(c.gasto_diario_total)}</td>
-              <td>{formatCurrency(c.gasto_mensual_total)}</td>
-              <td>{formatCurrency(c.gasto_anual_total)}</td>
-              <td>{formatCurrency(getFacturaTotal(c))}</td>
-              <td>{formatNumber(c.demanda_total)} kW</td>
+              <td><TipoBadge calculo={c} /></td>
+              <td>{isReciboRegistro(c) ? '-' : `${formatNumber(c.consumo_mes_total)} kWh`}</td>
+              <td><strong>{formatCurrency(getFacturaTotal(c))}</strong></td>
               <td className="actions">{renderActions(c)}</td>
             </tr>
-          )}
-          renderCard={(c) => (
+            );
+          }}
+          renderCard={(c) => {
+            const periodoFactura = formatPeriodoFactura(c);
+            return (
             <ListCard
-              title={formatDate(c.created_at)}
-              badge={
-                c.id === ultimoCalculo?.id
-                  ? <span className="badge badge-success">Activo</span>
-                  : <span className="badge badge-info">#{c.id}</span>
-              }
+              title={formatDateDay(c.created_at)}
+              subtitle={formatDate(c.created_at)}
+              badge={<TipoBadge calculo={c} />}
               fields={[
-                { label: 'Consumo/mes', value: `${formatNumber(c.consumo_mes_total)} kWh`, highlight: true },
-                { label: 'Gasto/día', value: formatCurrency(c.gasto_diario_total) },
-                { label: 'Gasto/mes', value: formatCurrency(c.gasto_mensual_total) },
-                { label: 'Gasto/año', value: formatCurrency(c.gasto_anual_total) },
-                { label: 'Factura est.', value: formatCurrency(getFacturaTotal(c)), highlight: true },
-                { label: 'Demanda', value: `${formatNumber(c.demanda_total)} kW` },
+                { label: 'Total factura', value: formatCurrency(getFacturaTotal(c)), highlight: true },
+                { label: 'Consumo/mes', value: isReciboRegistro(c) ? '— (recibo real)' : `${formatNumber(c.consumo_mes_total)} kWh` },
+                ...(isReciboRegistro(c) && periodoFactura
+                  ? [{ label: 'Período factura', value: periodoFactura }]
+                  : []),
+                ...(isReciboRegistro(c) && c.resumen_json?.empresa_distribuidora
+                  ? [{ label: 'Distribuidora', value: c.resumen_json.empresa_distribuidora }]
+                  : []),
               ]}
               actions={renderActions(c)}
             />
-          )}
+            );
+          }}
         />
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Detalle del Cálculo">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Detalle del registro">
         {selected && (
           <div>
-            <p><strong>Fecha:</strong> {formatDate(selected.created_at)}</p>
-            <p><strong>Precio kWh:</strong> {formatCurrency(selected.precio_kwh)}</p>
-            <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
-            <p>Consumo diario: {formatNumber(selected.consumo_dia_total)} kWh</p>
-            <p>Consumo mensual: {formatNumber(selected.consumo_mes_total)} kWh</p>
-            <p>Consumo anual: {formatNumber(selected.consumo_anio_total)} kWh</p>
-            <p>Gasto diario: {formatCurrency(selected.gasto_diario_total)}</p>
-            <p>Gasto mensual: {formatCurrency(selected.gasto_mensual_total)}</p>
-            <p>Gasto anual: {formatCurrency(selected.gasto_anual_total)}</p>
-            <p>Total factura: {formatCurrency(getFacturaTotal(selected))}</p>
-            <div style={{ marginTop: '1rem' }}>
-              <FacturaBreakdown
-                factura={selected.resumen_json?.factura}
-                precioKwh={selected.precio_kwh}
-                consumoMesFallback={selected.consumo_mes_total}
-              />
-            </div>
-            {selected.detalles?.length > 0 && (
+            <p><strong>Tipo:</strong> {isReciboRegistro(selected) ? 'Recibo real (PDF)' : 'Cálculo estimado'}</p>
+            <p><strong>Fecha de subida:</strong> {formatDate(selected.created_at)}</p>
+            {isReciboRegistro(selected) && formatPeriodoFactura(selected) && (
+              <p><strong>Período del recibo:</strong> {formatPeriodoFactura(selected)}</p>
+            )}
+            <p><strong>Total factura:</strong> {formatCurrency(getFacturaTotal(selected))}</p>
+            {isReciboRegistro(selected) ? (
               <>
-                <h4 style={{ marginTop: '1rem' }}>Equipos ({selected.detalles.length})</h4>
-                <ul style={{ fontSize: '0.85rem', paddingLeft: '1.25rem' }}>
-                  {selected.detalles.map((d) => (
-                    <li key={d.id}>
-                      {d.nombre} — {formatNumber(d.consumo_dia)}/{formatNumber(d.consumo_mes)}/{formatNumber(d.consumo_anio)} kWh
-                      {' '}| {formatCurrency(d.gasto_diario)}/{formatCurrency(d.gasto_mensual)}/{formatCurrency(d.gasto_anual)}
-                    </li>
-                  ))}
-                </ul>
+                {selected.resumen_json?.empresa_distribuidora && <p><strong>Distribuidora:</strong> {selected.resumen_json.empresa_distribuidora}</p>}
+                {selected.resumen_json?.tarifa_kwh != null && <p><strong>Tarifa detectada:</strong> {formatCurrency(selected.resumen_json.tarifa_kwh)}/kWh</p>}
+                {selected.resumen_json?.nombre_archivo && <p><strong>Archivo:</strong> {selected.resumen_json.nombre_archivo}</p>}
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.75rem' }}>
+                  Registrado el día que subió el PDF. Compare con los cálculos estimados del mismo período.
+                </p>
+              </>
+            ) : (
+              <>
+                <p><strong>Precio kWh:</strong> {formatCurrency(selected.precio_kwh)}</p>
+                <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+                <p>Consumo mensual: {formatNumber(selected.consumo_mes_total)} kWh</p>
+                <p>Gasto mensual: {formatCurrency(selected.gasto_mensual_total)}</p>
+                <div style={{ marginTop: '1rem' }}>
+                  <FacturaBreakdown factura={selected.resumen_json?.factura} precioKwh={selected.precio_kwh} consumoMesFallback={selected.consumo_mes_total} />
+                </div>
+                {selected.detalles?.length > 0 && (
+                  <>
+                    <h4 style={{ marginTop: '1rem' }}>Equipos ({selected.detalles.length})</h4>
+                    <ul style={{ fontSize: '0.85rem', paddingLeft: '1.25rem' }}>
+                      {selected.detalles.map((d) => (
+                        <li key={d.id}>{d.nombre} — {formatNumber(d.consumo_mes)} kWh | {formatCurrency(d.gasto_mensual)}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </>
             )}
           </div>

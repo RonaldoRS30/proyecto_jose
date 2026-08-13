@@ -253,12 +253,105 @@ function extractAlumbradoPublicoFromText(source) {
   return { alumbrado_publico: null, metodo: null };
 }
 
-function buildReciboMessage({ tarifa_kwh, potencia_contratada, alumbrado_publico, empresa_distribuidora }) {
+const MIN_TOTAL_PAGAR = 10;
+const MAX_TOTAL_PAGAR = 50000;
+
+function parseTotalAPagar(raw) {
+  return parseDecimalNumber(raw, { min: MIN_TOTAL_PAGAR, max: MAX_TOTAL_PAGAR, decimals: 2 });
+}
+
+function extractPeriodoFacturacionFromText(source) {
+  const nearTotal = source.match(
+    /TOTAL\s+A\s+PAGAR[\s\S]{0,160}?\((\d{2})\/(\d{2})\/(\d{4})\)/i
+  );
+  if (nearTotal) {
+    return `${nearTotal[3]}-${nearTotal[2]}-01`;
+  }
+
+  const lectura = source.match(/Lectura\s+Actual[\s\S]{0,80}?\((\d{2})\/(\d{2})\/(\d{4})\)/i);
+  if (lectura) {
+    return `${lectura[3]}-${lectura[2]}-01`;
+  }
+
+  const periodo = source.match(/Periodo\s+(?:de\s+)?(?:Facturaci[oó]n\s+)?(\d{2})\/(\d{4})/i);
+  if (periodo) {
+    return `${periodo[2]}-${periodo[1]}-01`;
+  }
+
+  const emision = source.match(/Fecha\s+de\s+Emisi[oó]n\s*:?\s*(\d{1,2})[-/](\w{3}|\d{2})[-/](\d{4})/i);
+  if (emision) {
+    const monthMap = {
+      ene: '01', feb: '02', mar: '03', abr: '04', may: '05', jun: '06',
+      jul: '07', ago: '08', sep: '09', oct: '10', nov: '11', dic: '12',
+    };
+    const monthToken = emision[2].toLowerCase().slice(0, 3);
+    const month = monthMap[monthToken] || String(emision[2]).padStart(2, '0');
+    return `${emision[3]}-${month}-01`;
+  }
+
+  return null;
+}
+
+function extractTotalAPagarFromText(source) {
+  const normalized = String(source || '').replace(/\s+/g, ' ');
+
+  const masked = normalized.match(/S\/[\s*]{2,}([\d.,]+)/i);
+  if (masked) {
+    const value = parseTotalAPagar(masked[1]);
+    if (value != null) {
+      return { total_a_pagar: value, metodo: 'total_enmascarado' };
+    }
+  }
+
+  const bannerRe = /TOTAL\s+A\s+PAGAR\s+S\/\s*([\d.,]+)/gi;
+  const banner = bannerRe.exec(normalized);
+  if (banner) {
+    const value = parseTotalAPagar(banner[1]);
+    if (value != null) {
+      return { total_a_pagar: value, metodo: 'total_banner' };
+    }
+  }
+
+  const beforeEmision = normalized.match(/([\d.,]+)\s+Fecha\s+de\s+Emisi[oó]n/i);
+  if (beforeEmision) {
+    const value = parseTotalAPagar(beforeEmision[1]);
+    if (value != null) {
+      return { total_a_pagar: value, metodo: 'total_antes_emision' };
+    }
+  }
+
+  const totalDelMes = normalized.match(/TOTAL\s+DEL\s+MES\s+([\d.,]+)/i);
+  if (totalDelMes) {
+    const value = parseTotalAPagar(totalDelMes[1]);
+    if (value != null) {
+      return { total_a_pagar: value, metodo: 'total_del_mes' };
+    }
+  }
+
+  const totalMesActual = normalized.match(/TOTAL\s+Mes\s+Actual\s+([\d.,]+)/i);
+  if (totalMesActual) {
+    const value = parseTotalAPagar(totalMesActual[1]);
+    if (value != null) {
+      return { total_a_pagar: value, metodo: 'total_mes_actual' };
+    }
+  }
+
+  return { total_a_pagar: null, metodo: null };
+}
+
+function buildReciboMessage({
+  tarifa_kwh,
+  potencia_contratada,
+  alumbrado_publico,
+  empresa_distribuidora,
+  total_a_pagar,
+}) {
   const parts = [];
   if (empresa_distribuidora) parts.push(`Distribuidora: ${empresa_distribuidora}`);
   if (tarifa_kwh != null) parts.push(`Tarifa: S/ ${tarifa_kwh.toFixed(4)}/kWh`);
   if (potencia_contratada) parts.push(`Potencia: ${potencia_contratada}`);
   if (alumbrado_publico != null) parts.push(`Alumbrado público: S/ ${alumbrado_publico.toFixed(2)}`);
+  if (total_a_pagar != null) parts.push(`Total a pagar: S/ ${total_a_pagar.toFixed(2)}`);
   if (!parts.length) {
     return 'No se encontraron datos del recibo. Verifique que sea un PDF con texto o una foto nítida.';
   }
@@ -326,6 +419,8 @@ function extractDatosReciboFromText(text) {
       potencia_contratada: null,
       alumbrado_publico: null,
       empresa_distribuidora: null,
+      total_a_pagar: null,
+      periodo_facturacion: null,
       metodo: null,
       message: 'No se pudo leer texto del archivo',
     };
@@ -358,27 +453,33 @@ function extractDatosReciboFromText(text) {
   const { potencia_contratada, metodo: potenciaMetodo } = extractPotenciaContratadaFromText(source);
   const { alumbrado_publico, metodo: alumbradoMetodo } = extractAlumbradoPublicoFromText(source);
   const { empresa_distribuidora, metodo: distribuidoraMetodo } = extractEmpresaDistribuidoraFromText(source);
+  const { total_a_pagar, metodo: totalMetodo } = extractTotalAPagarFromText(source);
+  const periodo_facturacion = extractPeriodoFacturacionFromText(source);
 
   const message = buildReciboMessage({
     tarifa_kwh,
     potencia_contratada,
     alumbrado_publico,
     empresa_distribuidora,
+    total_a_pagar,
   });
 
   if (tarifa_kwh == null) {
-    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora;
+    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora || total_a_pagar != null;
     return {
       tarifa_kwh: null,
       potencia_contratada,
       alumbrado_publico,
       empresa_distribuidora,
+      total_a_pagar,
+      periodo_facturacion,
       metodo: null,
       metodos: {
         tarifa: null,
         potencia: potenciaMetodo,
         alumbrado: alumbradoMetodo,
         distribuidora: distribuidoraMetodo,
+        total: totalMetodo,
       },
       message: hasPartial
         ? `${message}. No se encontró la tarifa en el recibo.`
@@ -391,12 +492,15 @@ function extractDatosReciboFromText(text) {
     potencia_contratada,
     alumbrado_publico,
     empresa_distribuidora,
+    total_a_pagar,
+    periodo_facturacion,
     metodo: tarifaMetodo,
     metodos: {
       tarifa: tarifaMetodo,
       potencia: potenciaMetodo,
       alumbrado: alumbradoMetodo,
       distribuidora: distribuidoraMetodo,
+      total: totalMetodo,
     },
     message,
   };
@@ -405,9 +509,12 @@ function extractDatosReciboFromText(text) {
 module.exports = {
   extractTarifaFromText,
   extractDatosReciboFromText,
+  extractTotalAPagarFromText,
+  extractPeriodoFacturacionFromText,
   parseTarifaNumber,
   parseAlumbradoNumber,
   parsePotenciaKw,
+  parseTotalAPagar,
   formatPotenciaContratada,
   TARIFA_PATTERNS,
   POTENCIA_PATTERNS,

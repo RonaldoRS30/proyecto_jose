@@ -38,8 +38,25 @@ function getCantidadEquiposCalculo(calculo) {
 /**
  * Recalcula factura según Excel — no depende de resumen_json obsoleto.
  */
+function isReciboCalculo(calculo) {
+  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  return plain.origen === 'recibo' || plain.resumen_json?.origen === 'recibo';
+}
+
 function buildFacturaParaCalculo(calculo) {
   const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  if (isReciboCalculo(plain)) {
+    const total = roundNum(
+      parseFloat(plain.factura_total_mes ?? plain.resumen_json?.total_a_pagar ?? 0),
+      2
+    );
+    return {
+      ...crearFacturaVacia(),
+      totalMes: total,
+      consumoEnergiaLinea: 0,
+      gastoEnergiaMensual: 0,
+    };
+  }
   if (getCantidadEquiposCalculo(plain) === 0) {
     return crearFacturaVacia();
   }

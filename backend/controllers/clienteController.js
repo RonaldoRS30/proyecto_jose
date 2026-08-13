@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 const clienteService = require('../services/clienteService');
 const { extractTarifaFromRecibo } = require('../services/reciboTarifaService');
+const { registrarReciboEnHistorial } = require('../services/reciboHistorialService');
 const { uploadRecibo } = require('../middlewares/uploadReciboMiddleware');
 const { asyncHandler } = require('../utils/errorHandler');
 
@@ -98,10 +99,32 @@ const extraerTarifaRecibo = [
         req.file.mimetype,
         req.file.originalname,
       );
-      if (result.tarifa_kwh == null) {
-        return res.status(422).json({ success: false, ...result });
+
+      const clienteId = req.user?.role === 'cliente'
+        ? (req.user.clienteId || req.user.id)
+        : (req.body?.cliente_id || req.query?.cliente_id || null);
+
+      let historialRecibo = null;
+      if (clienteId && result.total_a_pagar != null) {
+        historialRecibo = await registrarReciboEnHistorial(
+          Number(clienteId),
+          result,
+          req.file.originalname,
+        );
       }
-      return res.json({ success: true, data: result });
+
+      if (result.tarifa_kwh == null) {
+        return res.status(422).json({
+          success: false,
+          ...result,
+          historial_recibo: historialRecibo ? { id: historialRecibo.id } : null,
+        });
+      }
+      return res.json({
+        success: true,
+        data: result,
+        historial_recibo: historialRecibo ? { id: historialRecibo.id } : null,
+      });
     } catch (err) {
       return res.status(400).json({
         success: false,

@@ -29,10 +29,11 @@ export function CalculoProvider({ children }) {
   const refreshCalculos = useCallback(async () => {
     setCalculosLoading(true);
     try {
-      const { data } = await getCalculos({ page: 1, limit: 1 });
-      const latest = data.data?.[0] ?? null;
-      setUltimoCalculo(latest);
-      return latest;
+      const { data } = await getCalculos({ page: 1, limit: 10 });
+      const rows = data.data ?? [];
+      const latestCalculo = rows.find((c) => c.origen !== 'recibo') ?? rows[0] ?? null;
+      setUltimoCalculo(latestCalculo);
+      return latestCalculo;
     } catch (e) {
       console.error(e);
       throw e;

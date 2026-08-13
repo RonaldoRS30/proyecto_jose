@@ -544,6 +544,7 @@ export default function ClientesPage() {
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <ReciboTarifaUploader
                 key={editId ?? 'new'}
+                clienteId={editId}
                 onDatosDetected={(datos) => {
                   setForm((prev) => ({
                     ...prev,

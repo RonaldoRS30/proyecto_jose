@@ -48,9 +48,12 @@ export const getCliente = (id) => api.get(`/clientes/${id}`);
 export const getClienteDetalle = (id) => api.get(`/clientes/${id}/detalle`);
 export const createCliente = (data) => api.post('/clientes', data);
 
-export const extraerTarifaRecibo = (file) => {
+export const extraerTarifaRecibo = (file, clienteId = null) => {
   const formData = new FormData();
   formData.append('recibo', file);
+  if (clienteId != null && clienteId !== '') {
+    formData.append('cliente_id', String(clienteId));
+  }
   return api.post('/clientes/extraer-tarifa-recibo', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });

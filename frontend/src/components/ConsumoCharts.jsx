@@ -104,10 +104,11 @@ export function GastoResumenChart({ data }) {
   );
 }
 
-export function EvolucionHistoricaChart({ data }) {
+export function EvolucionHistoricaChart({ data, showKwh = true }) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
   const isTablet = bp === 'tablet';
+  const soloMoneda = !showKwh;
 
   if (!data?.length) return <div className="empty-state">Sin historial</div>;
 
@@ -119,10 +120,12 @@ export function EvolucionHistoricaChart({ data }) {
     <div className="chart-evolucion-wrap">
       {isMobile && (
         <div className="chart-legend-external">
-          <span className="chart-legend-item">
-            <i className="chart-legend-dot" style={{ background: '#1A4AB0' }} />
-            kWh/mes
-          </span>
+          {showKwh && (
+            <span className="chart-legend-item">
+              <i className="chart-legend-dot" style={{ background: '#1A4AB0' }} />
+              kWh/mes
+            </span>
+          )}
           <span className="chart-legend-item">
             <i className="chart-legend-dot" style={{ background: '#10b981' }} />
             S/ mes
@@ -135,7 +138,7 @@ export function EvolucionHistoricaChart({ data }) {
           data={data}
           margin={{
             top: isMobile ? 8 : 12,
-            right: isMobile ? 8 : 16,
+            right: isMobile ? 8 : soloMoneda ? 8 : 16,
             left: isMobile ? -8 : 0,
             bottom: isMobile ? 4 : 8,
           }}
@@ -151,17 +154,19 @@ export function EvolucionHistoricaChart({ data }) {
             textAnchor={data.length > 4 && isMobile ? 'end' : 'middle'}
             height={data.length > 4 && isMobile ? 50 : 30}
           />
-          <YAxis
-            yAxisId="kwh"
-            width={yAxisWidth}
-            tick={{ fill: '#1A4AB0', fontSize: tickSize }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => (isMobile && v >= 1000 ? `${(v / 1000).toFixed(3)}k` : formatNumber(v))}
-          />
+          {showKwh && (
+            <YAxis
+              yAxisId="kwh"
+              width={yAxisWidth}
+              tick={{ fill: '#1A4AB0', fontSize: tickSize }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => (isMobile && v >= 1000 ? `${(v / 1000).toFixed(3)}k` : formatNumber(v))}
+            />
+          )}
           <YAxis
             yAxisId="cost"
-            orientation="right"
+            orientation={soloMoneda ? 'left' : 'right'}
             width={yAxisWidth}
             tick={{ fill: '#10b981', fontSize: tickSize }}
             tickLine={false}
@@ -178,17 +183,19 @@ export function EvolucionHistoricaChart({ data }) {
               wrapperStyle={{ paddingTop: 12, fontSize: 12 }}
             />
           )}
-          <Line
-            yAxisId="kwh"
-            type="monotone"
-            dataKey="consumoMes"
-            name="kWh/mes"
-            stroke="#1A4AB0"
-            strokeWidth={2}
-            dot={{ r: isMobile ? 5 : 4, fill: '#1A4AB0', strokeWidth: 2, stroke: '#fff' }}
-            activeDot={{ r: 7 }}
-            connectNulls
-          />
+          {showKwh && (
+            <Line
+              yAxisId="kwh"
+              type="monotone"
+              dataKey="consumoMes"
+              name="kWh/mes"
+              stroke="#1A4AB0"
+              strokeWidth={2}
+              dot={{ r: isMobile ? 5 : 4, fill: '#1A4AB0', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 7 }}
+              connectNulls
+            />
+          )}
           <Line
             yAxisId="cost"
             type="monotone"

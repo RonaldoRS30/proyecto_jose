@@ -190,3 +190,45 @@ for (const sample of distribuidoraSamples) {
 }
 
 console.log(`reciboDistribuidoraExtractor: ${distPassed}/${distribuidoraSamples.length} OK`);
+
+const {
+  extractTotalAPagarFromText,
+  extractPeriodoFacturacionFromText,
+} = require('../helpers/reciboTarifaExtractor');
+
+const totalSamples = [
+  {
+    name: 'PLUZ total enmascarado',
+    text: 'Lima Norte S/******538.50 _________________________________',
+    total: 538.5,
+  },
+  {
+    name: 'Luz del Sur total antes emision',
+    text: 'GANCHO-CHOSICA - LIMA 0005212 361.10 Fecha de Emisión:15-Jul-2025',
+    total: 361.1,
+  },
+  {
+    name: 'TOTAL DEL MES fallback',
+    text: 'Cargo Fijo SUBTOTAL 00 TOTAL DEL MES 361.05',
+    total: 361.05,
+  },
+  {
+    name: 'Periodo lectura PLUZ',
+    text: 'TOTAL A PAGAR Lectura Actual (23/06/2026) S/******538.50',
+    total: 538.5,
+    periodo: '2026-06-01',
+  },
+];
+
+let totalPassed = 0;
+for (const sample of totalSamples) {
+  const result = extractTotalAPagarFromText(sample.text);
+  assert.strictEqual(result.total_a_pagar, sample.total, `${sample.name} total`);
+  if (sample.periodo) {
+    const periodo = extractPeriodoFacturacionFromText(sample.text.replace(/\s+/g, ' '));
+    assert.strictEqual(periodo, sample.periodo, `${sample.name} periodo`);
+  }
+  totalPassed += 1;
+}
+
+console.log(`reciboTarifaExtractor totales: ${totalPassed}/${totalSamples.length} OK`);
