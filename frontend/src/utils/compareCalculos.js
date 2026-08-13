@@ -37,7 +37,7 @@ export function formatCalculoOptionLabel(calculo) {
     hour: '2-digit',
     minute: '2-digit',
   });
-  return `${fecha} · ${roundNumber(m.consumoMesKwh)} kWh · S/ ${roundNumber(m.gastoEnergiaMes)}`;
+  return `${fecha} · ${roundNumber(m.consumoMesKwh)} kWh · S/ ${roundNumber(m.facturaTotalMes)}`;
 }
 
 function buildMetricPair(actualVal, refVal) {

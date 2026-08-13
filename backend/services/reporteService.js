@@ -194,6 +194,16 @@ const generarComparacionPDF = async (actualId, referenciaId, clienteId) => {
     loadCalculoParaReporte(referenciaId, clienteId),
   ]);
 
+  for (const calculo of [calculoActual, calculoReferencia]) {
+    const origen = calculo.origen || calculo.resumen_json?.origen;
+    if (origen === 'recibo') {
+      throw new AppError(
+        'La comparación solo aplica a cálculos estimados del sistema, no a recibos reales del PDF.',
+        400,
+      );
+    }
+  }
+
   const actualEnriquecido = enrichCalculo(calculoActual, { configMap });
   const referenciaEnriquecido = enrichCalculo(calculoReferencia, { configMap });
   const comparacion = compareCalculos(actualEnriquecido, referenciaEnriquecido);

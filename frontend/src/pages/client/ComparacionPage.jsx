@@ -28,7 +28,7 @@ export default function ComparacionPage() {
   const fetchCalculos = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await getCalculos({ page: 1, limit: 100 });
+      const { data } = await getCalculos({ page: 1, limit: 100, origen: 'calculo' });
       const list = [...(data.data ?? [])].sort(
         (a, b) => new Date(b.created_at) - new Date(a.created_at),
       );
@@ -111,9 +111,9 @@ export default function ComparacionPage() {
         />
         <div className="dashboard-empty">
           <GitCompare size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} aria-hidden />
-          <p>Necesita al menos <strong>2 cálculos guardados</strong> para comparar.</p>
+          <p>Necesita al menos <strong>2 cálculos estimados guardados</strong> para comparar.</p>
           <p style={{ fontSize: '0.8125rem', marginTop: '0.5rem' }}>
-            Ejecute un cálculo desde Inicio y guarde otro en una fecha distinta.
+            Ejecute un cálculo desde Inicio y guarde otro en una fecha distinta. Los recibos reales del PDF se ven en Historial.
           </p>
         </div>
       </div>
@@ -130,7 +130,7 @@ export default function ComparacionPage() {
     <div className="comparacion-page">
       <PageHeader
         title="Comparación de reportes"
-        subtitle="Resta simple entre el reporte actual y uno anterior"
+        subtitle="Compare dos cálculos estimados del sistema (no incluye recibos reales del PDF)"
         action={comparison ? {
           label: pdfLoading ? 'Generando...' : 'Descargar PDF',
           icon: Download,

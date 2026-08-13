@@ -12,6 +12,7 @@ import { useCalculosChart, useServerCalculosList, PAGE_SIZE } from '../../hooks/
 import { getCalculo, generarPDF, downloadReporte } from '../../services/api';
 import { formatNumber, formatCurrency, formatDate, formatDateDay } from '../../utils/helpers';
 import { buildFacturaFromCalculo } from '../../utils/factura';
+import { isReciboRegistro } from '../../utils/calculoRegistro';
 
 const getFacturaTotal = (calculo) => buildFacturaFromCalculo(calculo).totalMes;
 
@@ -24,9 +25,6 @@ const getConsumoMes = (calculo) => {
   const n = parseFloat(calculo.consumo_mes_total);
   return Number.isFinite(n) ? n : 0;
 };
-
-const isReciboRegistro = (calculo) =>
-  calculo?.origen === 'recibo' || calculo?.resumen_json?.origen === 'recibo';
 
 const formatPeriodoFactura = (calculo) => {
   const raw = calculo?.periodo_facturacion || calculo?.resumen_json?.periodo_facturacion;

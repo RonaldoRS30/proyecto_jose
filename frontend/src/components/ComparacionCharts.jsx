@@ -99,9 +99,9 @@ export default function ComparacionCharts({ comparison }) {
     { name: 'Referencia', value: comparison.consumoMesKwh.referencia, fill: '#64748b' },
   ];
 
-  const gastoData = [
-    { name: 'Actual', value: comparison.gastoEnergiaMes.actual, fill: '#10b981' },
-    { name: 'Referencia', value: comparison.gastoEnergiaMes.referencia, fill: '#94a3b8' },
+  const facturaData = [
+    { name: 'Actual', value: comparison.facturaTotalMes.actual, fill: '#10b981' },
+    { name: 'Referencia', value: comparison.facturaTotalMes.referencia, fill: '#94a3b8' },
   ];
 
   const ahorroData = [
@@ -135,11 +135,11 @@ export default function ComparacionCharts({ comparison }) {
         valueLabel="Consumo"
       />
       <ComparacionBarPanel
-        title="Gasto por energía mensual (S/)"
-        subtitle="Costo de energía (kWh × tarifa) — antes vs actual"
-        data={gastoData}
+        title="Total factura mensual (S/)"
+        subtitle="Total del mes (energía + cargos + IGV) — actual vs referencia"
+        data={facturaData}
         formatValue={formatSoles}
-        valueLabel="Gasto energía"
+        valueLabel="Total factura"
       />
       <ComparacionVariacionPanel data={ahorroData} />
     </div>

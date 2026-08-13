@@ -11,6 +11,7 @@ import { useAlert } from '../../contexts/ConfirmContext';
 import { getCalculos, generarPDF, downloadReporte, downloadExcelReporte, getClientes } from '../../services/api';
 import { formatDate, formatNumber, formatCurrency } from '../../utils/helpers';
 import { buildFacturaFromCalculo } from '../../utils/factura';
+import { isReciboRegistro } from '../../utils/calculoRegistro';
 import { useServerCalculosList, PAGE_SIZE } from '../../hooks/useServerCalculosList';
 
 const getFacturaTotal = (calculo) => buildFacturaFromCalculo(calculo).totalMes;
@@ -27,6 +28,43 @@ const getClienteNombre = (c) => {
   if (!c.cliente) return '-';
   return `${c.cliente.nombre || ''} ${c.cliente.apellido || ''}`.trim() || '-';
 };
+
+function ReportesActions({ calculo, generating, exportingExcel, onPDF, onExcel, admin = false }) {
+  if (isReciboRegistro(calculo)) {
+    return (
+      <span className="text-muted" style={{ fontSize: '0.8125rem' }}>
+        Recibo real — ver en Historial
+      </span>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <button
+        type="button"
+        className="btn btn-primary btn-sm"
+        onClick={() => onPDF(calculo.id)}
+        disabled={generating === calculo.id || exportingExcel === calculo.id}
+      >
+        <Download size={14} />
+        {generating === calculo.id
+          ? (admin ? 'Gen...' : 'Generando...')
+          : (admin ? 'PDF' : 'Descargar PDF')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        onClick={() => onExcel(calculo.id)}
+        disabled={exportingExcel === calculo.id || generating === calculo.id}
+      >
+        <FileSpreadsheet size={14} />
+        {exportingExcel === calculo.id
+          ? (admin ? 'Gen...' : 'Exportando...')
+          : 'Excel'}
+      </button>
+    </div>
+  );
+}
 
 function ReportesList({
   calculos,
@@ -67,26 +105,14 @@ function ReportesList({
           <td>{formatNumber(c.consumo_mes_total)} kWh</td>
           <td>{formatCurrency(getFacturaTotal(c))}</td>
           <td>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => onPDF(c.id)}
-                disabled={generating === c.id || exportingExcel === c.id}
-              >
-                <Download size={14} />
-                {generating === c.id ? 'Gen...' : 'PDF'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => onExcel(c.id)}
-                disabled={exportingExcel === c.id || generating === c.id}
-              >
-                <FileSpreadsheet size={14} />
-                {exportingExcel === c.id ? 'Gen...' : 'Excel'}
-              </button>
-            </div>
+            <ReportesActions
+              calculo={c}
+              generating={generating}
+              exportingExcel={exportingExcel}
+              onPDF={onPDF}
+              onExcel={onExcel}
+              admin
+            />
           </td>
         </tr>
       ) : (
@@ -104,26 +130,13 @@ function ReportesList({
           <td>{formatCurrency(c.gasto_anual_total)}</td>
           <td>{formatCurrency(getFacturaTotal(c))}</td>
           <td>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => onPDF(c.id)}
-                disabled={generating === c.id || exportingExcel === c.id}
-              >
-                <Download size={14} />
-                {generating === c.id ? 'Generando...' : 'Descargar PDF'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => onExcel(c.id)}
-                disabled={exportingExcel === c.id || generating === c.id}
-              >
-                <FileSpreadsheet size={14} />
-                {exportingExcel === c.id ? 'Exportando...' : 'Excel'}
-              </button>
-            </div>
+            <ReportesActions
+              calculo={c}
+              generating={generating}
+              exportingExcel={exportingExcel}
+              onPDF={onPDF}
+              onExcel={onExcel}
+            />
           </td>
         </tr>
       )
@@ -140,26 +153,14 @@ function ReportesList({
             { label: 'Total', value: formatCurrency(getFacturaTotal(c)), highlight: true },
           ]}
           actions={
-            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{ flex: 1, justifyContent: 'center' }}
-                onClick={() => onPDF(c.id)}
-                disabled={generating === c.id || exportingExcel === c.id}
-              >
-                <Download size={14} /> PDF
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                style={{ flex: 1, justifyContent: 'center' }}
-                onClick={() => onExcel(c.id)}
-                disabled={exportingExcel === c.id || generating === c.id}
-              >
-                <FileSpreadsheet size={14} /> Excel
-              </button>
-            </div>
+            <ReportesActions
+              calculo={c}
+              generating={generating}
+              exportingExcel={exportingExcel}
+              onPDF={onPDF}
+              onExcel={onExcel}
+              admin
+            />
           }
         />
       ) : (
@@ -180,28 +181,13 @@ function ReportesList({
             { label: 'Total factura', value: formatCurrency(getFacturaTotal(c)), highlight: true },
           ]}
           actions={
-            <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => onPDF(c.id)}
-                disabled={generating === c.id || exportingExcel === c.id}
-                style={{ flex: 1, justifyContent: 'center' }}
-              >
-                <Download size={14} />
-                {generating === c.id ? 'Gen...' : 'PDF'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => onExcel(c.id)}
-                disabled={exportingExcel === c.id || generating === c.id}
-                style={{ flex: 1, justifyContent: 'center' }}
-              >
-                <FileSpreadsheet size={14} />
-                {exportingExcel === c.id ? 'Exp...' : 'Excel'}
-              </button>
-            </div>
+            <ReportesActions
+              calculo={c}
+              generating={generating}
+              exportingExcel={exportingExcel}
+              onPDF={onPDF}
+              onExcel={onExcel}
+            />
           }
         />
       )
@@ -245,7 +231,7 @@ function ClientReportesPage() {
   useEffect(() => {
     let cancelled = false;
     setListLoading(true);
-    const params = { page, limit: PAGE_SIZE };
+    const params = { page, limit: PAGE_SIZE, origen: 'calculo' };
     if (fechaDesde) params.fecha_desde = fechaDesde;
     if (fechaHasta) params.fecha_hasta = fechaHasta;
     getCalculos(params)
@@ -411,7 +397,7 @@ function AdminReportesPage() {
 
   useEffect(() => {
     setLoading(true);
-    const params = { page, limit: PAGE_SIZE };
+    const params = { page, limit: PAGE_SIZE, origen: 'calculo' };
     if (search.trim()) params.search = search.trim();
     if (clienteId) params.cliente_id = clienteId;
     if (fechaDesde) params.fecha_desde = fechaDesde;
@@ -475,7 +461,7 @@ function AdminReportesPage() {
   const handleExportCsv = async () => {
     if (total === 0) return;
     try {
-      const params = { page: 1, limit: 10000 };
+      const params = { page: 1, limit: 10000, origen: 'calculo' };
       if (search.trim()) params.search = search.trim();
       if (clienteId) params.cliente_id = clienteId;
       if (fechaDesde) params.fecha_desde = fechaDesde;
