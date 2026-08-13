@@ -15,11 +15,13 @@ import {
 } from '../../services/api';
 import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
 import { CATEGORIAS_APARATO, formatCurrency } from '../../utils/helpers';
+import { emptyEficienciaFields } from '../../utils/eficienciaEnergetica';
 
 const emptyForm = {
   nombre: '', categoria: 'Cocina', marca: '', modelo: '',
   potencia_w: '', cantidad: 1, horas_uso_dia: '', dias_uso_mes: 30,
   observaciones: '', modulo: 'aparato', recomendacion_id: null,
+  ...emptyEficienciaFields,
 };
 
 export default function ElectrodomesticosPage() {
@@ -55,7 +57,15 @@ export default function ElectrodomesticosPage() {
   };
   const openEdit = (item) => {
     setEditId(item.id);
-    setForm({ ...item, potencia_w: item.potencia_w, horas_uso_dia: item.horas_uso_dia });
+    setForm({
+      ...item,
+      potencia_w: item.potencia_w,
+      horas_uso_dia: item.horas_uso_dia,
+      eficiencia_energetica: Boolean(item.eficiencia_energetica),
+      kwh_por_ciclo: item.kwh_por_ciclo ?? '',
+      horas_por_ciclo: item.horas_por_ciclo ?? '',
+      kwh_anual: item.kwh_anual ?? '',
+    });
     setModalOpen(true);
   };
 
@@ -141,7 +151,12 @@ export default function ElectrodomesticosPage() {
               <tr key={item.id}>
                 <td><strong>{item.nombre}</strong><br /><small>{item.marca} {item.modelo}</small></td>
                 <td><span className="badge badge-info">{item.categoria}</span></td>
-                <td>{item.potencia_w} W</td>
+                <td>
+                  {item.potencia_w} W
+                  {item.eficiencia_energetica && (
+                    <><br /><small style={{ color: 'var(--text-muted)' }}>Etiqueta EE</small></>
+                  )}
+                </td>
                 <td>{item.cantidad}</td>
                 <td>{item.horas_uso_dia}h</td>
                 {renderEquipoDataCells(calc)}
@@ -185,6 +200,7 @@ export default function ElectrodomesticosPage() {
         modulo="aparato"
         tiposPreset={catalogo}
         catalogLabel="Catálogo de equipos"
+        allowEficienciaEnergetica
       />
     </div>
   );

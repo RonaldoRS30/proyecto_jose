@@ -30,6 +30,31 @@ const MIGRATIONS = [
     column: 'periodo_facturacion',
     sql: 'ALTER TABLE calculos ADD COLUMN periodo_facturacion DATE NULL AFTER origen',
   },
+  {
+    table: 'electrodomesticos',
+    column: 'eficiencia_energetica',
+    sql: 'ALTER TABLE electrodomesticos ADD COLUMN eficiencia_energetica TINYINT(1) NOT NULL DEFAULT 0 AFTER potencia_w',
+  },
+  {
+    table: 'electrodomesticos',
+    column: 'tipo_eficiencia',
+    sql: "ALTER TABLE electrodomesticos ADD COLUMN tipo_eficiencia ENUM('lavadora','refrigerador') NULL AFTER eficiencia_energetica",
+  },
+  {
+    table: 'electrodomesticos',
+    column: 'kwh_por_ciclo',
+    sql: 'ALTER TABLE electrodomesticos ADD COLUMN kwh_por_ciclo DECIMAL(10,4) NULL AFTER tipo_eficiencia',
+  },
+  {
+    table: 'electrodomesticos',
+    column: 'horas_por_ciclo',
+    sql: 'ALTER TABLE electrodomesticos ADD COLUMN horas_por_ciclo DECIMAL(10,4) NULL AFTER kwh_por_ciclo',
+  },
+  {
+    table: 'electrodomesticos',
+    column: 'kwh_anual',
+    sql: 'ALTER TABLE electrodomesticos ADD COLUMN kwh_anual DECIMAL(10,2) NULL AFTER horas_por_ciclo',
+  },
 ];
 
 async function columnExists(conn, dbName, table, column) {

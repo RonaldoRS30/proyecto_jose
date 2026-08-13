@@ -3350,6 +3350,28 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   cursor: pointer;
 }
 
+.eficiencia-block {
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-card));
+}
+
+.eficiencia-checkbox {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.eficiencia-preview {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #10b981 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, #10b981 35%, var(--border));
+  font-size: 0.9rem;
+}
+
 .btn-filter {
   min-height: 42px;
   flex: 1;

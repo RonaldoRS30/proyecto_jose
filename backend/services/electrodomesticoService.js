@@ -2,6 +2,18 @@ const { Electrodomestico } = require('../models');
 const { AppError } = require('../utils/errorHandler');
 
 const { registerMarcaModelo } = require('./marcaModeloCatalogService');
+const { applyEficienciaToPayload } = require('../helpers/eficienciaEnergeticaHelper');
+
+function preparePayload(data) {
+  const normalized = applyEficienciaToPayload(data);
+  if (!normalized.eficiencia_energetica) {
+    const potencia = parseFloat(normalized.potencia_w);
+    if (!Number.isFinite(potencia) || potencia < 0) {
+      throw new AppError('La potencia (W) es obligatoria.', 400);
+    }
+  }
+  return normalized;
+}
 
 function normalizeNombreEquipo(nombre) {
   return String(nombre || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -66,24 +78,26 @@ const listarPaginado = async (clienteId, { modulo = null, page = 1, limit = 8 } 
 };
 
 const crear = async (clienteId, data) => {
-  validateHorasUsoDia(data);
-  const duplicado = await findDuplicadoPorNombre(clienteId, data.modulo, data.nombre);
+  const payload = preparePayload(data);
+  validateHorasUsoDia(payload);
+  const duplicado = await findDuplicadoPorNombre(clienteId, payload.modulo, payload.nombre);
   if (duplicado) errorNombreDuplicado(duplicado);
-  const item = await Electrodomestico.create({ ...data, cliente_id: clienteId });
-  await registerMarcaModelo({ marca: data.marca, modelo: data.modelo });
+  const item = await Electrodomestico.create({ ...payload, cliente_id: clienteId });
+  await registerMarcaModelo({ marca: payload.marca, modelo: payload.modelo });
   return item;
 };
 
 const actualizar = async (id, clienteId, data) => {
   const item = await Electrodomestico.findOne({ where: { id, cliente_id: clienteId } });
   if (!item) throw new AppError('Electrodoméstico no encontrado', 404);
-  validateHorasUsoDia(data);
-  if (data.nombre !== undefined) {
-    const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, data.nombre, id);
+  const payload = preparePayload(data);
+  validateHorasUsoDia(payload);
+  if (payload.nombre !== undefined) {
+    const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, payload.nombre, id);
     if (duplicado) errorNombreDuplicado(duplicado, true);
   }
-  await item.update(data);
-  await registerMarcaModelo({ marca: data.marca ?? item.marca, modelo: data.modelo ?? item.modelo });
+  await item.update(payload);
+  await registerMarcaModelo({ marca: payload.marca ?? item.marca, modelo: payload.modelo ?? item.modelo });
   return item;
 };
 

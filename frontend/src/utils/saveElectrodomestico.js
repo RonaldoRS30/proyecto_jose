@@ -5,6 +5,36 @@ export async function saveElectrodomestico({
   updateElectrodomestico,
   alert,
 }) {
+  if (payload.eficiencia_energetica) {
+    const nombre = String(payload.nombre || '').toLowerCase();
+    const esLav = nombre.includes('lavadora');
+    const esRef = nombre.includes('refrigerador') || nombre.includes('nevera') || nombre.includes('refri');
+    if (esLav) {
+      const kwh = parseFloat(payload.kwh_por_ciclo);
+      const horas = parseFloat(payload.horas_por_ciclo);
+      if (!Number.isFinite(kwh) || kwh <= 0 || !Number.isFinite(horas) || horas <= 0) {
+        await alert({
+          title: 'Datos de eficiencia incompletos',
+          message: 'Indique consumo por ciclo (kWh) y duración del ciclo (horas).',
+          variant: 'warning',
+          confirmLabel: 'Entendido',
+        });
+        return false;
+      }
+    } else if (esRef) {
+      const anual = parseFloat(payload.kwh_anual);
+      if (!Number.isFinite(anual) || anual <= 0) {
+        await alert({
+          title: 'Datos de eficiencia incompletos',
+          message: 'Indique el consumo anual (kWh/año) de la etiqueta del refrigerador.',
+          variant: 'warning',
+          confirmLabel: 'Entendido',
+        });
+        return false;
+      }
+    }
+  }
+
   const horas = parseFloat(payload.horas_uso_dia);
   if (!Number.isFinite(horas) || horas <= 0) {
     await alert({

@@ -1,16 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import SearchableSelect from './SearchableSelect';
 import { useMarcaModeloCatalog } from '../hooks/useMarcaModeloCatalog';
+import {
+  detectTipoEficiencia,
+  calcPotenciaFromEficiencia,
+  HORAS_REFRIGERADOR_DIA,
+  emptyEficienciaFields,
+} from '../utils/eficienciaEnergetica';
+import { formatNumber } from '../utils/helpers';
 
 export default function ElectroForm({
   isOpen, onClose, onSubmit, form, setForm, editId,
   categorias, modulo, tiposPreset = [], catalogLabel = 'Plantilla rápida',
+  allowEficienciaEnergetica = false,
 }) {
   const [presetKey, setPresetKey] = useState('');
   const [selectedConsejo, setSelectedConsejo] = useState('');
   const [isManual, setIsManual] = useState(false);
   const { marcas, modelos } = useMarcaModeloCatalog(isOpen);
+
+  const tipoEficiencia = allowEficienciaEnergetica ? detectTipoEficiencia(form.nombre) : null;
+  const eficienciaActiva = Boolean(form.eficiencia_energetica && tipoEficiencia);
+
+  const potenciaCalculada = useMemo(() => {
+    if (!eficienciaActiva || !tipoEficiencia) return null;
+    return calcPotenciaFromEficiencia(tipoEficiencia, form);
+  }, [eficienciaActiva, tipoEficiencia, form.kwh_por_ciclo, form.horas_por_ciclo, form.kwh_anual]);
 
   useEffect(() => {
     if (isOpen) {
@@ -20,10 +36,31 @@ export default function ElectroForm({
     }
   }, [isOpen, editId]);
 
+  useEffect(() => {
+    if (!allowEficienciaEnergetica || !eficienciaActiva || tipoEficiencia !== 'refrigerador') return;
+    if (String(form.horas_uso_dia) === String(HORAS_REFRIGERADOR_DIA)) return;
+    setForm((prev) => ({ ...prev, horas_uso_dia: HORAS_REFRIGERADOR_DIA }));
+  }, [allowEficienciaEnergetica, eficienciaActiva, tipoEficiencia, form.horas_uso_dia, setForm]);
+
+  useEffect(() => {
+    if (!eficienciaActiva || potenciaCalculada == null) return;
+    setForm((prev) => {
+      if (String(prev.potencia_w) === String(potenciaCalculada) && prev.tipo_eficiencia === tipoEficiencia) {
+        return prev;
+      }
+      return {
+        ...prev,
+        potencia_w: String(potenciaCalculada),
+        tipo_eficiencia: tipoEficiencia,
+      };
+    });
+  }, [eficienciaActiva, potenciaCalculada, tipoEficiencia, setForm]);
+
   const applyPreset = (preset) => {
     if (!preset) return;
     setForm({
       ...form,
+      ...emptyEficienciaFields,
       nombre: preset.nombre,
       potencia_w: preset.potencia,
       horas_uso_dia: '',
@@ -38,6 +75,25 @@ export default function ElectroForm({
     setPresetKey(preset.nombre);
     setSelectedConsejo(preset.texto || '');
     setIsManual(true);
+  };
+
+  const toggleEficiencia = (checked) => {
+    if (!checked) {
+      setForm({
+        ...form,
+        ...emptyEficienciaFields,
+        potencia_w: '',
+      });
+      return;
+    }
+    setForm({
+      ...form,
+      eficiencia_energetica: true,
+      tipo_eficiencia: tipoEficiencia,
+      kwh_por_ciclo: form.kwh_por_ciclo || '',
+      horas_por_ciclo: form.horas_por_ciclo || '',
+      kwh_anual: form.kwh_anual || '',
+    });
   };
 
   const presetOptions = tiposPreset.map((t) => ({
@@ -144,11 +200,76 @@ export default function ElectroForm({
             allowCustom
           />
         </div>
-        <div className="form-group">
-          <label>Potencia (Watts) *</label>
-          <input className="form-control" type="number" min="0" step="0.01" value={form.potencia_w} onChange={(e) => setForm({ ...form, potencia_w: e.target.value })} required />
-        </div>
+        {!eficienciaActiva && (
+          <div className="form-group">
+            <label>Potencia (Watts) *</label>
+            <input className="form-control" type="number" min="0" step="0.01" value={form.potencia_w} onChange={(e) => setForm({ ...form, potencia_w: e.target.value })} required />
+          </div>
+        )}
       </div>
+
+      {allowEficienciaEnergetica && tipoEficiencia && (
+        <div className="form-group eficiencia-block">
+          <label className="checkbox-label eficiencia-checkbox">
+            <input
+              type="checkbox"
+              checked={Boolean(form.eficiencia_energetica)}
+              onChange={(e) => toggleEficiencia(e.target.checked)}
+            />
+            <span>Usar etiqueta de eficiencia energética (datos del fabricante)</span>
+          </label>
+
+          {eficienciaActiva && tipoEficiencia === 'lavadora' && (
+            <div className="form-row" style={{ marginTop: '0.75rem' }}>
+              <div className="form-group">
+                <label>Consumo por ciclo (kWh/ciclo) *</label>
+                <input
+                  className="form-control"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.kwh_por_ciclo ?? ''}
+                  onChange={(e) => setForm({ ...form, kwh_por_ciclo: e.target.value })}
+                  placeholder="Ej. 1.6"
+                />
+              </div>
+              <div className="form-group">
+                <label>Duración del ciclo (horas/ciclo) *</label>
+                <input
+                  className="form-control"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.horas_por_ciclo ?? ''}
+                  onChange={(e) => setForm({ ...form, horas_por_ciclo: e.target.value })}
+                  placeholder="Ej. 1.5"
+                />
+              </div>
+            </div>
+          )}
+
+          {eficienciaActiva && tipoEficiencia === 'refrigerador' && (
+            <div className="form-group" style={{ marginTop: '0.75rem' }}>
+              <label>Consumo anual (kWh/año) *</label>
+              <input
+                className="form-control"
+                type="number"
+                min="1"
+                step="1"
+                value={form.kwh_anual ?? ''}
+                onChange={(e) => setForm({ ...form, kwh_anual: e.target.value })}
+                placeholder="Ej. 333"
+              />
+            </div>
+          )}
+
+          {eficienciaActiva && potenciaCalculada != null && (
+            <div className="eficiencia-preview">
+              <strong>Potencia calculada:</strong> {formatNumber(potenciaCalculada, 4)} W
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="form-row">
         <div className="form-group">
@@ -157,7 +278,20 @@ export default function ElectroForm({
         </div>
         <div className="form-group">
           <label>Horas de uso por día *</label>
-          <input className="form-control" type="number" min="0.01" step="0.5" value={form.horas_uso_dia} onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })} required />
+          <input
+            className="form-control"
+            type="number"
+            min="0.01"
+            step="0.5"
+            value={form.horas_uso_dia}
+            onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })}
+            required
+            readOnly={eficienciaActiva && tipoEficiencia === 'refrigerador'}
+            title={eficienciaActiva && tipoEficiencia === 'refrigerador' ? 'Refrigerador: 24 h (siempre encendido)' : undefined}
+          />
+          {eficienciaActiva && tipoEficiencia === 'refrigerador' && (
+            <small className="form-hint">Refrigerador: 24 h/día según el Excel.</small>
+          )}
         </div>
       </div>
 
