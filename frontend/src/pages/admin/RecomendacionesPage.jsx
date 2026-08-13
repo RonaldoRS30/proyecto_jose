@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, Lightbulb, Power } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Edit, Trash2, Lightbulb, Power, Search } from 'lucide-react';
 import Modal from '../../components/Modal';
 import PageHeader from '../../components/PageHeader';
 import PaginatedResponsiveList from '../../components/PaginatedResponsiveList';
@@ -62,6 +62,23 @@ export default function RecomendacionesPage() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => {
+      const aliases = Array.isArray(item.aliases) ? item.aliases.join(' ') : '';
+      const haystack = [
+        item.nombre,
+        item.categoria,
+        item.texto,
+        item.modulo,
+        aliases,
+      ].join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [items, search]);
 
   const load = async () => {
     setLoading(true);
@@ -160,13 +177,37 @@ export default function RecomendacionesPage() {
         action={{ label: 'Nueva recomendación', icon: Plus, onClick: openCreate }}
       />
 
+      <div className="search-bar">
+        <div className="search-input-wrap">
+          <Search size={16} className="search-input-icon" aria-hidden />
+          <input
+            className="form-control search-input"
+            type="search"
+            placeholder="Buscar equipos por nombre, categoría o consejo..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Buscar recomendaciones"
+          />
+        </div>
+        {search.trim() && (
+          <span className="search-results-hint">
+            {filteredItems.length} de {items.length} encontradas
+          </span>
+        )}
+      </div>
+
       <div className="card card-list">
         <PaginatedResponsiveList
+          key={search.trim().toLowerCase()}
           loading={loading}
-          empty={!loading && items.length === 0}
-          emptyMessage="No hay recomendaciones registradas"
+          empty={!loading && filteredItems.length === 0}
+          emptyMessage={
+            search.trim()
+              ? 'No se encontraron equipos con ese criterio'
+              : 'No hay recomendaciones registradas'
+          }
           emptyIcon={Lightbulb}
-          items={items}
+          items={filteredItems}
           label="recomendaciones"
           pageSize={8}
           tableHead={(

@@ -2101,6 +2101,13 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 .search-input { padding-left: 2.25rem !important; width: 100%; max-width: 100%; }
 .search-filter { max-width: 160px; min-width: 120px; }
 
+.search-results-hint {
+  align-self: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .code-display {
   font-family: monospace;
   font-size: 1.05rem;
