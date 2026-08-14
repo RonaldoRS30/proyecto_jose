@@ -20,6 +20,9 @@ const obtener = async (id) => {
 };
 
 const crear = async (data) => {
+  if (data.eficiencia_habilitada && !data.plantilla_eficiencia) {
+    throw new AppError('Seleccione una plantilla de eficiencia energética.', 400);
+  }
   return Recomendacion.create({
     ...data,
     aliases: Array.isArray(data.aliases) ? data.aliases : [],
@@ -28,6 +31,10 @@ const crear = async (data) => {
 
 const actualizar = async (id, data) => {
   const item = await obtener(id);
+  const merged = { ...item.toJSON(), ...data };
+  if (merged.eficiencia_habilitada && !merged.plantilla_eficiencia) {
+    throw new AppError('Seleccione una plantilla de eficiencia energética.', 400);
+  }
   await item.update({
     ...data,
     aliases: data.aliases != null

@@ -422,6 +422,69 @@ const seedRecomendaciones = async () => {
     if (wasCreated) created += 1;
   }
 
+  const EFICIENCIA_SYNC = [
+    {
+      nombre: 'Lavadora',
+      modulo: 'aparato',
+      eficiencia_habilitada: true,
+      plantilla_eficiencia: 'energia_tiempo_potencia',
+      eficiencia_config: {
+        labels: {
+          kwh_por_ciclo: 'Consumo por ciclo (kWh)',
+          minutos_por_ciclo: 'Duración del ciclo (minutos)',
+        },
+      },
+    },
+    {
+      nombre: 'Refrigeradora',
+      modulo: 'aparato',
+      eficiencia_habilitada: true,
+      plantilla_eficiencia: 'energia_anual_potencia',
+    },
+    {
+      nombre: 'Horno microondas',
+      modulo: 'aparato',
+      eficiencia_habilitada: true,
+      plantilla_eficiencia: 'energia_tiempo_potencia',
+      eficiencia_config: {
+        labels: {
+          kwh_por_ciclo: 'Consumo por uso (kWh)',
+          minutos_por_ciclo: 'Tiempo de uso (minutos)',
+        },
+      },
+    },
+    {
+      nombre: 'Ducha eléctrica',
+      modulo: 'aparato',
+      eficiencia_habilitada: true,
+      plantilla_eficiencia: 'energia_tiempo_potencia',
+      eficiencia_config: {
+        minutos_como_horas_uso: true,
+        labels: {
+          kwh_por_ciclo: 'Consumo por ducha (kWh)',
+          minutos_por_ciclo: 'Duración de la ducha (minutos)',
+        },
+      },
+    },
+    {
+      nombre: 'Aire acondicionado',
+      modulo: 'aparato',
+      eficiencia_habilitada: true,
+      plantilla_eficiencia: 'btu_potencia',
+    },
+  ];
+
+  for (const cfg of EFICIENCIA_SYNC) {
+    await Recomendacion.update(
+      {
+        eficiencia_habilitada: cfg.eficiencia_habilitada,
+        plantilla_eficiencia: cfg.plantilla_eficiencia,
+        eficiencia_config: cfg.eficiencia_config || null,
+      },
+      { where: { nombre: cfg.nombre, modulo: cfg.modulo } },
+    );
+  }
+
   if (created > 0) {
     console.log(`✓ Recomendaciones iniciales: ${created} creadas`);
   }

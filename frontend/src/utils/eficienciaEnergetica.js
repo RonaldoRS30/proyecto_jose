@@ -1,51 +1,86 @@
-export const HORAS_ANIO = 8760;
-export const HORAS_REFRIGERADOR_DIA = 24;
+import {
+  HORAS_REFRIGERADOR_DIA,
+  calcPotenciaFromPlantilla,
+  calcEnergiaPotenciaTiempo,
+  minutosToHoras,
+  matchCatalogEficiencia,
+  PLANTILLAS_EFICIENCIA,
+} from './plantillasEficiencia';
 
-function normalizeNombre(nombre) {
-  return String(nombre || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '');
-}
+export { HORAS_REFRIGERADOR_DIA, HORAS_ANIO } from './plantillasEficiencia';
+export { matchCatalogEficiencia, PLANTILLAS_EFICIENCIA, getFieldLabel } from './plantillasEficiencia';
 
+/** @deprecated Use matchCatalogEficiencia + plantilla_eficiencia */
 export function detectTipoEficiencia(nombre) {
-  const n = normalizeNombre(nombre);
-  if (!n) return null;
+  const n = String(nombre || '').trim().toLowerCase();
   if (n.includes('lavadora')) return 'lavadora';
-  if (n.includes('refrigerador') || n.includes('nevera') || n.includes('refri')) {
-    return 'refrigerador';
-  }
+  if (n.includes('refrigerador') || n.includes('nevera') || n.includes('refri')) return 'refrigerador';
   return null;
 }
 
 export function calcPotenciaWLavadora(kwhPorCiclo, horasPorCiclo) {
-  const e = Number(kwhPorCiclo);
-  const t = Number(horasPorCiclo);
-  if (!Number.isFinite(e) || e <= 0 || !Number.isFinite(t) || t <= 0) return null;
-  return Math.round((e / t) * 1000 * 10000) / 10000;
+  const minutos = Number(horasPorCiclo) * 60;
+  return calcPotenciaFromPlantilla('energia_tiempo_potencia', {
+    kwh_por_ciclo: kwhPorCiclo,
+    minutos_por_ciclo: minutos,
+  });
 }
 
 export function calcPotenciaWRefrigerador(kwhAnual) {
-  const e = Number(kwhAnual);
-  if (!Number.isFinite(e) || e <= 0) return null;
-  return Math.round((e / HORAS_ANIO) * 1000 * 10000) / 10000;
+  return calcPotenciaFromPlantilla('energia_anual_potencia', { kwh_anual: kwhAnual });
 }
 
-export function calcPotenciaFromEficiencia(tipo, form) {
-  if (tipo === 'lavadora') {
-    return calcPotenciaWLavadora(form.kwh_por_ciclo, form.horas_por_ciclo);
-  }
-  if (tipo === 'refrigerador') {
-    return calcPotenciaWRefrigerador(form.kwh_anual);
-  }
-  return null;
+export function calcPotenciaFromEficiencia(plantillaId, form) {
+  if (!plantillaId) return null;
+  return calcPotenciaFromPlantilla(plantillaId, form);
+}
+
+export function calcEnergiaPreview(plantillaId, form) {
+  if (plantillaId !== 'potencia_tiempo_energia') return null;
+  return calcEnergiaPotenciaTiempo(form.potencia_w, form.minutos_por_ciclo);
+}
+
+export function horasFromMinutos(minutos) {
+  return minutosToHoras(minutos);
+}
+
+export function resolveEficienciaConfig(form, catalogo) {
+  return matchCatalogEficiencia(form.nombre, form.recomendacion_id, catalogo);
+}
+
+export function getPlantillaMeta(plantillaId) {
+  return PLANTILLAS_EFICIENCIA[plantillaId] || null;
 }
 
 export const emptyEficienciaFields = {
   eficiencia_energetica: false,
+  plantilla_eficiencia: null,
   tipo_eficiencia: null,
   kwh_por_ciclo: '',
   horas_por_ciclo: '',
+  minutos_por_ciclo: '',
   kwh_anual: '',
+  btu_h: '',
+  hp: '',
 };
+
+export function eficienciaFieldsFromItem(item) {
+  const minutos = item.minutos_por_ciclo ?? (
+    item.horas_por_ciclo != null && item.horas_por_ciclo !== ''
+      ? Math.round(Number(item.horas_por_ciclo) * 60)
+      : ''
+  );
+  return {
+    eficiencia_energetica: Boolean(item.eficiencia_energetica),
+    plantilla_eficiencia: item.plantilla_eficiencia
+      || (item.tipo_eficiencia === 'lavadora' ? 'energia_tiempo_potencia' : null)
+      || (item.tipo_eficiencia === 'refrigerador' ? 'energia_anual_potencia' : null),
+    tipo_eficiencia: item.tipo_eficiencia ?? null,
+    kwh_por_ciclo: item.kwh_por_ciclo ?? '',
+    horas_por_ciclo: item.horas_por_ciclo ?? '',
+    minutos_por_ciclo: minutos,
+    kwh_anual: item.kwh_anual ?? '',
+    btu_h: item.btu_h ?? '',
+    hp: item.hp ?? '',
+  };
+}

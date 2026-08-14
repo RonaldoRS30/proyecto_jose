@@ -15,7 +15,7 @@ import {
 } from '../../services/api';
 import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
 import { CATEGORIAS_APARATO, formatCurrency } from '../../utils/helpers';
-import { emptyEficienciaFields } from '../../utils/eficienciaEnergetica';
+import { emptyEficienciaFields, eficienciaFieldsFromItem } from '../../utils/eficienciaEnergetica';
 
 const emptyForm = {
   nombre: '', categoria: 'Cocina', marca: '', modelo: '',
@@ -61,10 +61,7 @@ export default function ElectrodomesticosPage() {
       ...item,
       potencia_w: item.potencia_w,
       horas_uso_dia: item.horas_uso_dia,
-      eficiencia_energetica: Boolean(item.eficiencia_energetica),
-      kwh_por_ciclo: item.kwh_por_ciclo ?? '',
-      horas_por_ciclo: item.horas_por_ciclo ?? '',
-      kwh_anual: item.kwh_anual ?? '',
+      ...eficienciaFieldsFromItem(item),
     });
     setModalOpen(true);
   };
@@ -77,6 +74,7 @@ export default function ElectrodomesticosPage() {
       createElectrodomestico,
       updateElectrodomestico,
       alert,
+      catalogo,
     });
     if (!ok) {
       reload({ resetPage: true });

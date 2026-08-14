@@ -3,9 +3,14 @@ const { AppError } = require('../utils/errorHandler');
 
 const { registerMarcaModelo } = require('./marcaModeloCatalogService');
 const { applyEficienciaToPayload } = require('../helpers/eficienciaEnergeticaHelper');
+const { Recomendacion } = require('../models');
 
-function preparePayload(data) {
-  const normalized = applyEficienciaToPayload(data);
+async function preparePayload(data) {
+  let recomendacion = null;
+  if (data.recomendacion_id) {
+    recomendacion = await Recomendacion.findByPk(data.recomendacion_id);
+  }
+  const normalized = await applyEficienciaToPayload(data, { recomendacion });
   if (!normalized.eficiencia_energetica) {
     const potencia = parseFloat(normalized.potencia_w);
     if (!Number.isFinite(potencia) || potencia < 0) {
@@ -78,7 +83,7 @@ const listarPaginado = async (clienteId, { modulo = null, page = 1, limit = 8 } 
 };
 
 const crear = async (clienteId, data) => {
-  const payload = preparePayload(data);
+  const payload = await preparePayload(data);
   validateHorasUsoDia(payload);
   const duplicado = await findDuplicadoPorNombre(clienteId, payload.modulo, payload.nombre);
   if (duplicado) errorNombreDuplicado(duplicado);
@@ -90,7 +95,7 @@ const crear = async (clienteId, data) => {
 const actualizar = async (id, clienteId, data) => {
   const item = await Electrodomestico.findOne({ where: { id, cliente_id: clienteId } });
   if (!item) throw new AppError('Electrodoméstico no encontrado', 404);
-  const payload = preparePayload(data);
+  const payload = await preparePayload(data);
   validateHorasUsoDia(payload);
   if (payload.nombre !== undefined) {
     const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, payload.nombre, id);

@@ -13,6 +13,7 @@ import {
 } from '../../services/api';
 import { CATEGORIAS_APARATO } from '../../utils/helpers';
 import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
+import { PLANTILLA_OPTIONS, PLANTILLAS_EFICIENCIA } from '../../utils/plantillasEficiencia';
 
 const emptyForm = {
   nombre: '',
@@ -24,6 +25,11 @@ const emptyForm = {
   horas_uso_dia: '',
   orden: 0,
   activo: true,
+  eficiencia_habilitada: false,
+  plantilla_eficiencia: '',
+  eficiencia_minutos_como_horas: false,
+  eficiencia_label_kwh: '',
+  eficiencia_label_minutos: '',
 };
 
 const toForm = (item) => ({
@@ -36,22 +42,45 @@ const toForm = (item) => ({
   horas_uso_dia: item.horas_uso_dia ?? '',
   orden: item.orden ?? 0,
   activo: item.activo !== false,
+  eficiencia_habilitada: Boolean(item.eficiencia_habilitada),
+  plantilla_eficiencia: item.plantilla_eficiencia || '',
+  eficiencia_minutos_como_horas: Boolean(item.eficiencia_config?.minutos_como_horas_uso),
+  eficiencia_label_kwh: item.eficiencia_config?.labels?.kwh_por_ciclo || '',
+  eficiencia_label_minutos: item.eficiencia_config?.labels?.minutos_por_ciclo || '',
 });
 
-const toPayload = (form) => ({
-  nombre: form.nombre.trim(),
-  texto: form.texto.trim(),
-  aliases: form.aliases
-    .split(',')
-    .map((a) => a.trim())
-    .filter(Boolean),
-  categoria: form.categoria,
-  modulo: form.modulo,
-  potencia_w: form.potencia_w === '' ? null : Number(form.potencia_w),
-  horas_uso_dia: form.horas_uso_dia === '' ? null : Number(form.horas_uso_dia),
-  orden: Number(form.orden) || 0,
-  activo: form.activo,
-});
+const toPayload = (form) => {
+  const eficienciaConfig = {};
+  if (form.eficiencia_minutos_como_horas) {
+    eficienciaConfig.minutos_como_horas_uso = true;
+  }
+  const labels = {};
+  if (form.eficiencia_label_kwh.trim()) labels.kwh_por_ciclo = form.eficiencia_label_kwh.trim();
+  if (form.eficiencia_label_minutos.trim()) labels.minutos_por_ciclo = form.eficiencia_label_minutos.trim();
+  if (Object.keys(labels).length) eficienciaConfig.labels = labels;
+
+  return {
+    nombre: form.nombre.trim(),
+    texto: form.texto.trim(),
+    aliases: form.aliases
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean),
+    categoria: form.categoria,
+    modulo: form.modulo,
+    potencia_w: form.potencia_w === '' ? null : Number(form.potencia_w),
+    horas_uso_dia: form.horas_uso_dia === '' ? null : Number(form.horas_uso_dia),
+    orden: Number(form.orden) || 0,
+    activo: form.activo,
+    eficiencia_habilitada: Boolean(form.eficiencia_habilitada),
+    plantilla_eficiencia: form.eficiencia_habilitada && form.plantilla_eficiencia
+      ? form.plantilla_eficiencia
+      : null,
+    eficiencia_config: form.eficiencia_habilitada && Object.keys(eficienciaConfig).length
+      ? eficienciaConfig
+      : null,
+  };
+};
 
 export default function RecomendacionesPage() {
   const confirm = useConfirm();
@@ -110,6 +139,10 @@ export default function RecomendacionesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.eficiencia_habilitada && !form.plantilla_eficiencia) {
+      setError('Seleccione una plantilla de eficiencia energética.');
+      return;
+    }
     try {
       const payload = toPayload(form);
       if (editId) await updateRecomendacion(editId, payload);
@@ -216,6 +249,7 @@ export default function RecomendacionesPage() {
               <th>Categoría</th>
               <th>Potencia normal máx.</th>
               <th>Horas/día</th>
+              <th>Eficiencia EE</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -232,6 +266,13 @@ export default function RecomendacionesPage() {
               <td><span className="badge badge-info">{item.categoria}</span></td>
               <td>{item.potencia_w != null ? `${item.potencia_w} W` : '-'}</td>
               <td>{item.horas_uso_dia != null ? `${item.horas_uso_dia}h` : '-'}</td>
+              <td>
+                {item.eficiencia_habilitada && item.plantilla_eficiencia ? (
+                  <span className="badge badge-info" title={PLANTILLAS_EFICIENCIA[item.plantilla_eficiencia]?.label}>
+                    EE
+                  </span>
+                ) : '-'}
+              </td>
               <td>
                 <span className={`badge ${item.activo ? 'badge-success' : 'badge-warning'}`}>
                   {item.activo ? 'Activa' : 'Inactiva'}
@@ -253,6 +294,12 @@ export default function RecomendacionesPage() {
               fields={[
                 { label: 'Potencia normal máx.', value: item.potencia_w != null ? `${item.potencia_w} W` : '-' },
                 { label: 'Horas/día sugeridas', value: item.horas_uso_dia != null ? `${item.horas_uso_dia}h` : '-' },
+                {
+                  label: 'Eficiencia EE',
+                  value: item.eficiencia_habilitada && item.plantilla_eficiencia
+                    ? PLANTILLAS_EFICIENCIA[item.plantilla_eficiencia]?.label || item.plantilla_eficiencia
+                    : 'No habilitada',
+                },
                 { label: 'Consejo', value: item.texto },
               ]}
               actions={renderActions(item)}
@@ -375,6 +422,79 @@ export default function RecomendacionesPage() {
                 onChange={(e) => setForm({ ...form, orden: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="form-group eficiencia-block" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+            <h4 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Eficiencia energética</h4>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={form.eficiencia_habilitada}
+                onChange={(e) => setForm({
+                  ...form,
+                  eficiencia_habilitada: e.target.checked,
+                  plantilla_eficiencia: e.target.checked ? form.plantilla_eficiencia : '',
+                })}
+              />
+              Habilitar formulario de eficiencia energética para clientes
+            </label>
+
+            {form.eficiencia_habilitada && (
+              <>
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label>Plantilla de cálculo *</label>
+                  <select
+                    className="form-control"
+                    value={form.plantilla_eficiencia}
+                    onChange={(e) => setForm({ ...form, plantilla_eficiencia: e.target.value })}
+                    required
+                  >
+                    <option value="">Seleccione plantilla...</option>
+                    {PLANTILLA_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {form.plantilla_eficiencia && PLANTILLAS_EFICIENCIA[form.plantilla_eficiencia] && (
+                    <small className="form-hint">
+                      {PLANTILLAS_EFICIENCIA[form.plantilla_eficiencia].description}
+                    </small>
+                  )}
+                </div>
+
+                {(form.plantilla_eficiencia === 'energia_tiempo_potencia'
+                  || form.plantilla_eficiencia === 'potencia_tiempo_energia') && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Etiqueta energía (opcional)</label>
+                      <input
+                        className="form-control"
+                        value={form.eficiencia_label_kwh}
+                        onChange={(e) => setForm({ ...form, eficiencia_label_kwh: e.target.value })}
+                        placeholder="Ej. kWh por ciclo"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Etiqueta minutos (opcional)</label>
+                      <input
+                        className="form-control"
+                        value={form.eficiencia_label_minutos}
+                        onChange={(e) => setForm({ ...form, eficiencia_label_minutos: e.target.value })}
+                        placeholder="Ej. Minutos por ducha"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={form.eficiencia_minutos_como_horas}
+                    onChange={(e) => setForm({ ...form, eficiencia_minutos_como_horas: e.target.checked })}
+                  />
+                  Usar minutos ingresados como horas de uso diario (útil para ducha eléctrica)
+                </label>
+              </>
+            )}
           </div>
 
           <label className="checkbox-label">

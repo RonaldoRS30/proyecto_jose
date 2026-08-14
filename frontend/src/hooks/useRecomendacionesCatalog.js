@@ -12,6 +12,9 @@ const mapRecomendacion = (r) => {
     categoria: r.categoria,
     texto: r.texto,
     aliases,
+    eficiencia_habilitada: Boolean(r.eficiencia_habilitada),
+    plantilla_eficiencia: r.plantilla_eficiencia || null,
+    eficiencia_config: r.eficiencia_config || null,
     searchText: [r.nombre, ...aliases].join(' '),
     source: 'catalog',
   };
