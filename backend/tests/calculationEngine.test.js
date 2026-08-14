@@ -42,6 +42,30 @@ assertEqual(lav.consumoAnio, 389.33, 'Lavadora consumo año');
 assertEqual(lav.gastoDiario, 0.65, 'Lavadora gasto diario');
 assertEqual(lav.gastoMensual, 19.62, 'Lavadora gasto mensual');
 
+// Lavadora EE: consumo = cantidad × ciclos/día × kWh/ciclo
+const lavEe = calcularDispositivo({
+  nombre: 'Lavadora',
+  cantidad: 1,
+  horasDiarias: 1,
+  potenciaW: 1067,
+  eficiencia_energetica: true,
+  plantilla_eficiencia: 'energia_tiempo_potencia',
+  kwh_por_ciclo: 1.6,
+});
+assertEqual(lavEe.consumoDia, 1.6, 'Lavadora EE consumo día (1 ciclo × 1.6 kWh)');
+assertEqual(lavEe.consumoMes, 48, 'Lavadora EE consumo mes');
+
+const lavEeMulti = calcularDispositivo({
+  nombre: 'Lavadora',
+  cantidad: 3,
+  horasDiarias: 2,
+  potenciaW: 1067,
+  eficiencia_energetica: true,
+  plantilla_eficiencia: 'energia_tiempo_potencia',
+  kwh_por_ciclo: 1.6,
+});
+assertEqual(lavEeMulti.consumoDia, 9.6, 'Lavadora EE 3 equipos × 2 ciclos × 1.6 kWh');
+
 // 3 equipos ejemplo Excel (Lavadora + Horno + Licuadora)
 const ejemploExcel = calcularCompleto({
   aparatos: [

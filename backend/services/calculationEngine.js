@@ -35,9 +35,13 @@ const DEFAULT_TARIFF = {
   diasAnio: 365,
 };
 
+const {
+  calcularConsumoDiaDispositivo,
+} = require('../helpers/consumoDispositivoHelper');
+
 /**
  * Calcula métricas de un dispositivo individual
- * @param {Object} device - { cantidad, horasDiarias, potenciaW }
+ * @param {Object} device - { cantidad, horasDiarias, potenciaW, ...eficiencia }
  * @param {number} precioKwh - Precio por kWh (J1 en Excel)
  * @returns {Object} Resultados del dispositivo
  */
@@ -46,7 +50,12 @@ function calcularDispositivo(device, precioKwh = DEFAULT_TARIFF.precioKwh) {
   const horasDiarias = Number(device.horasDiarias ?? device.horas_diarias) || 0;
   const potenciaW = Number(device.potenciaW ?? device.potencia_w) || 0;
 
-  const consumoDiaRaw = (cantidad * potenciaW * horasDiarias) / 1000;
+  const consumoDiaRaw = calcularConsumoDiaDispositivo({
+    ...device,
+    cantidad,
+    horasDiarias,
+    potenciaW,
+  });
   const consumoMes = round(consumoDiaRaw * DEFAULT_TARIFF.diasMes, KWH_MONTH);
   const consumoDia = round(consumoMes / DEFAULT_TARIFF.diasMes, KWH_DAY);
   const consumoAnio = round((consumoMes / DEFAULT_TARIFF.diasMes) * DEFAULT_TARIFF.diasAnio, KWH_YEAR);

@@ -52,6 +52,28 @@ export function getPlantillaMeta(plantillaId) {
   return PLANTILLAS_EFICIENCIA[plantillaId] || null;
 }
 
+function normalizeNombre(nombre) {
+  return String(nombre || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
+
+/** Lavadora + EE: el campo de uso diario representa ciclos, no horas. */
+export function usaCiclosDiariosLavadora(form, catalogEntry = null) {
+  if (!form?.eficiencia_energetica) return false;
+  const plantilla = form.plantilla_eficiencia || catalogEntry?.plantilla_eficiencia;
+  if (plantilla !== 'energia_tiempo_potencia') return false;
+  if (catalogEntry?.eficiencia_config?.horas_uso_como_ciclos) return true;
+  return normalizeNombre(form.nombre).includes('lavadora');
+}
+
+export function labelUsoDiario(form, catalogEntry = null) {
+  if (usaCiclosDiariosLavadora(form, catalogEntry)) return 'Cantidad de ciclos por día';
+  return 'Horas de uso por día';
+}
+
 export const emptyEficienciaFields = {
   eficiencia_energetica: false,
   plantilla_eficiencia: null,

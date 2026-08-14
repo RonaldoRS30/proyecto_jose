@@ -1,4 +1,6 @@
 import { validateEficienciaPayload } from './eficienciaValidation';
+import { matchCatalogEficiencia } from './plantillasEficiencia';
+import { usaCiclosDiariosLavadora } from './eficienciaEnergetica';
 
 export async function saveElectrodomestico({
   editId,
@@ -21,16 +23,32 @@ export async function saveElectrodomestico({
     }
   }
 
-  const horas = parseFloat(payload.horas_uso_dia);
-  if (!Number.isFinite(horas) || horas <= 0) {
-    await alert({
-      title: 'Horas de uso inválidas',
-      message: 'Las horas de uso por día deben ser mayores a 0.',
-      detail: 'Indique cuántas horas al día utiliza este equipo (por ejemplo: 0.5, 1, 2).',
-      variant: 'warning',
-      confirmLabel: 'Entendido',
-    });
-    return false;
+  const catalogEntry = matchCatalogEficiencia(payload.nombre, payload.recomendacion_id, catalogo);
+  const porCiclos = usaCiclosDiariosLavadora(payload, catalogEntry);
+
+  if (porCiclos) {
+    const ciclos = Number(payload.horas_uso_dia);
+    if (!Number.isFinite(ciclos) || ciclos <= 0 || !Number.isInteger(ciclos)) {
+      await alert({
+        title: 'Ciclos inválidos',
+        message: 'Indique la cantidad de ciclos por día (número entero mayor a 0).',
+        variant: 'warning',
+        confirmLabel: 'Entendido',
+      });
+      return false;
+    }
+  } else {
+    const horas = parseFloat(payload.horas_uso_dia);
+    if (!Number.isFinite(horas) || horas <= 0) {
+      await alert({
+        title: 'Horas de uso inválidas',
+        message: 'Las horas de uso por día deben ser mayores a 0.',
+        detail: 'Indique cuántas horas al día utiliza este equipo (por ejemplo: 0.5, 1, 2).',
+        variant: 'warning',
+        confirmLabel: 'Entendido',
+      });
+      return false;
+    }
   }
 
   try {

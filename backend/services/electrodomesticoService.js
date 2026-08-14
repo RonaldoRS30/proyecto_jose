@@ -3,6 +3,7 @@ const { AppError } = require('../utils/errorHandler');
 
 const { registerMarcaModelo } = require('./marcaModeloCatalogService');
 const { applyEficienciaToPayload } = require('../helpers/eficienciaEnergeticaHelper');
+const { usaCiclosDiarios } = require('../helpers/consumoDispositivoHelper');
 const { Recomendacion } = require('../models');
 
 async function preparePayload(data) {
@@ -56,9 +57,14 @@ function errorNombreDuplicado(duplicado, isEdit = false) {
 
 function validateHorasUsoDia(data) {
   if (data.horas_uso_dia === undefined) return;
-  const horas = parseFloat(data.horas_uso_dia);
-  if (!Number.isFinite(horas) || horas <= 0) {
+  const valor = parseFloat(data.horas_uso_dia);
+  if (!Number.isFinite(valor) || valor <= 0) {
     throw new AppError('Las horas de uso por día deben ser mayores a 0.', 400);
+  }
+  if (usaCiclosDiarios(data)) {
+    if (!Number.isInteger(valor)) {
+      throw new AppError('La cantidad de ciclos por día debe ser un número entero.', 400);
+    }
   }
 }
 
@@ -122,6 +128,9 @@ const toCalcInput = (items) =>
     horasDiarias: parseFloat(e.horas_uso_dia),
     potenciaW: parseFloat(e.potencia_w),
     recomendacion_id: e.recomendacion_id || null,
+    eficiencia_energetica: Boolean(e.eficiencia_energetica),
+    plantilla_eficiencia: e.plantilla_eficiencia || null,
+    kwh_por_ciclo: e.kwh_por_ciclo != null ? parseFloat(e.kwh_por_ciclo) : null,
   }));
 
 module.exports = { listarPorCliente, listarPaginado, crear, actualizar, eliminar, toCalcInput };

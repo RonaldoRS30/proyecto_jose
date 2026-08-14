@@ -429,6 +429,7 @@ const seedRecomendaciones = async () => {
       eficiencia_habilitada: true,
       plantilla_eficiencia: 'energia_tiempo_potencia',
       eficiencia_config: {
+        horas_uso_como_ciclos: true,
         labels: {
           kwh_por_ciclo: 'Consumo por ciclo (kWh)',
           minutos_por_ciclo: 'Duración del ciclo (minutos)',

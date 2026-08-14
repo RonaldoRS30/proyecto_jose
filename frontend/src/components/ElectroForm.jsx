@@ -9,6 +9,8 @@ import {
   emptyEficienciaFields,
   getPlantillaMeta,
   resolveEficienciaConfig,
+  labelUsoDiario,
+  usaCiclosDiariosLavadora,
 } from '../utils/eficienciaEnergetica';
 import { getFieldLabel, sanitizeMinutosInput } from '../utils/plantillasEficiencia';
 import { formatNumber } from '../utils/helpers';
@@ -37,6 +39,20 @@ export default function ElectroForm({
   const eficienciaActiva = Boolean(form.eficiencia_energetica && plantillaId && plantillaMeta);
   const eficienciaConfig = catalogEntry?.eficiencia_config || {};
   const potenciaFromUser = Boolean(plantillaMeta?.potenciaFromUser);
+  const usoPorCiclos = eficienciaActiva && usaCiclosDiariosLavadora(form, catalogEntry);
+  const labelUsoDiarioField = labelUsoDiario(
+    { ...form, eficiencia_energetica: eficienciaActiva, plantilla_eficiencia: plantillaId },
+    catalogEntry,
+  );
+
+  const consumoCiclosPreview = useMemo(() => {
+    if (!usoPorCiclos) return null;
+    const ciclos = Number(form.horas_uso_dia);
+    const kwh = Number(form.kwh_por_ciclo);
+    const cant = Number(form.cantidad) || 1;
+    if (!Number.isFinite(ciclos) || ciclos <= 0 || !Number.isFinite(kwh) || kwh <= 0) return null;
+    return cant * ciclos * kwh;
+  }, [usoPorCiclos, form.horas_uso_dia, form.kwh_por_ciclo, form.cantidad]);
 
   const potenciaCalculada = useMemo(() => {
     if (!eficienciaActiva || !plantillaId) return null;
@@ -353,22 +369,33 @@ export default function ElectroForm({
 
       <div className="form-row">
         <div className="form-group">
-          <label>Cantidad *</label>
-          <input className="form-control" type="number" min="0" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} required />
+          <label>Cantidad de equipos *</label>
+          <input className="form-control" type="number" min="1" step="1" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} required />
         </div>
         <div className="form-group">
-          <label>Horas de uso por día *</label>
+          <label>{labelUsoDiarioField} *</label>
           <input
             className="form-control"
             type="number"
-            min="0.01"
-            step="0.5"
+            min={usoPorCiclos ? '1' : '0.01'}
+            step={usoPorCiclos ? '1' : '0.5'}
             value={form.horas_uso_dia}
             onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })}
             required
             readOnly={horasUsoReadOnly}
+            placeholder={usoPorCiclos ? 'Ej. 1' : undefined}
             title={horasUsoReadOnly ? 'Valor definido por la etiqueta de eficiencia energética' : undefined}
           />
+          {usoPorCiclos && (
+            <small className="form-hint">
+              Ciclos de lavado por día. Consumo/día ≈ cantidad × ciclos × kWh/ciclo
+            </small>
+          )}
+          {consumoCiclosPreview != null && (
+            <small className="form-hint" style={{ display: 'block', marginTop: '0.25rem' }}>
+              Consumo estimado: {formatNumber(consumoCiclosPreview, 4)} kWh/día
+            </small>
+          )}
         </div>
       </div>
 
