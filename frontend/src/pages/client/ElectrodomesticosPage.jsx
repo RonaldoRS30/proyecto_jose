@@ -14,6 +14,7 @@ import {
   deleteElectrodomestico,
 } from '../../services/api';
 import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
+import { getAllEquiposFromModulos } from '../../utils/nombreEquipo';
 import { CATEGORIAS_APARATO, formatCurrency } from '../../utils/helpers';
 import { emptyEficienciaFields, eficienciaFieldsFromItem } from '../../utils/eficienciaEnergetica';
 
@@ -75,6 +76,7 @@ export default function ElectrodomesticosPage() {
       updateElectrodomestico,
       alert,
       catalogo,
+      existingItems: getAllEquiposFromModulos(modulos),
     });
     if (!ok) {
       reload({ resetPage: true });

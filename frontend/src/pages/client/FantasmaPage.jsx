@@ -14,6 +14,7 @@ import {
   deleteElectrodomestico,
 } from '../../services/api';
 import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
+import { getAllEquiposFromModulos } from '../../utils/nombreEquipo';
 import { CATEGORIAS_FANTASMA, TIPOS_STANDBY } from '../../utils/helpers';
 
 const emptyForm = {
@@ -63,6 +64,7 @@ export default function FantasmaPage() {
       createElectrodomestico,
       updateElectrodomestico,
       alert,
+      existingItems: getAllEquiposFromModulos(modulos),
     });
     if (!ok) {
       reload({ resetPage: true });

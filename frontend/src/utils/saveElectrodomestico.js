@@ -1,6 +1,7 @@
 import { validateEficienciaPayload } from './eficienciaValidation';
 import { matchCatalogEficiencia } from './plantillasEficiencia';
 import { usaCiclosDiariosLavadora } from './eficienciaEnergetica';
+import { findDuplicateNombreEquipo } from './nombreEquipo';
 
 export async function saveElectrodomestico({
   editId,
@@ -9,6 +10,7 @@ export async function saveElectrodomestico({
   updateElectrodomestico,
   alert,
   catalogo = [],
+  existingItems = [],
 }) {
   if (payload.eficiencia_energetica) {
     const invalid = validateEficienciaPayload(payload, catalogo);
@@ -49,6 +51,22 @@ export async function saveElectrodomestico({
       });
       return false;
     }
+  }
+
+  const duplicado = findDuplicateNombreEquipo(payload.nombre, existingItems, editId);
+  if (duplicado) {
+    await alert({
+      title: editId ? 'Nombre no disponible' : 'Equipo ya registrado',
+      message: editId
+        ? `Ya existe otro equipo llamado «${duplicado.nombre}». Elija un nombre distinto.`
+        : `Ya existe un equipo llamado «${duplicado.nombre}». Puede editarlo desde la lista en lugar de agregar uno nuevo.`,
+      detail: editId
+        ? 'El nombre debe ser único en su inventario, sin importar marca o modelo.'
+        : 'Busque el equipo en la lista y use «Editar» para actualizar sus datos.',
+      variant: 'warning',
+      confirmLabel: 'Entendido',
+    });
+    return false;
   }
 
   try {

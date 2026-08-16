@@ -4,6 +4,7 @@ const { AppError } = require('../utils/errorHandler');
 const { registerMarcaModelo } = require('./marcaModeloCatalogService');
 const { applyEficienciaToPayload } = require('../helpers/eficienciaEnergeticaHelper');
 const { usaCiclosDiarios } = require('../helpers/consumoDispositivoHelper');
+const { normalizeNombreEquipo } = require('../helpers/nombreEquipoHelper');
 const { Recomendacion } = require('../models');
 
 async function preparePayload(data) {
@@ -12,6 +13,9 @@ async function preparePayload(data) {
     recomendacion = await Recomendacion.findByPk(data.recomendacion_id);
   }
   const normalized = await applyEficienciaToPayload(data, { recomendacion });
+  if (normalized.nombre != null) {
+    normalized.nombre = String(normalized.nombre).trim();
+  }
   if (!normalized.eficiencia_energetica) {
     const potencia = parseFloat(normalized.potencia_w);
     if (!Number.isFinite(potencia) || potencia < 0) {
@@ -21,11 +25,7 @@ async function preparePayload(data) {
   return normalized;
 }
 
-function normalizeNombreEquipo(nombre) {
-  return String(nombre || '').trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-async function findDuplicadoPorNombre(clienteId, modulo, nombre, excludeId = null) {
+async function findDuplicadoPorNombre(clienteId, nombre, excludeId = null) {
   const buscado = normalizeNombreEquipo(nombre);
   if (!buscado) return null;
 
@@ -34,8 +34,8 @@ async function findDuplicadoPorNombre(clienteId, modulo, nombre, excludeId = nul
     : null;
 
   const items = await Electrodomestico.findAll({
-    where: { cliente_id: clienteId, modulo, activo: true },
-    attributes: ['id', 'nombre'],
+    where: { cliente_id: clienteId, activo: true },
+    attributes: ['id', 'nombre', 'modulo'],
   });
 
   return items.find(
@@ -49,7 +49,7 @@ async function findDuplicadoPorNombre(clienteId, modulo, nombre, excludeId = nul
 function errorNombreDuplicado(duplicado, isEdit = false) {
   throw new AppError(
     isEdit
-      ? `Ya existe otro equipo llamado «${duplicado.nombre}». Elija un nombre distinto.`
+      ? `Ya existe otro equipo llamado «${duplicado.nombre}». Elija un nombre distinto (marca y modelo no lo distinguen).`
       : `Ya existe un equipo llamado «${duplicado.nombre}». Puede editarlo desde la lista en lugar de agregar uno nuevo.`,
     409,
   );
@@ -91,7 +91,7 @@ const listarPaginado = async (clienteId, { modulo = null, page = 1, limit = 8 } 
 const crear = async (clienteId, data) => {
   const payload = await preparePayload(data);
   validateHorasUsoDia(payload);
-  const duplicado = await findDuplicadoPorNombre(clienteId, payload.modulo, payload.nombre);
+  const duplicado = await findDuplicadoPorNombre(clienteId, payload.nombre);
   if (duplicado) errorNombreDuplicado(duplicado);
   const item = await Electrodomestico.create({ ...payload, cliente_id: clienteId });
   await registerMarcaModelo({ marca: payload.marca, modelo: payload.modelo });
@@ -104,7 +104,7 @@ const actualizar = async (id, clienteId, data) => {
   const payload = await preparePayload(data);
   validateHorasUsoDia(payload);
   if (payload.nombre !== undefined) {
-    const duplicado = await findDuplicadoPorNombre(clienteId, item.modulo, payload.nombre, id);
+    const duplicado = await findDuplicadoPorNombre(clienteId, payload.nombre, id);
     if (duplicado) errorNombreDuplicado(duplicado, true);
   }
   await item.update(payload);

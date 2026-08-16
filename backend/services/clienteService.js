@@ -78,6 +78,7 @@ const buildAlertasExcedentesPotencia = async (ultimosMap) => {
     if (!items.length) continue;
 
     const totalExcesoW = items.reduce((s, i) => s + (i.exceso_w || 0), 0);
+    const totalExcesoHoras = items.reduce((s, i) => s + (i.exceso_horas_dia || 0), 0);
     alertas.push({
       clienteId: calc.cliente_id,
       clienteNombre: calc.cliente
@@ -91,6 +92,7 @@ const buildAlertasExcedentesPotencia = async (ultimosMap) => {
       gastoMensualTotal: roundNum(parseFloat(calc.gasto_mensual_total) || 0),
       totalEquipos: items.length,
       totalExcesoW: roundNum(totalExcesoW),
+      totalExcesoHoras: roundNum(totalExcesoHoras, 4),
       items,
     });
   }

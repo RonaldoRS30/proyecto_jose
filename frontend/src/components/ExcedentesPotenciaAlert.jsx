@@ -17,6 +17,18 @@ const chartTooltipStyle = {
   maxWidth: '280px',
 };
 
+function formatHorasUso(value, decimals = 2) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '-';
+  if (n > 0 && n < 1) {
+    const mins = Math.round(n * 60);
+    if (Math.abs(mins / 60 - n) < 0.01) {
+      return `${mins} min (${formatNumber(n, decimals)} h)`;
+    }
+  }
+  return `${formatNumber(n, decimals)} h`;
+}
+
 function PotenciaTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
@@ -41,6 +53,30 @@ function PotenciaTooltip({ active, payload }) {
   );
 }
 
+function HorasTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  return (
+    <div style={chartTooltipStyle}>
+      <p style={{ margin: '0 0 8px', fontWeight: 700, color: 'var(--text)' }}>{row.nombreCompleto}</p>
+      <p style={{ margin: '0 0 6px', fontSize: '12px', color: 'var(--text-muted)' }}>{row.moduloLabel}</p>
+      <p style={{ margin: '4px 0', color: '#64748b' }}>
+        <span style={{ display: 'inline-block', width: 10, height: 10, background: '#94a3b8', borderRadius: 2, marginRight: 6 }} />
+        Uso sugerido: <strong>{formatHorasUso(row.referencia)}</strong>
+      </p>
+      <p style={{ margin: '4px 0', color: '#f59e0b' }}>
+        <span style={{ display: 'inline-block', width: 10, height: 10, background: '#f59e0b', borderRadius: 2, marginRight: 6 }} />
+        Su registro: <strong>{formatHorasUso(row.registrada)}</strong>
+      </p>
+      <p style={{ margin: '8px 0 0', paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
+        Supera la referencia en +{formatHorasUso(row.exceso)}
+      </p>
+    </div>
+  );
+}
+
 function ConsumoTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
@@ -60,6 +96,13 @@ function ConsumoTooltip({ active, payload }) {
   );
 }
 
+function alertaBadges(item) {
+  const badges = [];
+  if (item.excede_potencia) badges.push('Potencia');
+  if (item.excede_horas) badges.push('Tiempo de uso');
+  return badges.join(' · ') || 'Referencia';
+}
+
 export default function ExcedentesPotenciaAlert({ items = [], adminCliente = null, compact = false }) {
   const bp = useBreakpoint();
   const isMobile = bp === 'mobile';
@@ -68,7 +111,10 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
 
   if (!items.length) return null;
 
-  const chartData = items.map((item) => ({
+  const potenciaItems = items.filter((i) => i.excede_potencia);
+  const horasItems = items.filter((i) => i.excede_horas);
+
+  const chartDataPotencia = potenciaItems.map((item) => ({
     label: item.nombre?.length > (isMobile ? 14 : 20)
       ? `${item.nombre.slice(0, isMobile ? 14 : 20)}…`
       : item.nombre,
@@ -81,11 +127,35 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
     gastoMensual: Number(item.gasto_mensual) || 0,
   }));
 
+  const chartDataHoras = horasItems.map((item) => ({
+    label: item.nombre?.length > (isMobile ? 14 : 20)
+      ? `${item.nombre.slice(0, isMobile ? 14 : 20)}…`
+      : item.nombre,
+    nombreCompleto: item.nombre,
+    moduloLabel: item.moduloLabel,
+    referencia: Number(item.horas_referencia_dia) || 0,
+    registrada: Number(item.horas_uso_dia) || 0,
+    exceso: Number(item.exceso_horas_dia) || 0,
+    consumoMes: Number(item.consumo_mes) || 0,
+    gastoMensual: Number(item.gasto_mensual) || 0,
+  }));
+
+  const chartDataConsumo = items.map((item) => ({
+    label: item.nombre?.length > (isMobile ? 14 : 20)
+      ? `${item.nombre.slice(0, isMobile ? 14 : 20)}…`
+      : item.nombre,
+    nombreCompleto: item.nombre,
+    moduloLabel: item.moduloLabel,
+    consumoMes: Number(item.consumo_mes) || 0,
+    gastoMensual: Number(item.gasto_mensual) || 0,
+  }));
+
   const totalConsumo = items.reduce((s, i) => s + (i.consumo_mes || 0), 0);
   const totalExcesoW = items.reduce((s, i) => s + (i.exceso_w || 0), 0);
+  const totalExcesoHoras = items.reduce((s, i) => s + (i.exceso_horas_dia || 0), 0);
   const chartHeight = Math.max(
     isMobile ? 200 : 220,
-    chartData.length * (isMobile ? 52 : isTablet ? 48 : 46) + (isMobile ? 64 : 72),
+    Math.max(chartDataPotencia.length, chartDataHoras.length, 1) * (isMobile ? 52 : isTablet ? 48 : 46) + (isMobile ? 64 : 72),
   );
 
   return (
@@ -125,10 +195,10 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
               <AlertTriangle size={22} aria-hidden />
             </div>
             <div className="excedentes-potencia-alert__titles">
-              <h3>Equipos que superan la potencia normal de referencia</h3>
+              <h3>Equipos que superan la referencia del catálogo</h3>
               <p>
-                Estos equipos tienen una potencia (W) mayor al límite recomendado en el catálogo.
-                Revise los gráficos para comparar su registro con la referencia.
+                Estos equipos superan la potencia normal máx. (W) y/o las horas de uso sugeridas
+                configuradas en Admin → Recomendaciones.
               </p>
             </div>
           </>
@@ -136,7 +206,7 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
         {compact && (
           <div className="excedentes-potencia-alert__titles excedentes-potencia-alert__titles--compact">
             <h3>Detalle de equipos en alerta</h3>
-            <p>Gráficos y comparación con la potencia de referencia del catálogo.</p>
+            <p>Comparación con potencia y tiempo de uso de referencia del catálogo.</p>
           </div>
         )}
       </div>
@@ -146,106 +216,120 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
           <span className="excedentes-potencia-stat__label">Equipos detectados</span>
           <strong className="excedentes-potencia-stat__value">{items.length}</strong>
         </div>
-        <div className="excedentes-potencia-stat">
-          <span className="excedentes-potencia-stat__label">Exceso total de potencia</span>
-          <strong className="excedentes-potencia-stat__value excedentes-potencia-stat__value--warn">
-            +{formatNumber(totalExcesoW, 0)} W
-          </strong>
-        </div>
+        {potenciaItems.length > 0 && (
+          <div className="excedentes-potencia-stat">
+            <span className="excedentes-potencia-stat__label">Exceso total potencia</span>
+            <strong className="excedentes-potencia-stat__value excedentes-potencia-stat__value--warn">
+              +{formatNumber(totalExcesoW, 0)} W
+            </strong>
+          </div>
+        )}
+        {horasItems.length > 0 && (
+          <div className="excedentes-potencia-stat">
+            <span className="excedentes-potencia-stat__label">Exceso total tiempo de uso</span>
+            <strong className="excedentes-potencia-stat__value excedentes-potencia-stat__value--hours">
+              +{formatHorasUso(totalExcesoHoras)}
+            </strong>
+          </div>
+        )}
         <div className="excedentes-potencia-stat">
           <span className="excedentes-potencia-stat__label">Consumo mensual asociado</span>
           <strong className="excedentes-potencia-stat__value">{formatChartKwh(totalConsumo)}</strong>
         </div>
       </div>
 
-
-
       <div className="excedentes-potencia-charts-grid">
-        <div className="excedentes-potencia-chart-panel">
-          <div className="excedentes-potencia-chart-panel__head">
-            <h4>1. Comparación de potencia (W)</h4>
-            <p>Referencia del catálogo vs. potencia registrada en su equipo</p>
+        {chartDataPotencia.length > 0 && (
+          <div className="excedentes-potencia-chart-panel">
+            <div className="excedentes-potencia-chart-panel__head">
+              <h4>1. Comparación de potencia (W)</h4>
+              <p>Potencia normal máx. del catálogo vs. potencia registrada</p>
+            </div>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+              <BarChart
+                data={chartDataPotencia}
+                layout="vertical"
+                margin={{ top: 8, right: isMobile ? 8 : 20, left: 4, bottom: isMobile ? 28 : 20 }}
+                barGap={2}
+                barCategoryGap="18%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                  tickFormatter={(v) => `${formatNumber(v, 0)} W`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  width={isMobile ? 100 : 130}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: 'var(--border)' }}
+                />
+                <Tooltip content={<PotenciaTooltip />} cursor={{ fill: 'rgba(26, 74, 176, 0.06)' }} />
+                <Legend verticalAlign="top" align="right" iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
+                <Bar dataKey="referencia" name="Límite de referencia" fill="#94a3b8" radius={[0, 4, 4, 0]} barSize={isMobile ? 10 : 12} />
+                <Bar dataKey="registrada" name="Potencia de su equipo" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={isMobile ? 10 : 12} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={chartHeight}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 8, right: isMobile ? 8 : 20, left: 4, bottom: isMobile ? 28 : 20 }}
-              barGap={2}
-              barCategoryGap="18%"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-              <XAxis
-                type="number"
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                tickFormatter={(v) => `${formatNumber(v, 0)} W`}
-                label={!isMobile ? {
-                  value: 'Potencia (Watts)',
-                  position: 'insideBottom',
-                  offset: -12,
-                  fill: 'var(--text-muted)',
-                  fontSize: 11,
-                } : undefined}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={isMobile ? 100 : 130}
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                tickLine={false}
-                axisLine={{ stroke: 'var(--border)' }}
-              />
-              <Tooltip content={<PotenciaTooltip />} cursor={{ fill: 'rgba(26, 74, 176, 0.06)' }} />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                iconType="square"
-                iconSize={10}
-                wrapperStyle={{ fontSize: 12, paddingBottom: 8 }}
-              />
-              <Bar
-                dataKey="referencia"
-                name="Límite de referencia"
-                fill="#94a3b8"
-                radius={[0, 4, 4, 0]}
-                barSize={isMobile ? 10 : 12}
-              />
-              <Bar
-                dataKey="registrada"
-                name="Potencia de su equipo"
-                fill="#ef4444"
-                radius={[0, 4, 4, 0]}
-                barSize={isMobile ? 10 : 12}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        )}
+
+        {chartDataHoras.length > 0 && (
+          <div className="excedentes-potencia-chart-panel">
+            <div className="excedentes-potencia-chart-panel__head">
+              <h4>{chartDataPotencia.length > 0 ? '2.' : '1.'} Comparación de tiempo de uso (h/día)</h4>
+              <p>Horas de uso sugeridas del catálogo vs. tiempo registrado por el cliente</p>
+            </div>
+            <ResponsiveContainer width="100%" height={chartHeight}>
+              <BarChart
+                data={chartDataHoras}
+                layout="vertical"
+                margin={{ top: 8, right: isMobile ? 8 : 20, left: 4, bottom: isMobile ? 28 : 20 }}
+                barGap={2}
+                barCategoryGap="18%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                  tickFormatter={(v) => formatHorasUso(v, 2)}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  width={isMobile ? 100 : 130}
+                  tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: 'var(--border)' }}
+                />
+                <Tooltip content={<HorasTooltip />} cursor={{ fill: 'rgba(245, 158, 11, 0.08)' }} />
+                <Legend verticalAlign="top" align="right" iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
+                <Bar dataKey="referencia" name="Uso sugerido" fill="#94a3b8" radius={[0, 4, 4, 0]} barSize={isMobile ? 10 : 12} />
+                <Bar dataKey="registrada" name="Su registro" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={isMobile ? 10 : 12} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         <div className="excedentes-potencia-chart-panel">
           <div className="excedentes-potencia-chart-panel__head">
-            <h4>2. Consumo mensual (kWh)</h4>
-            <p>Impacto en energía consumida al mes por cada equipo</p>
+            <h4>
+              {(chartDataPotencia.length > 0 ? 1 : 0) + (chartDataHoras.length > 0 ? 1 : 0) + 1}
+              . Consumo mensual (kWh)
+            </h4>
+            <p>Impacto en energía consumida al mes por cada equipo en alerta</p>
           </div>
           <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart
-              data={chartData}
+              data={chartDataConsumo}
               layout="vertical"
               margin={{ top: 8, right: isMobile ? 8 : 20, left: 4, bottom: isMobile ? 28 : 20 }}
               barCategoryGap="22%"
             >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-              <XAxis
-                type="number"
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                tickFormatter={(v) => formatNumber(v)}
-                label={!isMobile ? {
-                  value: 'Consumo (kWh / mes)',
-                  position: 'insideBottom',
-                  offset: -12,
-                  fill: 'var(--text-muted)',
-                  fontSize: 11,
-                } : undefined}
-              />
+              <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => formatNumber(v)} />
               <YAxis
                 type="category"
                 dataKey="label"
@@ -255,20 +339,8 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
                 axisLine={{ stroke: 'var(--border)' }}
               />
               <Tooltip content={<ConsumoTooltip />} cursor={{ fill: 'rgba(26, 74, 176, 0.06)' }} />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                iconType="square"
-                iconSize={10}
-                wrapperStyle={{ fontSize: 12, paddingBottom: 8 }}
-              />
-              <Bar
-                dataKey="consumoMes"
-                name="Consumo mensual"
-                fill="#1A4AB0"
-                radius={[0, 4, 4, 0]}
-                barSize={isMobile ? 14 : 16}
-              />
+              <Legend verticalAlign="top" align="right" iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
+              <Bar dataKey="consumoMes" name="Consumo mensual" fill="#1A4AB0" radius={[0, 4, 4, 0]} barSize={isMobile ? 14 : 16} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -283,14 +355,26 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
                 key={`card-${item.modulo}-${item.nombre}`}
                 className="list-card-equipo excedentes-potencia-card"
                 title={item.nombre}
-                badge={<span className="badge badge-warning">{item.moduloLabel}</span>}
+                badge={(
+                  <span className="badge badge-warning">
+                    {item.moduloLabel} · {alertaBadges(item)}
+                  </span>
+                )}
                 featured={{
-                  label: 'Exceso sobre referencia',
-                  value: `+${formatNumber(item.exceso_w, 0)} W`,
+                  label: item.excede_potencia ? 'Exceso potencia' : 'Exceso tiempo de uso',
+                  value: item.excede_potencia
+                    ? `+${formatNumber(item.exceso_w, 0)} W`
+                    : `+${formatHorasUso(item.exceso_horas_dia)}`,
                 }}
                 fields={[
-                  { label: 'Su potencia', value: `${formatNumber(item.potencia_w, 0)} W` },
-                  { label: 'Referencia catálogo', value: `${formatNumber(item.potencia_referencia_w, 0)} W` },
+                  ...(item.excede_potencia ? [
+                    { label: 'Su potencia', value: `${formatNumber(item.potencia_w, 0)} W` },
+                    { label: 'Referencia catálogo', value: `${formatNumber(item.potencia_referencia_w, 0)} W` },
+                  ] : []),
+                  ...(item.excede_horas ? [
+                    { label: 'Su tiempo de uso/día', value: formatHorasUso(item.horas_uso_dia) },
+                    { label: 'Referencia catálogo', value: formatHorasUso(item.horas_referencia_dia) },
+                  ] : []),
                   { label: 'Consumo mensual', value: formatChartKwh(item.consumo_mes) },
                   { label: 'Gasto mensual', value: formatCurrency(item.gasto_mensual), highlight: true },
                 ]}
@@ -304,9 +388,11 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
                 <tr>
                   <th>Equipo</th>
                   <th>Módulo</th>
+                  <th>Alerta</th>
                   <th>Su potencia (W)</th>
-                  <th>Referencia (W)</th>
-                  <th>Exceso (W)</th>
+                  <th>Ref. potencia (W)</th>
+                  <th>Su uso/día</th>
+                  <th>Ref. uso/día</th>
                   <th>Consumo/mes</th>
                   <th>Gasto/mes</th>
                 </tr>
@@ -316,9 +402,15 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
                   <tr key={`table-${item.modulo}-${item.nombre}`}>
                     <td><strong>{item.nombre}</strong></td>
                     <td><span className="badge badge-warning">{item.moduloLabel}</span></td>
-                    <td>{formatNumber(item.potencia_w, 0)}</td>
-                    <td>{formatNumber(item.potencia_referencia_w, 0)}</td>
-                    <td className="excedentes-potencia-td-excess">+{formatNumber(item.exceso_w, 0)}</td>
+                    <td>{alertaBadges(item)}</td>
+                    <td className={item.excede_potencia ? 'excedentes-potencia-td-excess' : ''}>
+                      {item.excede_potencia ? formatNumber(item.potencia_w, 0) : '—'}
+                    </td>
+                    <td>{item.potencia_referencia_w != null ? formatNumber(item.potencia_referencia_w, 0) : '—'}</td>
+                    <td className={item.excede_horas ? 'excedentes-potencia-td-hours' : ''}>
+                      {item.excede_horas ? formatHorasUso(item.horas_uso_dia) : '—'}
+                    </td>
+                    <td>{item.horas_referencia_dia != null ? formatHorasUso(item.horas_referencia_dia) : '—'}</td>
                     <td>{formatChartKwh(item.consumo_mes)}</td>
                     <td>{formatCurrency(item.gasto_mensual)}</td>
                   </tr>
@@ -328,8 +420,6 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
           </div>
         )}
       </details>
-
-     
     </div>
   );
 }

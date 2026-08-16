@@ -3653,6 +3653,10 @@ tr:hover td { background: rgba(37,99,235,0.03); }
   color: var(--danger);
 }
 
+.excedentes-potencia-stat__value--hours {
+  color: #f59e0b;
+}
+
 .excedentes-potencia-guide {
   display: flex;
   align-items: flex-start;
@@ -3782,6 +3786,11 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 
 .excedentes-potencia-td-excess {
   color: var(--danger);
+  font-weight: 600;
+}
+
+.excedentes-potencia-td-hours {
+  color: #f59e0b;
   font-weight: 600;
 }
 

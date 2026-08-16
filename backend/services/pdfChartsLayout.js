@@ -406,15 +406,24 @@ function drawConsumoCategoryRow(doc, consumoItems, catItems) {
 function drawExcedentesPotenciaSection(doc, excedentes) {
   if (!excedentes?.length) return;
 
-  const chartItems = excedentes.map((e) => ({
-    label: e.nombre,
-    sublabel: `${e.moduloLabel} · ${Number(e.potencia_w).toFixed(0)} W (ref. ${Number(e.potencia_referencia_w).toFixed(0)} W)`,
-    value: e.consumo_mes,
-  }));
+  const chartItems = excedentes.map((e) => {
+    const partes = [];
+    if (e.excede_potencia) {
+      partes.push(`${Number(e.potencia_w).toFixed(0)} W (ref. ${Number(e.potencia_referencia_w).toFixed(0)} W)`);
+    }
+    if (e.excede_horas) {
+      partes.push(`${Number(e.horas_uso_dia).toFixed(2)} h/d (ref. ${Number(e.horas_referencia_dia).toFixed(2)} h/d)`);
+    }
+    return {
+      label: e.nombre,
+      sublabel: `${e.moduloLabel} · ${partes.join(' · ')}`,
+      value: e.consumo_mes,
+    };
+  });
 
   drawCleanHBars(doc, {
-    title: 'EQUIPOS QUE SUPERAN LA POTENCIA NORMAL DE REFERENCIA',
-    sub: 'Mayor consumo mensual entre equipos por encima del límite del catálogo (3 módulos)',
+    title: 'EQUIPOS QUE SUPERAN LA REFERENCIA DEL CATÁLOGO',
+    sub: 'Potencia (W) y/o tiempo de uso diario por encima del límite en Recomendaciones',
     items: chartItems,
     color: C.red,
     unit: 'kWh',
@@ -425,7 +434,7 @@ function drawExcedentesPotenciaSection(doc, excedentes) {
   ensureSpace(doc, 24);
   doc.font('Helvetica').fontSize(7).fillColor(C.muted)
     .text(
-      'Referencia: potencia normal máx. (W) configurada en Admin → Recomendaciones/Catálogo. '
+      'Referencia: potencia normal máx. (W) y horas de uso/día sugeridas en Admin → Recomendaciones. '
       + 'Potencias comerciales son aproximadas y pueden variar según modelo y uso.',
       MARGIN,
       doc.y,
