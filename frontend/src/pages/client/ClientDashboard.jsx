@@ -81,6 +81,7 @@ export default function ClientDashboard() {
     tarifaFuente,
     dispositivos,
     ultimoCalculo,
+    historialSyncKey,
     excedentesPotencia,
   } = useCalculo();
 
@@ -119,7 +120,7 @@ export default function ClientDashboard() {
     if (activeTab === 'graficos' && dataSource === 'historial') {
       fetchHistorial();
     }
-  }, [activeTab, dataSource, fetchHistorial, precioKwh, ultimoCalculo?.id]);
+  }, [activeTab, dataSource, fetchHistorial, precioKwh, historialSyncKey]);
 
   const handleDataSourceChange = (source) => {
     setDataSource(source);
@@ -140,7 +141,7 @@ export default function ClientDashboard() {
       await ejecutarCalculo();
       await alert({
         title: 'Cálculo guardado',
-        message: 'El cálculo estimado se actualizó en su historial y reportes.',
+        message: 'Se agregó un nuevo escenario estimado a su historial.',
         variant: 'success',
       });
     } catch (e) {

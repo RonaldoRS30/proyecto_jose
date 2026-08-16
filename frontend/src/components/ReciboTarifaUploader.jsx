@@ -8,6 +8,7 @@ export default function ReciboTarifaUploader({
   onDatosDetected,
   onExtractingChange,
   onHistorialRegistered,
+  onReciboPendienteHistorial,
   clienteId = null,
   disabled = false,
 }) {
@@ -45,9 +46,20 @@ export default function ReciboTarifaUploader({
     try {
       const { data } = await extraerTarifaRecibo(file, clienteId);
       const datos = data.data || {};
-      if (data.historial_recibo?.id) {
+      const historialOk = Boolean(data.historial_recibo?.id);
+      if (historialOk) {
         onHistorialRegistered?.(data.historial_recibo);
+      } else if (
+        !clienteId
+        && (datos.total_a_pagar != null || datos.consumo_kwh != null)
+      ) {
+        onReciboPendienteHistorial?.(datos);
       }
+      const historialMsg = historialOk
+        ? ' Escenario inicial registrado en Historial.'
+        : (!clienteId && (datos.total_a_pagar != null || datos.consumo_kwh != null)
+          ? ' Guarde el cliente/perfil para registrar el escenario inicial en Historial.'
+          : '');
       if (datos.tarifa_kwh == null) {
         setError(data.message || datos.message || 'No se encontró la tarifa en el recibo.');
         if (
@@ -60,8 +72,8 @@ export default function ReciboTarifaUploader({
           emitDatos(datos);
           setMessage(
             datos.total_a_pagar != null
-              ? `${datos.message || 'Datos detectados.'} Registrado en historial.`
-              : (datos.message || 'Se detectaron algunos datos del recibo.'),
+              ? `${datos.message || 'Datos detectados.'}${historialMsg}`
+              : `${datos.message || 'Se detectaron algunos datos del recibo.'}${historialMsg}`,
           );
         }
         return;
@@ -69,8 +81,8 @@ export default function ReciboTarifaUploader({
       emitDatos(datos);
       setMessage(
         datos.total_a_pagar != null
-          ? `${datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`}. Total a pagar registrado en historial.`
-          : (datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`),
+          ? `${datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`}.${historialMsg}`
+          : `${datos.message || `Tarifa detectada: S/ ${datos.tarifa_kwh} por kWh`}${historialMsg}`,
       );
     } catch (err) {
       setError(
@@ -156,7 +168,8 @@ export default function ReciboTarifaUploader({
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
         Extrae empresa distribuidora, tarifa (S/kWh), potencia, alumbrado, electrificación rural (Ley N° 28749) y total a pagar del recibo.
-        El total se guarda en su historial como referencia mensual.
+        El total y consumo del recibo crean su escenario inicial en Historial (informativo).
+        Cada «Ejecutar Cálculo» agrega escenarios estimados según sus equipos.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

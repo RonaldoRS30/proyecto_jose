@@ -8,6 +8,7 @@ import ServerPaginatedResponsiveList from '../../components/ServerPaginatedRespo
 import { ListCard } from '../../components/ResponsiveList';
 import {
   getClientes, createCliente, updateCliente, deleteCliente, generarCodigo, getClientesExportResumen,
+  registrarReciboHistorialCliente,
 } from '../../services/api';
 import { exportToCsv, formatCsvDate } from '../../utils/exportCsv';
 import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
@@ -99,6 +100,7 @@ export default function ClientesPage() {
   const [extractingTarifa, setExtractingTarifa] = useState(false);
   const [tarifaGuardada, setTarifaGuardada] = useState('');
   const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
+  const [pendingReciboHistorial, setPendingReciboHistorial] = useState(null);
 
   useEffect(() => {
     setPage(1);
@@ -127,6 +129,7 @@ export default function ClientesPage() {
     setTipoCliente('natural');
     setTarifaGuardada('');
     setTarifaDesdeRecibo(false);
+    setPendingReciboHistorial(null);
     setModalOpen(true);
     setError('');
   };
@@ -142,8 +145,18 @@ export default function ClientesPage() {
     setTipoCliente(tipo);
     setTarifaGuardada(c.tarifa_kwh ?? '');
     setTarifaDesdeRecibo(false);
+    setPendingReciboHistorial(null);
     setModalOpen(true);
     setError('');
+  };
+
+  const flushReciboHistorial = async (clienteId) => {
+    if (!pendingReciboHistorial || !clienteId) return;
+    if (pendingReciboHistorial.total_a_pagar == null && pendingReciboHistorial.consumo_kwh == null) {
+      return;
+    }
+    await registrarReciboHistorialCliente(clienteId, pendingReciboHistorial);
+    setPendingReciboHistorial(null);
   };
 
   const tarifaPendiente = modalOpen && tarifaValuesDiffer(tarifaGuardada, form.tarifa_kwh);
@@ -218,9 +231,12 @@ export default function ClientesPage() {
     try {
       if (editId) {
         await updateCliente(editId, payload);
+        await flushReciboHistorial(editId);
       } else {
         const { data } = await createCliente(payload);
-        await generarCodigo({ cliente_id: data.data.id });
+        const newId = data.data.id;
+        await generarCodigo({ cliente_id: newId });
+        await flushReciboHistorial(newId);
       }
       setModalOpen(false);
       load();
@@ -545,6 +561,8 @@ export default function ClientesPage() {
               <ReciboTarifaUploader
                 key={editId ?? 'new'}
                 clienteId={editId}
+                onReciboPendienteHistorial={(datos) => setPendingReciboHistorial(datos)}
+                onHistorialRegistered={() => setPendingReciboHistorial(null)}
                 onDatosDetected={(datos) => {
                   setForm((prev) => ({
                     ...prev,
@@ -558,6 +576,11 @@ export default function ClientesPage() {
                 }}
                 onExtractingChange={setExtractingTarifa}
               />
+              {!editId && pendingReciboHistorial && (
+                <small style={{ display: 'block', marginTop: '8px', color: '#fbbf24', fontSize: '0.75rem' }}>
+                  Recibo detectado. Pulse «Guardar» para crear el escenario inicial en el Historial del cliente.
+                </small>
+              )}
               {tarifaPendiente && (
                 <div
                   role="alert"

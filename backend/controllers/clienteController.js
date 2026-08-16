@@ -105,7 +105,7 @@ const extraerTarifaRecibo = [
         : (req.body?.cliente_id || req.query?.cliente_id || null);
 
       let historialRecibo = null;
-      if (clienteId && result.total_a_pagar != null) {
+      if (clienteId && (result.total_a_pagar != null || result.consumo_kwh != null)) {
         historialRecibo = await registrarReciboEnHistorial(
           Number(clienteId),
           result,
@@ -134,6 +134,31 @@ const extraerTarifaRecibo = [
   }),
 ];
 
+const registrarReciboHistorial = asyncHandler(async (req, res) => {
+  const clienteId = Number(req.params.id);
+  if (!Number.isFinite(clienteId)) {
+    return res.status(400).json({ success: false, message: 'ID de cliente inválido' });
+  }
+  if (req.user?.role === 'cliente') {
+    const ownId = Number(req.user.clienteId || req.user.id);
+    if (ownId !== clienteId) {
+      return res.status(403).json({ success: false, message: 'No autorizado' });
+    }
+  }
+  const historial = await registrarReciboEnHistorial(
+    clienteId,
+    req.body || {},
+    req.body?.nombre_archivo || null,
+  );
+  if (!historial) {
+    return res.status(422).json({
+      success: false,
+      message: 'Se requiere total a pagar o consumo kWh del recibo para registrar el historial.',
+    });
+  }
+  return res.status(201).json({ success: true, data: historial });
+});
+
 module.exports = {
   listar,
   crear,
@@ -148,4 +173,5 @@ module.exports = {
   detalleAdmin,
   exportResumen,
   extraerTarifaRecibo,
+  registrarReciboHistorial,
 };

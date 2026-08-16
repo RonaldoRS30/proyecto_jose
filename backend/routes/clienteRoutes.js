@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.get('/', authenticate, authorizeRoles('admin'), clienteController.listar);
 router.post('/extraer-tarifa-recibo', authenticate, authorizeRoles('admin', 'cliente'), clienteController.extraerTarifaRecibo);
+router.post('/:id/recibo-historial', authenticate, authorizeRoles('admin', 'cliente'), clienteController.registrarReciboHistorial);
 router.post('/', authenticate, authorizeRoles('admin'), clienteController.crear);
 router.get('/estadisticas', authenticate, authorizeRoles('admin'), clienteController.estadisticas);
 router.get('/export-resumen', authenticate, authorizeRoles('admin'), clienteController.exportResumen);

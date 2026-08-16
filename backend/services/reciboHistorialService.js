@@ -18,21 +18,50 @@ function normalizePeriodo(value) {
   return `${d.getFullYear()}-${month}-01`;
 }
 
+function parseResumenJson(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return value;
+}
+
 /**
- * Registra o actualiza el total del recibo real en historial (origen = recibo).
+ * Registra o actualiza el recibo PDF en historial (origen = recibo) — escenario inicial informativo.
  */
 async function registrarReciboEnHistorial(clienteId, datos, filename = null) {
-  const total = roundNum(Number(datos.total_a_pagar), 2);
-  if (!clienteId || !total || total <= 0) return null;
+  if (!clienteId) return null;
 
-  const periodo = normalizePeriodo(datos.periodo_facturacion);
+  const total = datos.total_a_pagar != null
+    ? roundNum(Number(datos.total_a_pagar), 2)
+    : null;
   const consumoKwh = datos.consumo_kwh != null
     ? roundNum(Number(datos.consumo_kwh), 3)
     : null;
 
+  const hasTotal = total != null && total > 0;
+  const hasConsumo = consumoKwh != null && consumoKwh > 0;
+  if (!hasTotal && !hasConsumo) return null;
+
+  const periodo = normalizePeriodo(datos.periodo_facturacion);
+
+  const existing = await Calculo.findOne({
+    where: { cliente_id: clienteId, origen: 'recibo', periodo_facturacion: periodo },
+  });
+
+  const priorCount = await Calculo.count({ where: { cliente_id: clienteId } });
+  const escenarioInicial = existing
+    ? Boolean(parseResumenJson(existing.resumen_json)?.escenario_inicial)
+    : priorCount === 0;
+
   const resumenRecibo = {
     origen: 'recibo',
-    total_a_pagar: total,
+    escenario_inicial: escenarioInicial,
+    total_a_pagar: hasTotal ? total : null,
     consumo_kwh: consumoKwh,
     tarifa_kwh: datos.tarifa_kwh ?? null,
     potencia_contratada: datos.potencia_contratada ?? null,
@@ -50,14 +79,10 @@ async function registrarReciboEnHistorial(clienteId, datos, filename = null) {
     periodo_facturacion: periodo,
     precio_kwh: datos.tarifa_kwh ?? null,
     consumo_mes_total: consumoKwh,
-    factura_total_mes: total,
-    gasto_mensual_total: total,
+    factura_total_mes: hasTotal ? total : 0,
+    gasto_mensual_total: hasTotal ? total : null,
     resumen_json: resumenRecibo,
   };
-
-  const existing = await Calculo.findOne({
-    where: { cliente_id: clienteId, origen: 'recibo', periodo_facturacion: periodo },
-  });
 
   if (existing) {
     await existing.update(payload);

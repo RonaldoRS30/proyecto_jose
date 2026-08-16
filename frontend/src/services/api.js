@@ -58,6 +58,9 @@ export const extraerTarifaRecibo = (file, clienteId = null) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const registrarReciboHistorialCliente = (clienteId, datos) =>
+  api.post(`/clientes/${clienteId}/recibo-historial`, datos);
 export const updateCliente = (id, data) => api.put(`/clientes/${id}`, data);
 export const deleteCliente = (id) => api.delete(`/clientes/${id}`);
 export const toggleCliente = (id) => api.patch(`/clientes/${id}/toggle`);

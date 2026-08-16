@@ -3,7 +3,7 @@ import { User, Building, Zap, Save, Check, Loader2, AlertTriangle } from 'lucide
 import PageHeader from '../../components/PageHeader';
 import ReciboTarifaUploader from '../../components/ReciboTarifaUploader';
 import SearchableSelect from '../../components/SearchableSelect';
-import { getMiPerfil, updateMiPerfil } from '../../services/api';
+import { getMiPerfil, updateMiPerfil, registrarReciboHistorialCliente } from '../../services/api';
 import { useCalculo } from '../../contexts/CalculoContext';
 import { useUnsavedTarifaGuard } from '../../hooks/useUnsavedTarifaGuard';
 import { tarifaValuesDiffer } from '../../utils/tarifaCompare';
@@ -84,6 +84,7 @@ export default function PerfilPage() {
   const [error, setError] = useState('');
   const [extractingTarifa, setExtractingTarifa] = useState(false);
   const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
+  const [pendingReciboHistorial, setPendingReciboHistorial] = useState(null);
   const [codigoAcceso, setCodigoAcceso] = useState('');
   const [codigoAccesoConfirm, setCodigoAccesoConfirm] = useState('');
 
@@ -197,6 +198,10 @@ export default function PerfilPage() {
       setCodigoAcceso('');
       setCodigoAccesoConfirm('');
       setTarifaDesdeRecibo(false);
+      if (pendingReciboHistorial && data.data?.id) {
+        await registrarReciboHistorialCliente(data.data.id, pendingReciboHistorial);
+        setPendingReciboHistorial(null);
+      }
       const previewData = await refreshPreview();
       const equipos = previewData?.resumenGeneral?.cantidadEquipos ?? 0;
       if (billingChanged && equipos > 0) {
@@ -307,7 +312,11 @@ export default function PerfilPage() {
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
               <ReciboTarifaUploader
-                onHistorialRegistered={() => refreshAll()}
+                onHistorialRegistered={() => {
+                  setPendingReciboHistorial(null);
+                  refreshAll();
+                }}
+                onReciboPendienteHistorial={(datos) => setPendingReciboHistorial(datos)}
                 onDatosDetected={(datos) => {
                 setForm((prev) => ({
                   ...prev,

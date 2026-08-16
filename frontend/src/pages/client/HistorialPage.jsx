@@ -12,7 +12,7 @@ import { useCalculosChart, useServerCalculosList, PAGE_SIZE } from '../../hooks/
 import { getCalculo, generarPDF, downloadReporte } from '../../services/api';
 import { formatNumber, formatCurrency, formatDate, formatDateDay } from '../../utils/helpers';
 import { buildFacturaFromCalculo } from '../../utils/factura';
-import { isReciboRegistro } from '../../utils/calculoRegistro';
+import { isReciboRegistro, isEscenarioInicial } from '../../utils/calculoRegistro';
 
 const getFacturaTotal = (calculo) => buildFacturaFromCalculo(calculo).totalMes;
 
@@ -41,7 +41,8 @@ const formatFechaChartFull = (calculo) => {
   });
   const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
   const tipo = isReciboRegistro(calculo) ? 'Recibo real' : 'Cálculo estimado';
-  return `${dia}, ${hora} · ${tipo}`;
+  const escenario = isEscenarioInicial(calculo) ? ' · Escenario inicial' : '';
+  return `${dia}, ${hora} · ${tipo}${escenario}`;
 };
 
 const formatFechaChartShort = (calculo, sameCalendarDay) => {
@@ -80,14 +81,17 @@ function buildYearOptions() {
 }
 
 function TipoBadge({ calculo }) {
+  if (isEscenarioInicial(calculo)) {
+    return <span className="badge badge-warning"><FileText size={12} /> Escenario inicial (recibo)</span>;
+  }
   if (isReciboRegistro(calculo)) {
     return <span className="badge badge-warning"><FileText size={12} /> Recibo real</span>;
   }
-  return <span className="badge badge-info"><Calculator size={12} /> Cálculo</span>;
+  return <span className="badge badge-info"><Calculator size={12} /> Cálculo estimado</span>;
 }
 
 export default function HistorialPage() {
-  const { loading: contextLoading, resumenGeneral, ultimoCalculo } = useCalculo();
+  const { loading: contextLoading, resumenGeneral, ultimoCalculo, ultimoRecibo, historialSyncKey } = useCalculo();
   const alert = useAlert();
   const [selected, setSelected] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -105,7 +109,7 @@ export default function HistorialPage() {
     fechaHasta: fechaHasta || undefined,
   }), [mes, anio, origen, fechaDesde, fechaHasta]);
 
-  const syncKey = ultimoCalculo?.id;
+  const syncKey = historialSyncKey;
   const {
     calculos, total, page, setPage, loading: listLoading,
   } = useServerCalculosList({ syncKey, filters });
@@ -175,6 +179,10 @@ export default function HistorialPage() {
     </>
   );
 
+  const chartHasConsumo = chartData.some((d) => d.consumoMes > 0);
+  const tieneEscenarioInicial = ultimoRecibo != null;
+  const tieneCalculosEstimados = ultimoCalculo != null;
+
   const hasActiveFilters = Boolean(mes || anio || origen || fechaDesde || fechaHasta);
 
   const clearFilters = () => {
@@ -191,8 +199,28 @@ export default function HistorialPage() {
     <div>
       <PageHeader
         title="Historial de Facturación"
-        subtitle="Compare su recibo real (al subir PDF) con los cálculos estimados del sistema"
+        subtitle="Escenario inicial desde su recibo PDF; luego cada «Ejecutar Cálculo» agrega un escenario estimado con sus equipos"
       />
+
+      {tieneEscenarioInicial && !tieneCalculosEstimados && (
+        <div
+          role="status"
+          style={{
+            marginBottom: '1rem',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            color: 'var(--text-muted)',
+            fontSize: '0.875rem',
+            lineHeight: 1.5,
+          }}
+        >
+          <strong style={{ color: 'var(--text)' }}>Escenario inicial registrado.</strong>
+          {' '}El total y consumo de su recibo ya están en historial (solo informativo).
+          Registre electrodomésticos y pulse «Ejecutar Cálculo» en Inicio para sumar escenarios estimados.
+        </div>
+      )}
 
       <div className="search-bar historial-filters">
         <div className="search-input-wrap historial-date-wrap">
@@ -237,7 +265,7 @@ export default function HistorialPage() {
         <div className="card card-chart" style={{ marginBottom: '1.5rem' }}>
           <div className="card-header"><h3>Evolución del total a pagar</h3></div>
           <div className="card-body chart-evolucion-body">
-            <EvolucionHistoricaChart data={chartData} showKwh={false} />
+            <EvolucionHistoricaChart data={chartData} showKwh={chartHasConsumo} />
           </div>
         </div>
       )}
@@ -256,7 +284,7 @@ export default function HistorialPage() {
         <ServerPaginatedResponsiveList
           loading={listLoading}
           empty={!listLoading && total === 0}
-          emptyMessage={hasActiveFilters ? 'No hay registros con esos filtros.' : 'Suba su recibo en Perfil o ejecute un cálculo desde Inicio para comenzar el historial.'}
+          emptyMessage={hasActiveFilters ? 'No hay registros con esos filtros.' : 'Suba su recibo en Mi Perfil para crear el escenario inicial. Luego ejecute cálculos desde Inicio.'}
           emptyIcon={History}
           items={calculos}
           page={page}
@@ -286,7 +314,12 @@ export default function HistorialPage() {
                     <small style={{ color: 'var(--text-muted)' }}>Factura: {periodoFactura}</small>
                   </>
                 )}
-                {c.id === ultimoCalculo?.id && <span className="badge badge-success" style={{ marginLeft: '0.35rem' }}>Reciente</span>}
+                {isEscenarioInicial(c) && (
+                  <span className="badge badge-warning" style={{ marginLeft: '0.35rem' }}>Inicial</span>
+                )}
+                {!isEscenarioInicial(c) && c.id === ultimoCalculo?.id && (
+                  <span className="badge badge-success" style={{ marginLeft: '0.35rem' }}>Reciente</span>
+                )}
               </td>
               <td><TipoBadge calculo={c} /></td>
               <td>{(() => {
@@ -336,7 +369,7 @@ export default function HistorialPage() {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Detalle del registro">
         {selected && (
           <div>
-            <p><strong>Tipo:</strong> {isReciboRegistro(selected) ? 'Recibo real (PDF)' : 'Cálculo estimado'}</p>
+            <p><strong>Tipo:</strong> {isEscenarioInicial(selected) ? 'Escenario inicial (recibo PDF)' : isReciboRegistro(selected) ? 'Recibo real (PDF)' : 'Cálculo estimado'}</p>
             <p><strong>Fecha de subida:</strong> {formatDate(selected.created_at)}</p>
             {isReciboRegistro(selected) && formatPeriodoFactura(selected) && (
               <p><strong>Período del recibo:</strong> {formatPeriodoFactura(selected)}</p>
@@ -351,7 +384,9 @@ export default function HistorialPage() {
                 {selected.resumen_json?.tarifa_kwh != null && <p><strong>Tarifa detectada:</strong> {formatCurrency(selected.resumen_json.tarifa_kwh)}/kWh</p>}
                 {selected.resumen_json?.nombre_archivo && <p><strong>Archivo:</strong> {selected.resumen_json.nombre_archivo}</p>}
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.75rem' }}>
-                  Registrado el día que subió el PDF. Compare con los cálculos estimados del mismo período.
+                  {isEscenarioInicial(selected)
+                    ? 'Primer escenario de su historial: referencia del recibo real. Los cálculos posteriores comparan sus equipos registrados contra esta línea base.'
+                    : 'Registrado el día que subió el PDF. Compare con los cálculos estimados del mismo período.'}
                 </p>
               </>
             ) : (

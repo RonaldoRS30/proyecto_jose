@@ -16,6 +16,7 @@ const CalculoContext = createContext(null);
 export function CalculoProvider({ children }) {
   const [preview, setPreview] = useState(null);
   const [ultimoCalculo, setUltimoCalculo] = useState(null);
+  const [ultimoRecibo, setUltimoRecibo] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(true);
   const [calculosLoading, setCalculosLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -41,7 +42,9 @@ export function CalculoProvider({ children }) {
       const rows = data.data ?? [];
       // Solo cálculos estimados del sistema — los recibos PDF son referencia aparte.
       const latestCalculo = rows.find((c) => !isReciboRegistro(c)) ?? null;
+      const latestRecibo = rows.find((c) => isReciboRegistro(c)) ?? null;
       setUltimoCalculo(latestCalculo);
+      setUltimoRecibo(latestRecibo);
       return latestCalculo;
     } catch (e) {
       console.error(e);
@@ -100,9 +103,13 @@ export function CalculoProvider({ children }) {
 
   const loading = previewLoading && preview === null;
 
+  const historialSyncKey = `${ultimoCalculo?.id ?? 'c0'}-${ultimoRecibo?.id ?? 'r0'}`;
+
   const value = useMemo(() => ({
     preview,
     ultimoCalculo,
+    ultimoRecibo,
+    historialSyncKey,
     loading,
     previewLoading,
     calculosLoading,
@@ -125,7 +132,7 @@ export function CalculoProvider({ children }) {
     dispositivos: preview?.dispositivos ?? [],
     excedentesPotencia: preview?.excedentesPotencia ?? [],
   }), [
-    preview, ultimoCalculo, loading, previewLoading, calculosLoading, calculating, hasEquipos, hasCambiosSinGuardar,
+    preview, ultimoCalculo, ultimoRecibo, historialSyncKey, loading, previewLoading, calculosLoading, calculating, hasEquipos, hasCambiosSinGuardar,
     tarifaCambiada, configFacturacionCambiada, calculoSincronizado, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
   ]);
 
