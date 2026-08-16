@@ -22,6 +22,15 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
+  const updateUser = (partial) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -37,6 +46,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         logout,
+        updateUser,
         isAdmin: user?.role === 'admin',
         isCliente: user?.role === 'cliente',
       }}

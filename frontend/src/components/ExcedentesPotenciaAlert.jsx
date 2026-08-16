@@ -329,10 +329,7 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
         )}
       </details>
 
-      <p className="excedentes-potencia-footnote">
-        La potencia de referencia proviene del catálogo configurado en Admin → Recomendaciones.
-        Valores comerciales aproximados; pueden variar según modelo y uso real del equipo.
-      </p>
+     
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
 
   LayoutDashboard, Plug, Ghost, Lightbulb, History,
@@ -11,6 +12,8 @@ import Sidebar from '../components/Sidebar';
 import CalculoStatusBanner from '../components/CalculoStatusBanner';
 
 import { CalculoProvider } from '../contexts/CalculoContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getMiPerfil } from '../services/api';
 
 
 
@@ -36,25 +39,38 @@ const clientNav = [
 
 
 
+function ClientShell({ children }) {
+  const { isCliente, updateUser } = useAuth();
+
+  useEffect(() => {
+    if (!isCliente) return;
+    getMiPerfil()
+      .then(({ data }) => {
+        if (data?.data) updateUser(data.data);
+      })
+      .catch(() => {});
+  }, [isCliente, updateUser]);
+
+  return (
+    <div className="app-layout">
+      <Sidebar items={clientNav} />
+      <main className="main-content has-bottom-nav">
+        <CalculoStatusBanner />
+        {children}
+      </main>
+    </div>
+  );
+}
+
+
+
 export default function ClientLayout({ children }) {
 
   return (
 
     <CalculoProvider>
 
-      <div className="app-layout">
-
-        <Sidebar items={clientNav} />
-
-        <main className="main-content has-bottom-nav">
-
-          <CalculoStatusBanner />
-
-          {children}
-
-        </main>
-
-      </div>
+      <ClientShell>{children}</ClientShell>
 
     </CalculoProvider>
 

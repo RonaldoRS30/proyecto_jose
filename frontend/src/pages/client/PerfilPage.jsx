@@ -5,6 +5,7 @@ import ReciboTarifaUploader from '../../components/ReciboTarifaUploader';
 import SearchableSelect from '../../components/SearchableSelect';
 import { getMiPerfil, updateMiPerfil, registrarReciboHistorialCliente } from '../../services/api';
 import { useCalculo } from '../../contexts/CalculoContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useUnsavedTarifaGuard } from '../../hooks/useUnsavedTarifaGuard';
 import { tarifaValuesDiffer } from '../../utils/tarifaCompare';
 
@@ -75,6 +76,7 @@ function billingFieldsChanged(cliente, payload) {
 
 export default function PerfilPage() {
   const { refreshPreview, refreshCalculos, refreshAll, ejecutarCalculo } = useCalculo();
+  const { updateUser } = useAuth();
   const [cliente, setCliente] = useState(null);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -195,6 +197,7 @@ export default function PerfilPage() {
       const billingChanged = billingFieldsChanged(cliente, payload);
       setCliente(data.data);
       setForm(buildFormFromCliente(data.data));
+      updateUser({ ...data.data, role: 'cliente' });
       setCodigoAcceso('');
       setCodigoAccesoConfirm('');
       setTarifaDesdeRecibo(false);

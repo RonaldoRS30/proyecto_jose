@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { Moon, Sun, LogOut, Menu, X } from 'lucide-react';
+import { Moon, Sun, LogOut, Menu, X, Building2, UserRound } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import GuardedNavLink from './GuardedNavLink';
 import MobileBottomNav from './MobileBottomNav';
+import { getSidebarUserDisplay, isClienteEmpresa } from '../utils/clienteDisplay';
 
 export default function Sidebar({ items }) {
   const { darkMode, toggleTheme } = useTheme();
@@ -21,6 +22,9 @@ export default function Sidebar({ items }) {
     logout();
     navigate('/login');
   };
+
+  const userDisplay = useMemo(() => getSidebarUserDisplay(user), [user]);
+  const isEmpresa = user?.role === 'cliente' && isClienteEmpresa(user);
 
   return (
     <>
@@ -58,8 +62,20 @@ export default function Sidebar({ items }) {
               <X size={20} />
             </button>
           </div>
-          {user && (
-            <p className="sidebar-user">{user.nombre || user.email}</p>
+          {userDisplay && (
+            <div className="sidebar-user-card" aria-label="Usuario en sesión">
+              <div className="sidebar-user-avatar" aria-hidden="true">
+                <span>{userDisplay.initials}</span>
+                <span className="sidebar-user-avatar-icon">
+                  {user?.role === 'admin' ? <UserRound size={12} /> : (isEmpresa ? <Building2 size={12} /> : <UserRound size={12} />)}
+                </span>
+              </div>
+              <div className="sidebar-user-info">
+                <p className="sidebar-user-name" title={userDisplay.name}>
+                  {userDisplay.name}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
