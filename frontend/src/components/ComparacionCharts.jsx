@@ -2,20 +2,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { formatNumber, formatCurrency } from '../utils/helpers';
-import { hasComparacionVariacion } from '../utils/compareCalculos';
+import { buildComparacionBarData, hasComparacionVariacion } from '../utils/compareCalculos';
 import { DashboardSimpleTooltip, DashboardChartPanel } from './DashboardChartPanel';
 
 const formatKwh = (v) => `${formatNumber(v)} kWh`;
 const formatSoles = (v) => formatCurrency(v);
 
 function ComparacionBarPanel({ title, subtitle, data, formatValue, valueLabel, wide = false }) {
-  if (!data?.length) {
-    return (
-      <DashboardChartPanel title={title} subtitle={subtitle} wide={wide}>
-        <div className="dashboard-empty dashboard-empty--compact"><p>Sin datos para comparar.</p></div>
-      </DashboardChartPanel>
-    );
-  }
+  if (!data?.length) return null;
 
   return (
     <DashboardChartPanel title={title} subtitle={subtitle} wide={wide}>
@@ -55,12 +49,9 @@ function VariacionTooltip({ active, payload, formatValue }) {
 function ComparacionVariacionPanel({ data, sinVariacion = false }) {
   if (sinVariacion || !data?.length || data.every((d) => (d.value ?? 0) < 0.001)) {
     return (
-      <DashboardChartPanel title="Variación (ahorro o aumento)" subtitle="Respecto al reporte de referencia" wide>
+      <DashboardChartPanel title="Variación (ahorro o aumento)" subtitle="Respecto al recibo o referencia" wide>
         <div className="dashboard-empty dashboard-empty--compact">
-          <p>Sin variación entre los cálculos seleccionados.</p>
-          <p style={{ fontSize: '0.8125rem', marginTop: '0.35rem' }}>
-            Elija otro cálculo de referencia para ver diferencias.
-          </p>
+          <p>Sin variación entre los escenarios seleccionados.</p>
         </div>
       </DashboardChartPanel>
     );
@@ -73,12 +64,12 @@ function ComparacionVariacionPanel({ data, sinVariacion = false }) {
   return (
     <DashboardChartPanel
       title="Variación (ahorro o aumento)"
-      subtitle="Valores absolutos respecto a la referencia — ver leyenda de colores"
+      subtitle="Valores absolutos vs recibo/referencia — verde = ahorro, rojo = aumento"
       wide
     >
       <div className="comparacion-variacion-legend" aria-hidden="false">
-        <span><i style={{ background: '#10b981' }} /> Ahorro — consumiste menos que la referencia</span>
-        <span><i style={{ background: '#ef4444' }} /> Aumento — consumiste más que la referencia</span>
+        <span><i style={{ background: '#10b981' }} /> Ahorro — consumiste o pagaste menos que la referencia</span>
+        <span><i style={{ background: '#ef4444' }} /> Aumento — consumiste o pagaste más que la referencia</span>
       </div>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
@@ -97,59 +88,52 @@ function ComparacionVariacionPanel({ data, sinVariacion = false }) {
   );
 }
 
-export default function ComparacionCharts({ comparison }) {
+export default function ComparacionCharts({ comparison, metricas = {} }) {
   if (!comparison) return null;
 
-  const sinVariacion = !hasComparacionVariacion(comparison);
+  const barData = buildComparacionBarData(comparison, metricas);
+  const metricFields = [];
+  if (metricas.consumoKwh !== false) metricFields.push('consumoMesKwh');
+  if (metricas.gastoEnergia !== false) metricFields.push('gastoEnergiaMes');
+  if (metricas.totalFactura !== false) metricFields.push('facturaTotalMes');
+  const sinVariacion = !hasComparacionVariacion(comparison, metricFields);
 
-  const kwhData = [
-    { name: 'Actual', value: comparison.consumoMesKwh.actual, fill: '#1A4AB0' },
-    { name: 'Referencia', value: comparison.consumoMesKwh.referencia, fill: '#64748b' },
-  ];
-
-  const facturaData = [
-    { name: 'Actual', value: comparison.facturaTotalMes.actual, fill: '#10b981' },
-    { name: 'Referencia', value: comparison.facturaTotalMes.referencia, fill: '#94a3b8' },
-  ];
-
-  const ahorroData = [
-    {
-      name: 'kWh/mes',
-      value: Math.abs(comparison.consumoMesKwh.ahorro),
-      fill: comparison.consumoMesKwh.ahorro >= 0 ? '#10b981' : '#ef4444',
-      tipo: comparison.consumoMesKwh.ahorro >= 0 ? 'Ahorro' : 'Aumento',
-    },
-    {
-      name: 'S/ factura/mes',
-      value: Math.abs(comparison.facturaTotalMes.ahorro),
-      fill: comparison.facturaTotalMes.ahorro >= 0 ? '#10b981' : '#ef4444',
-      tipo: comparison.facturaTotalMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
-    },
-    {
-      name: 'S/ energía/año',
-      value: Math.abs(comparison.gastoEnergiaAnio.ahorro),
-      fill: comparison.gastoEnergiaAnio.ahorro >= 0 ? '#10b981' : '#ef4444',
-      tipo: comparison.gastoEnergiaAnio.ahorro >= 0 ? 'Ahorro' : 'Aumento',
-    },
-  ];
+  const refSubtitle = comparison.referenciaEsRecibo
+    ? 'Escenario estimado vs recibo real'
+    : 'Escenario actual vs referencia';
 
   return (
     <div className="dashboard-charts-grid comparacion-charts-grid">
-      <ComparacionBarPanel
-        title="Consumo mensual (kWh)"
-        subtitle="Reporte actual vs reporte de referencia"
-        data={kwhData}
-        formatValue={formatKwh}
-        valueLabel="Consumo"
-      />
-      <ComparacionBarPanel
-        title="Total factura mensual (S/)"
-        subtitle="Total del mes (energía + cargos + IGV) — actual vs referencia"
-        data={facturaData}
-        formatValue={formatSoles}
-        valueLabel="Total factura"
-      />
-      <ComparacionVariacionPanel data={ahorroData} sinVariacion={sinVariacion} />
+      {barData.kwh.length > 0 && (
+        <ComparacionBarPanel
+          title="Consumo mensual (kWh)"
+          subtitle={refSubtitle}
+          data={barData.kwh}
+          formatValue={formatKwh}
+          valueLabel="Consumo"
+        />
+      )}
+      {barData.factura.length > 0 && (
+        <ComparacionBarPanel
+          title="Total a pagar (S/mes)"
+          subtitle="Total facturado del mes — escenario vs recibo/referencia"
+          data={barData.factura}
+          formatValue={formatSoles}
+          valueLabel="Total a pagar"
+        />
+      )}
+      {barData.gasto.length > 0 && (
+        <ComparacionBarPanel
+          title="Gasto por energía (S/mes)"
+          subtitle="Consumo kWh × tarifa — escenario vs recibo/referencia"
+          data={barData.gasto}
+          formatValue={formatSoles}
+          valueLabel="Gasto energía"
+        />
+      )}
+      {barData.ahorro.length > 0 && (
+        <ComparacionVariacionPanel data={barData.ahorro} sinVariacion={sinVariacion} />
+      )}
     </div>
   );
 }

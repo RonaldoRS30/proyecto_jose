@@ -25,7 +25,7 @@ const {
   MARGIN,
 } = require('./pdfReciboLayout');
 const { drawChartsSection, drawComparacionSection } = require('./pdfChartsLayout');
-const { compareCalculos, formatDatePE } = require('./comparacionHelper');
+const { compareCalculos, formatDatePE, isReciboRegistro } = require('./comparacionHelper');
 const { getEquiposExcedenPotenciaReferencia } = require('../helpers/potenciaReferenciaHelper');
 const recomendacionService = require('./recomendacionService');
 
@@ -194,14 +194,11 @@ const generarComparacionPDF = async (actualId, referenciaId, clienteId) => {
     loadCalculoParaReporte(referenciaId, clienteId),
   ]);
 
-  for (const calculo of [calculoActual, calculoReferencia]) {
-    const origen = calculo.origen || calculo.resumen_json?.origen;
-    if (origen === 'recibo') {
-      throw new AppError(
-        'La comparación solo aplica a cálculos estimados del sistema, no a recibos reales del PDF.',
-        400,
-      );
-    }
+  if (isReciboRegistro(calculoActual)) {
+    throw new AppError(
+      'El escenario actual debe ser un cálculo estimado. Use el recibo PDF solo como referencia.',
+      400,
+    );
   }
 
   const actualEnriquecido = enrichCalculo(calculoActual, { configMap });

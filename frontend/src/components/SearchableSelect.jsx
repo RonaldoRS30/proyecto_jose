@@ -12,6 +12,7 @@ export default function SearchableSelect({
   getOptionLabel = (opt) => opt.label ?? opt.nombre ?? String(opt),
   getOptionValue = (opt) => opt.value ?? opt.nombre ?? opt,
   renderOption,
+  renderValue,
   disabled = false,
   clearable = true,
   allowCustom = false,
@@ -95,6 +96,8 @@ export default function SearchableSelect({
       ? getOptionLabel(selectedOption)
       : (value || '');
 
+  const showRenderedValue = !open && selectedOption && renderValue;
+
   const showCustomOption = allowCustom
     && query.trim()
     && !filtered.some((opt) => getOptionLabel(opt).toLowerCase() === query.trim().toLowerCase());
@@ -114,25 +117,39 @@ export default function SearchableSelect({
     >
       <div className="searchable-select-control" onClick={() => !disabled && setOpen(true)}>
         <Search size={16} className="searchable-select-icon" aria-hidden />
-        <input
-          ref={inputRef}
-          type="text"
-          className="searchable-select-input"
-          value={displayValue}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-            if (!e.target.value && selectedOption && clearable) onChange('', null);
-          }}
-          onFocus={() => !disabled && setOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          autoComplete="off"
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          role="combobox"
-        />
+        {showRenderedValue ? (
+          <div
+            className="searchable-select-value"
+            onKeyDown={handleKeyDown}
+            role="combobox"
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            tabIndex={disabled ? -1 : 0}
+            onFocus={() => !disabled && setOpen(true)}
+          >
+            {renderValue(selectedOption)}
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="text"
+            className="searchable-select-input"
+            value={displayValue}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+              if (!e.target.value && selectedOption && clearable) onChange('', null);
+            }}
+            onFocus={() => !disabled && setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            autoComplete="off"
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            role="combobox"
+          />
+        )}
         {clearable && value && !open && (
           <button type="button" className="searchable-select-clear" onClick={handleClear} aria-label="Limpiar">
             <X size={14} />
