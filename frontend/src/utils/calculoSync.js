@@ -33,6 +33,12 @@ export function isCalculoSincronizado(preview, ultimoCalculo) {
     return false;
   }
 
+  const previewElect = preview.factura?.electrificacionRural;
+  const storedElect = ultimoCalculo.resumen_json?.factura?.electrificacionRural;
+  if (previewElect != null && storedElect != null && numDiff(previewElect, storedElect)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -55,5 +61,9 @@ export function isSoloConfigFacturacionPendiente(preview, ultimoCalculo) {
   const storedAlumbrado = ultimoCalculo.resumen_json?.factura?.alumbradoPublico;
   const alumbradoDistinto = previewAlumbrado != null && storedAlumbrado != null
     && numDiff(previewAlumbrado, storedAlumbrado);
-  return consumoIgual && equiposIguales && tarifaIgual && alumbradoDistinto;
+  const previewElect = preview.factura?.electrificacionRural;
+  const storedElect = ultimoCalculo.resumen_json?.factura?.electrificacionRural;
+  const electDistinta = previewElect != null && storedElect != null
+    && numDiff(previewElect, storedElect);
+  return consumoIgual && equiposIguales && tarifaIgual && (alumbradoDistinto || electDistinta);
 }

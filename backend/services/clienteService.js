@@ -227,7 +227,7 @@ const actualizarCliente = async (id, data) => {
 const PERFIL_CAMPOS = [
   'nombre', 'apellido', 'email', 'telefono', 'direccion',
   'empresa_distribuidora', 'tarifa', 'medidor', 'potencia_contratada',
-  'tarifa_kwh', 'alumbrado_publico',
+  'tarifa_kwh', 'alumbrado_publico', 'electrificacion_rural',
 ];
 
 const actualizarPerfilCliente = async (id, data) => {
@@ -307,6 +307,18 @@ const actualizarPerfilCliente = async (id, data) => {
         throw new AppError('El alumbrado público debe ser un número válido mayor o igual a 0', 400);
       }
       updateFields.alumbrado_publico = alumbrado;
+    }
+  }
+
+  if (updateFields.electrificacion_rural !== undefined) {
+    if (updateFields.electrificacion_rural === null || updateFields.electrificacion_rural === '') {
+      updateFields.electrificacion_rural = null;
+    } else {
+      const electrificacion = parseFloat(updateFields.electrificacion_rural);
+      if (Number.isNaN(electrificacion) || electrificacion < 0) {
+        throw new AppError('La electrificación rural debe ser un número válido mayor o igual a 0', 400);
+      }
+      updateFields.electrificacion_rural = electrificacion;
     }
   }
 

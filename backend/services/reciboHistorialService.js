@@ -37,6 +37,7 @@ async function registrarReciboEnHistorial(clienteId, datos, filename = null) {
     tarifa_kwh: datos.tarifa_kwh ?? null,
     potencia_contratada: datos.potencia_contratada ?? null,
     alumbrado_publico: datos.alumbrado_publico ?? null,
+    electrificacion_rural: datos.electrificacion_rural ?? null,
     empresa_distribuidora: datos.empresa_distribuidora ?? null,
     periodo_facturacion: periodo,
     nombre_archivo: filename,

@@ -34,6 +34,7 @@ function buildFormFromCliente(c) {
     tarifa_kwh: c.tarifa_kwh ?? '',
     potencia_contratada: c.potencia_contratada || '',
     alumbrado_publico: c.alumbrado_publico ?? '',
+    electrificacion_rural: c.electrificacion_rural ?? '',
   };
 }
 
@@ -58,6 +59,7 @@ function formHasChanges(cliente, form, tipo) {
     tarifaValuesDiffer(cliente.tarifa_kwh, form.tarifa_kwh),
     (cliente.potencia_contratada || '') !== (form.potencia_contratada || ''),
     String(cliente.alumbrado_publico ?? '') !== String(form.alumbrado_publico === '' ? '' : form.alumbrado_publico),
+    String(cliente.electrificacion_rural ?? '') !== String(form.electrificacion_rural === '' ? '' : form.electrificacion_rural),
   ];
   return checks.some(Boolean);
 }
@@ -66,6 +68,7 @@ function billingFieldsChanged(cliente, payload) {
   if (!cliente) return false;
   return tarifaValuesDiffer(cliente.tarifa_kwh, payload.tarifa_kwh)
     || String(cliente.alumbrado_publico ?? '') !== String(payload.alumbrado_publico ?? '')
+    || String(cliente.electrificacion_rural ?? '') !== String(payload.electrificacion_rural ?? '')
     || (cliente.potencia_contratada || '') !== (payload.potencia_contratada || '')
     || (cliente.empresa_distribuidora || '') !== (payload.empresa_distribuidora || '');
 }
@@ -138,6 +141,10 @@ export default function PerfilPage() {
       setError('El alumbrado público debe ser un número válido mayor o igual a 0.');
       return;
     }
+    if (form.electrificacion_rural !== '' && (Number.isNaN(Number(form.electrificacion_rural)) || Number(form.electrificacion_rural) < 0)) {
+      setError('La electrificación rural debe ser un número válido mayor o igual a 0.');
+      return;
+    }
 
     const docLimpio = (form.documento || '').replace(/\D/g, '');
     const docCambiado = documentoChanged(cliente, form);
@@ -172,6 +179,7 @@ export default function PerfilPage() {
         tarifa_kwh: form.tarifa_kwh === '' ? null : parseFloat(form.tarifa_kwh),
         potencia_contratada: form.potencia_contratada.trim() || null,
         alumbrado_publico: form.alumbrado_publico === '' ? null : parseFloat(form.alumbrado_publico),
+        electrificacion_rural: form.electrificacion_rural === '' ? null : parseFloat(form.electrificacion_rural),
       };
       if (tipoCliente === 'natural') {
         payload.apellido = form.apellido.trim();
@@ -280,6 +288,21 @@ export default function PerfilPage() {
                 disabled={extractingTarifa}
               />
             </div>
+            <div className="profile-field" style={{ flex: '0 0 auto' }}>
+              <label className="profile-field-label">Electrificación rural (S/)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-control"
+                style={{ width: '160px', padding: '8px 12px' }}
+                value={form.electrificacion_rural}
+                onChange={(e) => setField('electrificacion_rural', e.target.value)}
+                placeholder="Ej. 5.01"
+                disabled={extractingTarifa}
+                title="Aporte Ley N° 28749 del recibo"
+              />
+            </div>
           </div>
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
@@ -291,6 +314,7 @@ export default function PerfilPage() {
                   ...(datos.tarifa_kwh != null ? { tarifa_kwh: String(datos.tarifa_kwh) } : {}),
                   ...(datos.potencia_contratada ? { potencia_contratada: datos.potencia_contratada } : {}),
                   ...(datos.alumbrado_publico != null ? { alumbrado_publico: String(datos.alumbrado_publico) } : {}),
+                  ...(datos.electrificacion_rural != null ? { electrificacion_rural: String(datos.electrificacion_rural) } : {}),
                   ...(datos.empresa_distribuidora ? { empresa_distribuidora: datos.empresa_distribuidora } : {}),
                 }));
                 setTarifaDesdeRecibo(true);
@@ -311,14 +335,14 @@ export default function PerfilPage() {
                   lineHeight: 1.5,
                 }}
               >
-                <strong>Recibo detectado.</strong> Pulse «Guardar perfil» para aplicar tarifa y alumbrado.
+                <strong>Recibo detectado.</strong> Pulse «Guardar perfil» para aplicar tarifa, alumbrado y electrificación rural.
                 Luego vaya a Inicio y pulse «Ejecutar Cálculo» para actualizar el estimado del sistema.
               </div>
             )}
           </div>
 
           <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
-            <strong>Importante:</strong> La tarifa y el alumbrado público se usan en los cálculos y reportes PDF.
+            <strong>Importante:</strong> La tarifa, el alumbrado público y la electrificación rural (Ley N° 28749) se usan en los cálculos y reportes PDF.
             La potencia contratada aparece en el PDF del cliente.
             {form.tarifa_kwh === '' && (
               <> Si deja la tarifa vacía se usa la tarifa global (S/ 0.613).</>

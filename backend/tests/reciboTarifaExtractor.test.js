@@ -133,6 +133,22 @@ const extraSamples = [
     potencia: '1.20 KW',
     alumbrado: 12.35,
   },
+  {
+    name: 'Luz del Sur electrificacion rural',
+    text: 'Cargo Fijo Mant. y Reposición de Conexión Alumbrado Público Interés Compensatorio SUBTOTAL IGV Electrificación Rural (Ley N° 28749) Interés Moratorio TOTAL DEL MES 2.26 1.68 75.60 28.06 3 016.96 543.05 52.21 3.13 3 615.35',
+    tarifa: null,
+    potencia: null,
+    alumbrado: 75.6,
+    electrificacion: 52.21,
+  },
+  {
+    name: 'PLUZ aporte ley 28749',
+    text: '417.09 1.91 28.00 451.03 81.19 532.22 7.29 SUBTOTAL Mes Actual Cargo Fijo Interés Compensatorio Alumbrado Público Reposic. y Mant. de Conex Aporte Ley N° 28749 I.G.V. Cargo por Energía TOTAL Mes Actual',
+    tarifa: null,
+    potencia: null,
+    alumbrado: 28,
+    electrificacion: 7.29,
+  },
 ];
 
 let extraPassed = 0;
@@ -143,6 +159,9 @@ for (const sample of extraSamples) {
   }
   assert.strictEqual(result.potencia_contratada, sample.potencia, `${sample.name} potencia`);
   assert.strictEqual(result.alumbrado_publico, sample.alumbrado, `${sample.name} alumbrado`);
+  if (sample.electrificacion != null) {
+    assert.strictEqual(result.electrificacion_rural, sample.electrificacion, `${sample.name} electrificacion`);
+  }
   extraPassed += 1;
 }
 

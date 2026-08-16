@@ -33,6 +33,7 @@ const Cliente = sequelize.define(
     },
     potencia_contratada: { type: DataTypes.STRING(20), defaultValue: '10 KW' },
     alumbrado_publico: { type: DataTypes.DECIMAL(10, 2), allowNull: true },
+    electrificacion_rural: { type: DataTypes.DECIMAL(10, 2), allowNull: true },
     medidor: { type: DataTypes.STRING(50), defaultValue: '3φ - 3 hilos' },
     activo: { type: DataTypes.BOOLEAN, defaultValue: true },
     notas: { type: DataTypes.TEXT, allowNull: true },

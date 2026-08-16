@@ -31,7 +31,7 @@ async function resolveTarifa(clienteId) {
 
 async function applyConfigTarifa(config, clienteId) {
   const cliente = await Cliente.findByPk(clienteId, {
-    attributes: ['id', 'tarifa_kwh', 'alumbrado_publico'],
+    attributes: ['id', 'tarifa_kwh', 'alumbrado_publico', 'electrificacion_rural'],
   });
   const tarifa = resolveTarifaFromCliente(cliente, config);
   config.precioKwh = tarifa.precioKwh;
@@ -41,6 +41,14 @@ async function applyConfigTarifa(config, clienteId) {
     const parsed = parseFloat(alumbradoCliente);
     if (Number.isFinite(parsed) && parsed >= 0) {
       config.alumbradoPublico = parsed;
+    }
+  }
+
+  const electrificacionCliente = cliente?.electrificacion_rural;
+  if (electrificacionCliente != null && electrificacionCliente !== '') {
+    const parsed = parseFloat(electrificacionCliente);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      config.electrificacionRural = parsed;
     }
   }
 

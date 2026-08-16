@@ -21,6 +21,11 @@ const MIGRATIONS = [
     sql: 'ALTER TABLE clientes ADD COLUMN alumbrado_publico DECIMAL(10,2) NULL AFTER potencia_contratada',
   },
   {
+    table: 'clientes',
+    column: 'electrificacion_rural',
+    sql: 'ALTER TABLE clientes ADD COLUMN electrificacion_rural DECIMAL(10,2) NULL AFTER alumbrado_publico',
+  },
+  {
     table: 'calculos',
     column: 'origen',
     sql: "ALTER TABLE calculos ADD COLUMN origen ENUM('calculo','recibo') NOT NULL DEFAULT 'calculo' AFTER factura_total_mes",

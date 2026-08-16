@@ -45,6 +45,8 @@ const MIN_TARIFA = 0.05;
 const MAX_TARIFA = 3.5;
 const MIN_ALUMBRADO = 0.01;
 const MAX_ALUMBRADO = 500;
+const MIN_ELECTRIFICACION = 0.01;
+const MAX_ELECTRIFICACION = 500;
 const MIN_POTENCIA_KW = 0.1;
 const MAX_POTENCIA_KW = 100;
 
@@ -78,6 +80,25 @@ const ALUMBRADO_PATTERNS = [
   },
 ];
 
+const ELECTRIFICACION_PATTERNS = [
+  {
+    id: 'electrificacion_rural_ley',
+    re: /Electrificaci[oó]n\s+Rural\s*\(\s*Ley\s+N[°º]?\s*28749\s*\)\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'aporte_ley_28749',
+    re: /Aporte\s+Ley\s+N[°º]?\s*28749\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'electrificacion_rural_label',
+    re: /Electrificaci[oó]n\s+Rural\s*:?\s*([\d.,]+)/gi,
+  },
+  {
+    id: 'aporte_ley_28749_espaciado',
+    re: /Aporte\s+Ley\s+N[°º]?\s*28749[^\d]{0,24}([\d.,]+)/gi,
+  },
+];
+
 function parseDecimalNumber(raw, { min, max, decimals = 4 } = {}) {
   if (raw == null) return null;
   let s = String(raw).trim().replace(/\s/g, '');
@@ -101,6 +122,10 @@ function parseTarifaNumber(raw) {
 
 function parseAlumbradoNumber(raw) {
   return parseDecimalNumber(raw, { min: MIN_ALUMBRADO, max: MAX_ALUMBRADO, decimals: 2 });
+}
+
+function parseElectrificacionNumber(raw) {
+  return parseDecimalNumber(raw, { min: MIN_ELECTRIFICACION, max: MAX_ELECTRIFICACION, decimals: 2 });
 }
 
 function parsePotenciaKw(raw) {
@@ -176,8 +201,9 @@ function extractPotenciaContratadaFromText(source) {
 }
 
 function collectDecimalAmounts(text) {
-  return [...String(text).matchAll(/(\d{1,4}[.,]\d{2})/g)]
-    .map((m) => parseAlumbradoNumber(m[1]))
+  const normalized = String(text).replace(/(\d{1,3})\s(\d{3}[.,]\d{2})/g, '$1$2');
+  return [...normalized.matchAll(/(\d{1,4}[.,]\d{2})/g)]
+    .map((m) => parseDecimalNumber(m[1], { min: 0.01, max: 50000, decimals: 2 }))
     .filter((n) => n != null);
 }
 
@@ -251,6 +277,70 @@ function extractAlumbradoPublicoFromText(source) {
   }
 
   return { alumbrado_publico: null, metodo: null };
+}
+
+/** Luz del Sur: tras SUBTOTAL vienen IGV, Electrificación Rural (Ley N° 28749), moratorio y total. */
+function extractElectrificacionLuzDelSurLayout(source) {
+  if (!/Electrificaci[oó]n\s+Rural\s*\(\s*Ley\s+N[°º]?\s*28749\s*\)/i.test(source)) return null;
+  if (source.search(/SUBTOTAL\s+IGV/i) < 0) return null;
+
+  const numbersStart = source.search(/TOTAL\s+DEL\s+MES/i);
+  if (numbersStart < 0) return null;
+  const numbers = collectDecimalAmounts(source.slice(numbersStart, numbersStart + 280))
+    .filter((n) => n >= MIN_ELECTRIFICACION);
+
+  let subtotalIdx = -1;
+  for (let i = 0; i < numbers.length; i += 1) {
+    if (numbers[i] >= 500) {
+      subtotalIdx = i;
+      break;
+    }
+  }
+  if (subtotalIdx < 0) return null;
+
+  const electIdx = subtotalIdx + 2;
+  const candidate = numbers[electIdx];
+  if (candidate >= MIN_ELECTRIFICACION && candidate <= MAX_ELECTRIFICACION) return candidate;
+  return null;
+}
+
+/** PLUZ: «Aporte Ley N° 28749» — en columna invertida suele ser el último importe antes del SUBTOTAL. */
+function extractElectrificacionPluzLayout(source) {
+  const endIdx = source.search(/SUBTOTAL\s+Mes\s+Actual/i);
+  if (endIdx < 0) return null;
+
+  const after = source.slice(endIdx, endIdx + 450);
+  if (!/Aporte\s+Ley\s+N[°º]?\s*28749|Electrificaci[oó]n\s+Rural/i.test(after)) return null;
+
+  const before = source.slice(Math.max(0, endIdx - 500), endIdx);
+  const numbers = collectDecimalAmounts(before).filter((n) => n <= 10000);
+  if (!numbers.length) return null;
+
+  for (let i = numbers.length - 1; i >= 0; i -= 1) {
+    const n = numbers[i];
+    if (n >= MIN_ELECTRIFICACION && n <= 100) return n;
+  }
+
+  return null;
+}
+
+function extractElectrificacionRuralFromText(source) {
+  const direct = matchFirstPattern(source, ELECTRIFICACION_PATTERNS, parseElectrificacionNumber);
+  if (direct.value != null) {
+    return { electrificacion_rural: direct.value, metodo: direct.metodo };
+  }
+
+  const fromLds = extractElectrificacionLuzDelSurLayout(source);
+  if (fromLds != null) {
+    return { electrificacion_rural: fromLds, metodo: 'electrificacion_columna_luz_sur' };
+  }
+
+  const fromPluz = extractElectrificacionPluzLayout(source);
+  if (fromPluz != null) {
+    return { electrificacion_rural: fromPluz, metodo: 'electrificacion_columna_pluz' };
+  }
+
+  return { electrificacion_rural: null, metodo: null };
 }
 
 const MIN_TOTAL_PAGAR = 10;
@@ -440,6 +530,7 @@ function buildReciboMessage({
   tarifa_kwh,
   potencia_contratada,
   alumbrado_publico,
+  electrificacion_rural,
   empresa_distribuidora,
   total_a_pagar,
   consumo_kwh,
@@ -450,6 +541,9 @@ function buildReciboMessage({
   if (tarifa_kwh != null) parts.push(`Tarifa: S/ ${tarifa_kwh.toFixed(4)}/kWh`);
   if (potencia_contratada) parts.push(`Potencia: ${potencia_contratada}`);
   if (alumbrado_publico != null) parts.push(`Alumbrado público: S/ ${alumbrado_publico.toFixed(2)}`);
+  if (electrificacion_rural != null) {
+    parts.push(`Electrificación rural: S/ ${electrificacion_rural.toFixed(2)}`);
+  }
   if (total_a_pagar != null) parts.push(`Total a pagar: S/ ${total_a_pagar.toFixed(2)}`);
   if (!parts.length) {
     return 'No se encontraron datos del recibo. Verifique que sea un PDF con texto o una foto nítida.';
@@ -517,6 +611,7 @@ function extractDatosReciboFromText(text) {
       tarifa_kwh: null,
       potencia_contratada: null,
       alumbrado_publico: null,
+      electrificacion_rural: null,
       empresa_distribuidora: null,
       total_a_pagar: null,
       periodo_facturacion: null,
@@ -552,6 +647,7 @@ function extractDatosReciboFromText(text) {
 
   const { potencia_contratada, metodo: potenciaMetodo } = extractPotenciaContratadaFromText(source);
   const { alumbrado_publico, metodo: alumbradoMetodo } = extractAlumbradoPublicoFromText(source);
+  const { electrificacion_rural, metodo: electrificacionMetodo } = extractElectrificacionRuralFromText(source);
   const { empresa_distribuidora, metodo: distribuidoraMetodo } = extractEmpresaDistribuidoraFromText(source);
   const { total_a_pagar, metodo: totalMetodo } = extractTotalAPagarFromText(source);
   const periodo_facturacion = extractPeriodoFacturacionFromText(source);
@@ -561,18 +657,21 @@ function extractDatosReciboFromText(text) {
     tarifa_kwh,
     potencia_contratada,
     alumbrado_publico,
+    electrificacion_rural,
     empresa_distribuidora,
     total_a_pagar,
     consumo_kwh,
   });
 
   if (tarifa_kwh == null) {
-    const hasPartial = potencia_contratada || alumbrado_publico != null || empresa_distribuidora
+    const hasPartial = potencia_contratada || alumbrado_publico != null || electrificacion_rural != null
+      || empresa_distribuidora
       || total_a_pagar != null || consumo_kwh != null;
     return {
       tarifa_kwh: null,
       potencia_contratada,
       alumbrado_publico,
+      electrificacion_rural,
       empresa_distribuidora,
       total_a_pagar,
       periodo_facturacion,
@@ -582,6 +681,7 @@ function extractDatosReciboFromText(text) {
         tarifa: null,
         potencia: potenciaMetodo,
         alumbrado: alumbradoMetodo,
+        electrificacion: electrificacionMetodo,
         distribuidora: distribuidoraMetodo,
         total: totalMetodo,
         consumo: consumoMetodo,
@@ -596,6 +696,7 @@ function extractDatosReciboFromText(text) {
     tarifa_kwh,
     potencia_contratada,
     alumbrado_publico,
+    electrificacion_rural,
     empresa_distribuidora,
     total_a_pagar,
     periodo_facturacion,
@@ -605,6 +706,7 @@ function extractDatosReciboFromText(text) {
       tarifa: tarifaMetodo,
       potencia: potenciaMetodo,
       alumbrado: alumbradoMetodo,
+      electrificacion: electrificacionMetodo,
       distribuidora: distribuidoraMetodo,
       total: totalMetodo,
       consumo: consumoMetodo,
@@ -621,11 +723,14 @@ module.exports = {
   extractConsumoKwhFromText,
   parseTarifaNumber,
   parseAlumbradoNumber,
+  parseElectrificacionNumber,
   parsePotenciaKw,
   parseTotalAPagar,
   parseConsumoKwh,
   formatPotenciaContratada,
+  extractElectrificacionRuralFromText,
   TARIFA_PATTERNS,
   POTENCIA_PATTERNS,
   ALUMBRADO_PATTERNS,
+  ELECTRIFICACION_PATTERNS,
 };

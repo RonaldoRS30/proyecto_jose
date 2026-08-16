@@ -21,7 +21,7 @@ const rowNumber = (page, index) => (page - 1) * PAGE_SIZE + index + 1;
 const emptyForm = {
   nombre: '', apellido: '', documento: '', email: '', telefono: '',
   direccion: '', empresa_distribuidora: 'Luz del Sur', tarifa: 'BT5B residencial',
-  potencia_contratada: '10 KW', alumbrado_publico: '', medidor: '3φ - 3 hilos', notas: '',
+  potencia_contratada: '10 KW', alumbrado_publico: '', electrificacion_rural: '', medidor: '3φ - 3 hilos', notas: '',
   tipo_cliente: 'natural',
 };
 
@@ -551,6 +551,7 @@ export default function ClientesPage() {
                     ...(datos.tarifa_kwh != null ? { tarifa_kwh: datos.tarifa_kwh } : {}),
                     ...(datos.potencia_contratada ? { potencia_contratada: datos.potencia_contratada } : {}),
                     ...(datos.alumbrado_publico != null ? { alumbrado_publico: datos.alumbrado_publico } : {}),
+                    ...(datos.electrificacion_rural != null ? { electrificacion_rural: datos.electrificacion_rural } : {}),
                     ...(datos.empresa_distribuidora ? { empresa_distribuidora: datos.empresa_distribuidora } : {}),
                   }));
                   setTarifaDesdeRecibo(true);
@@ -630,6 +631,24 @@ export default function ClientesPage() {
                 disabled={extractingTarifa}
               />
             </div>
+            <div className="form-group">
+              <label>Electrificación rural (S/)</label>
+              <input
+                className="form-control"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.electrificacion_rural ?? ''}
+                onChange={(e) => setForm({
+                  ...form,
+                  electrificacion_rural: e.target.value === '' ? '' : parseFloat(e.target.value),
+                })}
+                placeholder="Ej. 5.01 (Ley N° 28749)"
+                disabled={extractingTarifa}
+              />
+            </div>
+          </div>
+          <div className="form-row">
             <div className="form-group">
               <label>Dirección</label>
               <input

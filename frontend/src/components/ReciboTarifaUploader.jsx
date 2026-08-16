@@ -53,6 +53,7 @@ export default function ReciboTarifaUploader({
         if (
           datos.potencia_contratada
           || datos.alumbrado_publico != null
+          || datos.electrificacion_rural != null
           || datos.empresa_distribuidora
           || datos.total_a_pagar != null
         ) {
@@ -154,7 +155,7 @@ export default function ReciboTarifaUploader({
         </div>
       )}
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
-        Extrae empresa distribuidora, tarifa (S/kWh), potencia, alumbrado y total a pagar del recibo.
+        Extrae empresa distribuidora, tarifa (S/kWh), potencia, alumbrado, electrificación rural (Ley N° 28749) y total a pagar del recibo.
         El total se guarda en su historial como referencia mensual.
       </small>
       {message && (

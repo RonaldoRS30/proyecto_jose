@@ -22,6 +22,16 @@ function parseOptionalAlumbrado(raw) {
   return parsed;
 }
 
+function parseOptionalElectrificacion(raw) {
+  if (raw.electrificacion_rural === undefined) return undefined;
+  if (raw.electrificacion_rural === null || raw.electrificacion_rural === '') return null;
+  const parsed = parseFloat(raw.electrificacion_rural);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new AppError('La electrificación rural debe ser un número válido mayor o igual a 0', 400);
+  }
+  return parsed;
+}
+
 function buildCommonFields(raw, tarifaKwh) {
   const payload = {
     ...raw,
@@ -37,6 +47,11 @@ function buildCommonFields(raw, tarifaKwh) {
   const alumbradoPublico = parseOptionalAlumbrado(raw);
   if (alumbradoPublico !== undefined) {
     payload.alumbrado_publico = alumbradoPublico;
+  }
+
+  const electrificacionRural = parseOptionalElectrificacion(raw);
+  if (electrificacionRural !== undefined) {
+    payload.electrificacion_rural = electrificacionRural;
   }
 
   return payload;
