@@ -62,13 +62,22 @@ function formHasChanges(cliente, form, tipo) {
   return checks.some(Boolean);
 }
 
+function billingFieldsChanged(cliente, payload) {
+  if (!cliente) return false;
+  return tarifaValuesDiffer(cliente.tarifa_kwh, payload.tarifa_kwh)
+    || String(cliente.alumbrado_publico ?? '') !== String(payload.alumbrado_publico ?? '')
+    || (cliente.potencia_contratada || '') !== (payload.potencia_contratada || '')
+    || (cliente.empresa_distribuidora || '') !== (payload.empresa_distribuidora || '');
+}
+
 export default function PerfilPage() {
-  const { refreshPreview, refreshCalculos } = useCalculo();
+  const { refreshPreview, refreshCalculos, refreshAll, ejecutarCalculo } = useCalculo();
   const [cliente, setCliente] = useState(null);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [calculoAutoActualizado, setCalculoAutoActualizado] = useState(false);
   const [error, setError] = useState('');
   const [extractingTarifa, setExtractingTarifa] = useState(false);
   const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
@@ -149,6 +158,7 @@ export default function PerfilPage() {
 
     setSaving(true);
     setSaved(false);
+    setCalculoAutoActualizado(false);
     setError('');
     try {
       const payload = {
@@ -173,14 +183,25 @@ export default function PerfilPage() {
       }
 
       const { data } = await updateMiPerfil(payload);
+      const billingChanged = billingFieldsChanged(cliente, payload);
       setCliente(data.data);
       setForm(buildFormFromCliente(data.data));
       setCodigoAcceso('');
       setCodigoAccesoConfirm('');
       setTarifaDesdeRecibo(false);
-      await Promise.all([refreshPreview(), refreshCalculos()]);
+      const previewData = await refreshPreview();
+      const equipos = previewData?.resumenGeneral?.cantidadEquipos ?? 0;
+      if (billingChanged && equipos > 0) {
+        await ejecutarCalculo();
+        setCalculoAutoActualizado(true);
+      } else {
+        await refreshCalculos();
+      }
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => {
+        setSaved(false);
+        setCalculoAutoActualizado(false);
+      }, 5000);
     } catch (e) {
       setError(e.response?.data?.message || 'Error al guardar el perfil');
     } finally {
@@ -263,7 +284,7 @@ export default function PerfilPage() {
 
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
               <ReciboTarifaUploader
-                onHistorialRegistered={() => refreshCalculos()}
+                onHistorialRegistered={() => refreshAll()}
                 onDatosDetected={(datos) => {
                 setForm((prev) => ({
                   ...prev,
@@ -276,6 +297,24 @@ export default function PerfilPage() {
               }}
               onExtractingChange={setExtractingTarifa}
             />
+            {tarifaDesdeRecibo && hasChanges && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  color: '#fbbf24',
+                  fontSize: '0.8rem',
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>Recibo detectado.</strong> Pulse «Guardar perfil» para aplicar tarifa y alumbrado.
+                Luego vaya a Inicio y pulse «Ejecutar Cálculo» para actualizar el estimado del sistema.
+              </div>
+            )}
           </div>
 
           <div style={{ marginTop: '12px', fontSize: '12px', color: '#718096', lineHeight: '1.5', background: 'rgba(225, 29, 72, 0.05)', padding: '10px 12px', borderRadius: '6px' }}>
@@ -508,7 +547,7 @@ export default function PerfilPage() {
           ) : extractingTarifa ? (
             <><Loader2 size={18} className="spin" /> Analizando recibo...</>
           ) : saved ? (
-            <><Check size={18} /> Perfil guardado</>
+            <><Check size={18} /> {calculoAutoActualizado ? 'Perfil y cálculo actualizados' : 'Perfil guardado'}</>
           ) : (
             <><Save size={18} /> Guardar perfil</>
           )}

@@ -1,6 +1,14 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
+import {
+  hasCambiosPendientes,
+  isCalculoSincronizado,
+  isSoloConfigFacturacionPendiente,
+  numDiff,
+  previewPrecioKwh,
+} from '../utils/calculoSync';
+import { isReciboRegistro } from '../utils/calculoRegistro';
 import { getCalculoPreview, ejecutarCalculo, getCalculos } from '../services/api';
 
 const CalculoContext = createContext(null);
@@ -31,7 +39,8 @@ export function CalculoProvider({ children }) {
     try {
       const { data } = await getCalculos({ page: 1, limit: 10 });
       const rows = data.data ?? [];
-      const latestCalculo = rows.find((c) => c.origen !== 'recibo') ?? rows[0] ?? null;
+      // Solo cálculos estimados del sistema — los recibos PDF son referencia aparte.
+      const latestCalculo = rows.find((c) => !isReciboRegistro(c)) ?? null;
       setUltimoCalculo(latestCalculo);
       return latestCalculo;
     } catch (e) {
@@ -66,24 +75,26 @@ export function CalculoProvider({ children }) {
     refreshAll();
   }, [refreshAll]);
 
-  const hasCambiosSinGuardar = useMemo(() => {
-    if (!preview?.resumenGeneral) return false;
-    if (!ultimoCalculo) {
-      return (preview.resumenGeneral.cantidadEquipos ?? 0) > 0;
-    }
-    const diff = (a, b) => Math.abs(parseFloat(a || 0) - parseFloat(b || 0)) > 0.001;
-    return (
-      diff(ultimoCalculo.consumo_mes_total, preview.resumenGeneral.consumoMes)
-      || diff(ultimoCalculo.gasto_mensual_total, preview.resumenGeneral.gastoMensual)
-      || diff(ultimoCalculo.factura_total_mes, preview.factura?.totalMes)
-      || diff(ultimoCalculo.precio_kwh, preview.precioKwh)
-    );
-  }, [preview, ultimoCalculo]);
+  const hasCambiosSinGuardar = useMemo(
+    () => hasCambiosPendientes(preview, ultimoCalculo),
+    [preview, ultimoCalculo],
+  );
+
+  const calculoSincronizado = useMemo(
+    () => isCalculoSincronizado(preview, ultimoCalculo),
+    [preview, ultimoCalculo],
+  );
 
   const tarifaCambiada = useMemo(() => {
-    if (!preview?.precioKwh || !ultimoCalculo?.precio_kwh) return false;
-    return Math.abs(parseFloat(preview.precioKwh) - parseFloat(ultimoCalculo.precio_kwh)) > 0.0001;
+    const previewTarifa = previewPrecioKwh(preview);
+    if (!previewTarifa || !ultimoCalculo?.precio_kwh) return false;
+    return numDiff(ultimoCalculo.precio_kwh, previewTarifa);
   }, [preview, ultimoCalculo]);
+
+  const configFacturacionCambiada = useMemo(
+    () => isSoloConfigFacturacionPendiente(preview, ultimoCalculo),
+    [preview, ultimoCalculo],
+  );
 
   const hasEquipos = (preview?.resumenGeneral?.cantidadEquipos ?? 0) > 0;
 
@@ -98,7 +109,9 @@ export function CalculoProvider({ children }) {
     calculating,
     hasEquipos,
     hasCambiosSinGuardar,
+    calculoSincronizado,
     tarifaCambiada,
+    configFacturacionCambiada,
     refreshPreview,
     refreshCalculos,
     refreshAll,
@@ -113,7 +126,7 @@ export function CalculoProvider({ children }) {
     excedentesPotencia: preview?.excedentesPotencia ?? [],
   }), [
     preview, ultimoCalculo, loading, previewLoading, calculosLoading, calculating, hasEquipos, hasCambiosSinGuardar,
-    tarifaCambiada, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
+    tarifaCambiada, configFacturacionCambiada, calculoSincronizado, refreshPreview, refreshCalculos, refreshAll, ejecutarCalculoGuardado,
   ]);
 
   return (

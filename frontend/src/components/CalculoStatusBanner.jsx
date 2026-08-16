@@ -3,6 +3,7 @@ import { Calculator, CheckCircle, AlertTriangle, Plug } from 'lucide-react';
 import { useCalculo } from '../contexts/CalculoContext';
 import { formatDate, formatNumber, formatCurrency } from '../utils/helpers';
 import { buildFacturaFromCalculo } from '../utils/factura';
+import { isReciboRegistro } from '../utils/calculoRegistro';
 
 export default function CalculoStatusBanner() {
   const location = useLocation();
@@ -12,6 +13,7 @@ export default function CalculoStatusBanner() {
     hasEquipos,
     hasCambiosSinGuardar,
     tarifaCambiada,
+    configFacturacionCambiada,
     calculating,
     loading,
   } = useCalculo();
@@ -26,12 +28,20 @@ export default function CalculoStatusBanner() {
         <AlertTriangle size={18} />
         <div className="calculo-status-text">
           <strong>
-            {tarifaCambiada ? 'Tarifa kWh actualizada — gastos recalculados.' : 'Hay cambios sin guardar en sus equipos.'}
+            {tarifaCambiada || configFacturacionCambiada
+              ? 'Tarifa o facturación actualizada — falta guardar el cálculo estimado.'
+              : !ultimoCalculo || isReciboRegistro(ultimoCalculo)
+                ? 'Tiene equipos registrados pero aún no guardó un cálculo estimado.'
+                : 'Hay cambios sin guardar en sus equipos.'}
           </strong>
           <span>
             Vista actual: {formatNumber(resumenGeneral.consumoMes ?? 0)} kWh/mes ·{' '}
             {formatCurrency(resumenGeneral.gastoMensual ?? 0)}/mes.
-            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Cálculo» para guardar en historial y reportes.'}
+            {' '}El recibo PDF solo se guarda en Historial; para actualizar el estimado pulse «Ejecutar Cálculo».
+            {(tarifaCambiada || configFacturacionCambiada) && (
+              <> Si subió un recibo en Mi Perfil, guarde primero el perfil para aplicar tarifa y alumbrado.</>
+            )}
+            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Cálculo».'}
           </span>
         </div>
         {!isInicio && (
@@ -43,15 +53,15 @@ export default function CalculoStatusBanner() {
     );
   }
 
-  if (!ultimoCalculo) {
+  if (!ultimoCalculo || isReciboRegistro(ultimoCalculo)) {
     return (
       <div className="calculo-status-banner calculo-status-empty">
         <AlertTriangle size={18} />
         <div className="calculo-status-text">
-          <strong>{hasEquipos ? 'Sin cálculo guardado.' : 'Sin equipos registrados.'}</strong>
+          <strong>{hasEquipos ? 'Sin cálculo estimado guardado.' : 'Sin equipos registrados.'}</strong>
           <span>
             {hasEquipos
-              ? 'Ejecute el cálculo desde Inicio para habilitar historial y reportes PDF.'
+              ? 'Subir un recibo PDF solo registra el total real en Historial. Para reportes y comparaciones, ejecute el cálculo desde Inicio.'
               : 'Registre electrodomésticos, consumo fantasma o iluminación para comenzar.'}
           </span>
         </div>

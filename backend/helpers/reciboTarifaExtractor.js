@@ -258,6 +258,41 @@ const MAX_TOTAL_PAGAR = 50000;
 const MIN_CONSUMO_KWH = 1;
 const MAX_CONSUMO_KWH = 50000;
 
+/** Captura montos con miles separados por espacio: "6 866.20", "12 345.67" o "866.20". */
+const AMOUNT_CAPTURE = String.raw`(\d{1,3}\s\d{3}(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)`;
+
+function findLastValidTotalMatch(source, patternSource) {
+  const re = new RegExp(patternSource, 'gi');
+  let match;
+  let last = null;
+  while ((match = re.exec(source)) !== null) {
+    const value = parseTotalAPagar(match[1]);
+    if (value != null) last = value;
+  }
+  return last;
+}
+
+function extractTotalBeforeEmision(normalized) {
+  const idx = normalized.search(/Fecha\s+de\s+Emisi[oó]n/i);
+  if (idx < 0) return null;
+
+  const chunk = normalized.slice(Math.max(0, idx - 80), idx).trim();
+
+  const spacedAtEnd = chunk.match(/(\d{1,3}\s\d{3}[.,]\d{2})\s*$/);
+  if (spacedAtEnd) {
+    const value = parseTotalAPagar(spacedAtEnd[1]);
+    if (value != null) return value;
+  }
+
+  const decimalAmounts = [...chunk.matchAll(/(\d+[.,]\d{2})/g)];
+  for (let i = decimalAmounts.length - 1; i >= 0; i -= 1) {
+    const value = parseTotalAPagar(decimalAmounts[i][1]);
+    if (value != null) return value;
+  }
+
+  return null;
+}
+
 function parseConsumoKwh(raw) {
   return parseDecimalNumber(raw, { min: MIN_CONSUMO_KWH, max: MAX_CONSUMO_KWH, decimals: 2 });
 }
@@ -309,24 +344,20 @@ function extractTotalAPagarFromText(source) {
     }
   }
 
-  const bannerRe = /TOTAL\s+A\s+PAGAR\s+S\/\s*([\d.,]+)/gi;
-  const banner = bannerRe.exec(normalized);
-  if (banner) {
-    const value = parseTotalAPagar(banner[1]);
-    if (value != null) {
-      return { total_a_pagar: value, metodo: 'total_banner' };
-    }
+  const bannerValue = findLastValidTotalMatch(
+    normalized,
+    `TOTAL\\s+A\\s+PAGAR\\s+S\\/\\s*${AMOUNT_CAPTURE}`,
+  );
+  if (bannerValue != null) {
+    return { total_a_pagar: bannerValue, metodo: 'total_banner' };
   }
 
-  const beforeEmision = normalized.match(/([\d.,]+)\s+Fecha\s+de\s+Emisi[oó]n/i);
-  if (beforeEmision) {
-    const value = parseTotalAPagar(beforeEmision[1]);
-    if (value != null) {
-      return { total_a_pagar: value, metodo: 'total_antes_emision' };
-    }
+  const emisionValue = extractTotalBeforeEmision(normalized);
+  if (emisionValue != null) {
+    return { total_a_pagar: emisionValue, metodo: 'total_antes_emision' };
   }
 
-  const totalDelMes = normalized.match(/TOTAL\s+DEL\s+MES\s+([\d.,]+)/i);
+  const totalDelMes = normalized.match(new RegExp(`TOTAL\\s+DEL\\s+MES\\s+${AMOUNT_CAPTURE}`, 'i'));
   if (totalDelMes) {
     const value = parseTotalAPagar(totalDelMes[1]);
     if (value != null) {
@@ -334,7 +365,7 @@ function extractTotalAPagarFromText(source) {
     }
   }
 
-  const totalMesActual = normalized.match(/TOTAL\s+Mes\s+Actual\s+([\d.,]+)/i);
+  const totalMesActual = normalized.match(new RegExp(`TOTAL\\s+Mes\\s+Actual\\s+${AMOUNT_CAPTURE}`, 'i'));
   if (totalMesActual) {
     const value = parseTotalAPagar(totalMesActual[1]);
     if (value != null) {

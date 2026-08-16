@@ -208,6 +208,16 @@ const totalSamples = [
     total: 361.1,
   },
   {
+    name: 'Luz del Sur miles con espacio antes emision',
+    text: 'LURIGANCHO-CHOSICA - LIMA 0001854 6 866.20 Fecha de Emisión:15-Jul-2026',
+    total: 6866.2,
+  },
+  {
+    name: 'Banner TOTAL A PAGAR con miles espaciados',
+    text: 'TOTAL A PAGAR S/ 6 866.20 Resumen de facturación',
+    total: 6866.2,
+  },
+  {
     name: 'TOTAL DEL MES fallback',
     text: 'Cargo Fijo SUBTOTAL 00 TOTAL DEL MES 361.05',
     total: 361.05,

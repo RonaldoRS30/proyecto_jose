@@ -17,6 +17,7 @@ export default function PageHeader({ title, subtitle, action, children }) {
             className="btn btn-primary page-header-action-desktop"
             onClick={action.onClick}
             disabled={action.disabled}
+            title={action.title}
           >
             {action.icon && <action.icon size={16} />}
             {action.loading && action.loadingLabel ? action.loadingLabel : action.label}
@@ -27,6 +28,7 @@ export default function PageHeader({ title, subtitle, action, children }) {
             onClick={action.onClick}
             disabled={action.disabled}
             aria-label={action.label}
+            title={action.title}
           >
             {action.icon && <action.icon size={16} />}
             {action.loading && action.loadingLabel ? action.loadingLabel : action.label}

@@ -2,11 +2,30 @@ const { calcularFacturaMensual, crearFacturaVacia, DEFAULT_TARIFF } = require('.
 const { resolveTarifaFromCliente } = require('./tarifaService');
 const { roundNum } = require('../utils/format');
 
+function parseResumenJson(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return value;
+}
+
+function normalizeCalculoPlain(calculo) {
+  const plain = calculo?.toJSON ? calculo.toJSON() : { ...calculo };
+  plain.resumen_json = parseResumenJson(plain.resumen_json);
+  return plain;
+}
+
 /**
  * Tarifa usada en el cálculo (precio del registro + cargos guardados o defaults).
  */
 function tariffFromCalculo(calculo) {
-  const stored = calculo.resumen_json?.factura || {};
+  const plain = normalizeCalculoPlain(calculo);
+  const stored = plain.resumen_json?.factura || {};
   return {
     precioKwh: parseFloat(calculo.precio_kwh) || DEFAULT_TARIFF.precioKwh,
     cargoFijo: stored.cargoFijo ?? DEFAULT_TARIFF.cargoFijo,
@@ -19,7 +38,7 @@ function tariffFromCalculo(calculo) {
 }
 
 function getCantidadEquiposCalculo(calculo) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  const plain = normalizeCalculoPlain(calculo);
   const fromResumen = plain.resumen_json?.resumenGeneral?.cantidadEquipos;
   if (fromResumen != null && fromResumen > 0) return fromResumen;
 
@@ -39,12 +58,12 @@ function getCantidadEquiposCalculo(calculo) {
  * Recalcula factura según Excel — no depende de resumen_json obsoleto.
  */
 function isReciboCalculo(calculo) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  const plain = normalizeCalculoPlain(calculo);
   return plain.origen === 'recibo' || plain.resumen_json?.origen === 'recibo';
 }
 
 function buildFacturaParaCalculo(calculo) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  const plain = normalizeCalculoPlain(calculo);
   if (isReciboCalculo(plain)) {
     const total = roundNum(
       parseFloat(plain.factura_total_mes ?? plain.resumen_json?.total_a_pagar ?? 0),
@@ -74,16 +93,17 @@ function buildFacturaParaCalculo(calculo) {
  */
 function enrichCalculo(calculo, options = {}) {
   const configMap = options.configMap || {};
-  const precioKwhActual = options.precioKwhActual ?? getPrecioKwhParaCalculo(calculo, configMap);
-  const plain = aplicarTarifaDinamica(calculo, precioKwhActual);
-  const factura = buildFacturaParaCalculo(plain);
+  const plain = normalizeCalculoPlain(calculo);
+  const precioKwhActual = options.precioKwhActual ?? getPrecioKwhParaCalculo(plain, configMap);
+  const withTarifa = aplicarTarifaDinamica(plain, precioKwhActual);
+  const factura = buildFacturaParaCalculo(withTarifa);
   const tarifa = resolveTarifaFromCliente(plain.cliente, configMap);
 
   return {
-    ...plain,
+    ...withTarifa,
     factura_total_mes: factura.totalMes,
     resumen_json: {
-      ...(plain.resumen_json || {}),
+      ...(withTarifa.resumen_json || {}),
       factura,
       precioKwh: precioKwhActual,
     },
@@ -118,7 +138,7 @@ function recalcTotalesGasto(totales, precioKwh) {
  * No modifica la base de datos; solo la respuesta API.
  */
 function aplicarTarifaDinamica(calculo, precioKwh) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : { ...calculo };
+  const plain = normalizeCalculoPlain(calculo);
   const storedPrecio = parseFloat(plain.precio_kwh);
   const p = parseFloat(precioKwh);
 
@@ -191,7 +211,7 @@ function aplicarTarifaDinamica(calculo, precioKwh) {
 }
 
 function getPrecioKwhParaCalculo(calculo, configMap = {}) {
-  const plain = calculo?.toJSON ? calculo.toJSON() : calculo;
+  const plain = normalizeCalculoPlain(calculo);
   if (plain.cliente) {
     return resolveTarifaFromCliente(plain.cliente, configMap).precioKwh;
   }
@@ -202,15 +222,16 @@ function getPrecioKwhParaCalculo(calculo, configMap = {}) {
  * Resumen general priorizando columnas del cálculo guardado.
  */
 function getResumenParaCalculo(calculo) {
-  const rg = calculo.resumen_json?.resumenGeneral || {};
+  const plain = normalizeCalculoPlain(calculo);
+  const rg = plain.resumen_json?.resumenGeneral || {};
   return {
-    consumoDia: calculo.consumo_dia_total ?? rg.consumoDia ?? 0,
-    consumoMes: calculo.consumo_mes_total ?? rg.consumoMes ?? 0,
-    consumoAnio: calculo.consumo_anio_total ?? rg.consumoAnio ?? 0,
-    gastoDiario: calculo.gasto_diario_total ?? rg.gastoDiario ?? 0,
-    gastoMensual: calculo.gasto_mensual_total ?? rg.gastoMensual ?? 0,
-    gastoAnual: calculo.gasto_anual_total ?? rg.gastoAnual ?? 0,
-    demandaTotal: calculo.demanda_total ?? rg.demandaTotal ?? 0,
+    consumoDia: plain.consumo_dia_total ?? rg.consumoDia ?? 0,
+    consumoMes: plain.consumo_mes_total ?? rg.consumoMes ?? 0,
+    consumoAnio: plain.consumo_anio_total ?? rg.consumoAnio ?? 0,
+    gastoDiario: plain.gasto_diario_total ?? rg.gastoDiario ?? 0,
+    gastoMensual: plain.gasto_mensual_total ?? rg.gastoMensual ?? 0,
+    gastoAnual: plain.gasto_anual_total ?? rg.gastoAnual ?? 0,
+    demandaTotal: plain.demanda_total ?? rg.demandaTotal ?? 0,
   };
 }
 
@@ -224,8 +245,9 @@ const MOD_LABELS = {
  * Totales por módulo desde resumen_json o agregando detalles.
  */
 function getTotalesPorModulo(calculo) {
-  const modulos = calculo.resumen_json?.modulos || {};
-  const detalles = calculo.detalles || [];
+  const plain = normalizeCalculoPlain(calculo);
+  const modulos = plain.resumen_json?.modulos || {};
+  const detalles = plain.detalles || [];
   const keys = ['aparato', 'fantasma', 'iluminacion'];
 
   return keys.map((key) => {
@@ -278,7 +300,8 @@ const FACTURA_AGG_KEYS = [
 ];
 
 function facturaFieldsFromCalculo(calculo) {
-  const f = calculo.resumen_json?.factura || buildFacturaParaCalculo(calculo);
+  const plain = normalizeCalculoPlain(calculo);
+  const f = plain.resumen_json?.factura || buildFacturaParaCalculo(plain);
   return {
     consumoKwh: f.consumoEnergiaKwh ?? 0,
     gastoEnergia: f.gastoEnergiaMensual ?? f.consumoEnergiaLinea ?? 0,

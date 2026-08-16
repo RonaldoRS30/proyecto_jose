@@ -14,6 +14,7 @@ import ExcelCalculoChartsBlock from '../../components/ExcelCalculoCharts';
 import {
   facturaFromPreview,
 } from '../../utils/excelChartData';
+import { isReciboRegistro } from '../../utils/calculoRegistro';
 import {
   ConsumoPorEquipoChart, ConsumoPorCategoriaChart, ConsumoMensualChart,
   GastoPorEquipoChart, GastoResumenChart,
@@ -71,6 +72,8 @@ export default function ClientDashboard() {
     ejecutarCalculo,
     hasEquipos,
     hasCambiosSinGuardar,
+    tarifaCambiada,
+    configFacturacionCambiada,
     resumenGeneral: rg,
     modulos,
     factura,
@@ -135,6 +138,11 @@ export default function ClientDashboard() {
   const handleCalcular = async () => {
     try {
       await ejecutarCalculo();
+      await alert({
+        title: 'Cálculo guardado',
+        message: 'El cálculo estimado se actualizó en su historial y reportes.',
+        variant: 'success',
+      });
     } catch (e) {
       await alert({
         title: 'Error al calcular',
@@ -260,9 +268,9 @@ export default function ClientDashboard() {
       <PageHeader
         title="Inicio"
         subtitle={
-          ultimoCalculo
-            ? `Último cálculo: ${formatDate(ultimoCalculo.created_at)}`
-            : 'Registre equipos y ejecute el cálculo para sincronizar el sistema'
+          ultimoCalculo && !isReciboRegistro(ultimoCalculo)
+            ? `Último cálculo estimado: ${formatDate(ultimoCalculo.created_at)}`
+            : 'Registre equipos y ejecute el cálculo estimado (el recibo PDF es solo referencia)'
         }
         action={{
           label: 'Ejecutar Cálculo',
@@ -271,6 +279,9 @@ export default function ClientDashboard() {
           disabled: calculating || !hasEquipos,
           loading: calculating,
           loadingLabel: 'Calculando...',
+          title: !hasEquipos
+            ? 'Registre al menos un equipo en Electrodomésticos, Iluminación o Consumo fantasma'
+            : undefined,
         }}
       />
 
@@ -288,7 +299,9 @@ export default function ClientDashboard() {
               </div>
               {hasCambiosSinGuardar && (
                 <span className="dashboard-status-chip dashboard-status-chip--warn">
-                  Cambios sin guardar — ejecute cálculo
+                  {configFacturacionCambiada || tarifaCambiada
+                    ? 'Tarifa/facturación cambió — ejecute cálculo'
+                    : 'Cambios sin guardar — ejecute cálculo'}
                 </span>
               )}
               <Link to="/cliente/perfil" className="dashboard-link-sm">Editar tarifa →</Link>

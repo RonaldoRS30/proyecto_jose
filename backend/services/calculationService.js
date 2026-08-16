@@ -45,12 +45,6 @@ const ejecutarCalculo = async (clienteId) => {
     resumen_json: { ...resultado, tarifa, origen: 'calculo' },
   });
 
-  const facturaFinal = buildFacturaParaCalculo(calculo);
-  await calculo.update({
-    factura_total_mes: facturaFinal.totalMes,
-    resumen_json: { ...resultado, factura: facturaFinal, tarifa, origen: 'calculo' },
-  });
-
   const detalles = resultado.dispositivos.map((d) => ({
     calculo_id: calculo.id,
     electrodomestico_id: d.id || null,
