@@ -74,6 +74,27 @@ export function labelUsoDiario(form, catalogEntry = null) {
   return 'Horas de uso por día';
 }
 
+/** Si el valor en horas equivale a minutos enteros y es menor a 1 h, mostrar modo minutos al editar. */
+export function shouldDefaultUsoEnMinutos(horas) {
+  const h = parseFloat(horas);
+  if (!Number.isFinite(h) || h <= 0 || h >= 1) return false;
+  const mins = Math.round(h * 60);
+  return mins > 0 && Math.abs(mins / 60 - h) < 0.0001;
+}
+
+export function horasToMinutosUso(horas) {
+  const h = parseFloat(horas);
+  if (!Number.isFinite(h) || h <= 0) return '';
+  const mins = Math.round(h * 60);
+  return mins > 0 ? String(mins) : '';
+}
+
+export function puedeUsarMinutosUsoDiario(form, catalogEntry = null) {
+  if (form?.eficiencia_energetica) return false;
+  if (usaCiclosDiariosLavadora(form, catalogEntry)) return false;
+  return true;
+}
+
 export const emptyEficienciaFields = {
   eficiencia_energetica: false,
   plantilla_eficiencia: null,

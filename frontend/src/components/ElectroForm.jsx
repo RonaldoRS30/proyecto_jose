@@ -11,6 +11,9 @@ import {
   resolveEficienciaConfig,
   labelUsoDiario,
   usaCiclosDiariosLavadora,
+  shouldDefaultUsoEnMinutos,
+  horasToMinutosUso,
+  puedeUsarMinutosUsoDiario,
 } from '../utils/eficienciaEnergetica';
 import { getFieldLabel, sanitizeMinutosInput } from '../utils/plantillasEficiencia';
 import { formatNumber } from '../utils/helpers';
@@ -23,6 +26,8 @@ export default function ElectroForm({
   const [presetKey, setPresetKey] = useState('');
   const [selectedConsejo, setSelectedConsejo] = useState('');
   const [isManual, setIsManual] = useState(false);
+  const [usarMinutosUsoDia, setUsarMinutosUsoDia] = useState(false);
+  const [minutosUsoDia, setMinutosUsoDia] = useState('');
   const { marcas, modelos } = useMarcaModeloCatalog(isOpen);
 
   const catalogEntry = useMemo(() => {
@@ -40,10 +45,16 @@ export default function ElectroForm({
   const eficienciaConfig = catalogEntry?.eficiencia_config || {};
   const potenciaFromUser = Boolean(plantillaMeta?.potenciaFromUser);
   const usoPorCiclos = eficienciaActiva && usaCiclosDiariosLavadora(form, catalogEntry);
-  const labelUsoDiarioField = labelUsoDiario(
-    { ...form, eficiencia_energetica: eficienciaActiva, plantilla_eficiencia: plantillaId },
+  const minutosUsoDisponible = puedeUsarMinutosUsoDiario(
+    { ...form, eficiencia_energetica: eficienciaActiva },
     catalogEntry,
   );
+  const labelUsoDiarioField = minutosUsoDisponible && usarMinutosUsoDia
+    ? 'Minutos de uso por día'
+    : labelUsoDiario(
+      { ...form, eficiencia_energetica: eficienciaActiva, plantilla_eficiencia: plantillaId },
+      catalogEntry,
+    );
 
   const consumoCiclosPreview = useMemo(() => {
     if (!usoPorCiclos) return null;
@@ -69,12 +80,21 @@ export default function ElectroForm({
     return horasFromMinutos(form.minutos_por_ciclo);
   }, [form.minutos_por_ciclo]);
 
+  const horasDesdeMinutosUsoPreview = useMemo(() => {
+    if (!usarMinutosUsoDia || !minutosUsoDia) return null;
+    return horasFromMinutos(minutosUsoDia);
+  }, [usarMinutosUsoDia, minutosUsoDia]);
+
   useEffect(() => {
-    if (isOpen) {
-      setPresetKey('');
-      setSelectedConsejo('');
-      setIsManual(!!editId);
-    }
+    if (!isOpen) return;
+    setPresetKey('');
+    setSelectedConsejo('');
+    setIsManual(!!editId);
+    const enMinutos = !form.eficiencia_energetica && shouldDefaultUsoEnMinutos(form.horas_uso_dia);
+    setUsarMinutosUsoDia(enMinutos);
+    setMinutosUsoDia(enMinutos ? horasToMinutosUso(form.horas_uso_dia) : '');
+    // Solo al abrir el modal (create/edit), no al sincronizar horas desde minutos
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editId]);
 
   useEffect(() => {
@@ -90,6 +110,20 @@ export default function ElectroForm({
     if (horas == null || String(form.horas_uso_dia) === String(horas)) return;
     setForm((prev) => ({ ...prev, horas_uso_dia: horas }));
   }, [eficienciaActiva, eficienciaConfig.minutos_como_horas_uso, form.minutos_por_ciclo, form.horas_uso_dia, setForm]);
+
+  useEffect(() => {
+    if (!minutosUsoDisponible || !usarMinutosUsoDia || !minutosUsoDia) return;
+    const horas = horasFromMinutos(minutosUsoDia);
+    if (horas == null || String(form.horas_uso_dia) === String(horas)) return;
+    setForm((prev) => ({ ...prev, horas_uso_dia: horas }));
+  }, [minutosUsoDisponible, usarMinutosUsoDia, minutosUsoDia, form.horas_uso_dia, setForm]);
+
+  useEffect(() => {
+    if (eficienciaActiva && usarMinutosUsoDia) {
+      setUsarMinutosUsoDia(false);
+      setMinutosUsoDia('');
+    }
+  }, [eficienciaActiva, usarMinutosUsoDia]);
 
   useEffect(() => {
     if (!eficienciaActiva || potenciaFromUser || potenciaCalculada == null) return;
@@ -126,6 +160,17 @@ export default function ElectroForm({
     setIsManual(true);
   };
 
+  const toggleMinutosUsoDia = (checked) => {
+    if (checked) {
+      const fromHoras = horasToMinutosUso(form.horas_uso_dia);
+      setMinutosUsoDia(fromHoras || minutosUsoDia || '');
+      setUsarMinutosUsoDia(true);
+      return;
+    }
+    setUsarMinutosUsoDia(false);
+    setMinutosUsoDia('');
+  };
+
   const toggleEficiencia = (checked) => {
     if (!checked) {
       setForm({
@@ -135,6 +180,8 @@ export default function ElectroForm({
       });
       return;
     }
+    setUsarMinutosUsoDia(false);
+    setMinutosUsoDia('');
     setForm({
       ...form,
       eficiencia_energetica: true,
@@ -374,18 +421,48 @@ export default function ElectroForm({
         </div>
         <div className="form-group">
           <label>{labelUsoDiarioField} *</label>
-          <input
-            className="form-control"
-            type="number"
-            min={usoPorCiclos ? '1' : '0.01'}
-            step={usoPorCiclos ? '1' : '0.5'}
-            value={form.horas_uso_dia}
-            onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })}
-            required
-            readOnly={horasUsoReadOnly}
-            placeholder={usoPorCiclos ? 'Ej. 1' : undefined}
-            title={horasUsoReadOnly ? 'Valor definido por la etiqueta de eficiencia energética' : undefined}
-          />
+          {minutosUsoDisponible && usarMinutosUsoDia ? (
+            <>
+              <input
+                className="form-control"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={minutosUsoDia}
+                onChange={(e) => setMinutosUsoDia(sanitizeMinutosInput(e.target.value))}
+                placeholder="Ej. 15"
+                required
+              />
+              {horasDesdeMinutosUsoPreview != null && (
+                <small className="form-hint">
+                  = {formatNumber(horasDesdeMinutosUsoPreview, 4)} horas por día
+                </small>
+              )}
+            </>
+          ) : (
+            <input
+              className="form-control"
+              type="number"
+              min={usoPorCiclos ? '1' : '0.01'}
+              step={usoPorCiclos ? '1' : '0.5'}
+              value={form.horas_uso_dia}
+              onChange={(e) => setForm({ ...form, horas_uso_dia: e.target.value })}
+              required
+              readOnly={horasUsoReadOnly}
+              placeholder={usoPorCiclos ? 'Ej. 1' : 'Ej. 0.5'}
+              title={horasUsoReadOnly ? 'Valor definido por la etiqueta de eficiencia energética' : undefined}
+            />
+          )}
+          {minutosUsoDisponible && (
+            <label className="checkbox-label eficiencia-checkbox" style={{ marginTop: '0.5rem' }}>
+              <input
+                type="checkbox"
+                checked={usarMinutosUsoDia}
+                onChange={(e) => toggleMinutosUsoDia(e.target.checked)}
+              />
+              <span>Ingresar uso diario en minutos (se convierte automáticamente a horas)</span>
+            </label>
+          )}
           {usoPorCiclos && (
             <small className="form-hint">
               Ciclos de lavado por día. Consumo/día ≈ cantidad × ciclos × kWh/ciclo

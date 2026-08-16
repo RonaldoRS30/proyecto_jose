@@ -41,9 +41,9 @@ export async function saveElectrodomestico({
     const horas = parseFloat(payload.horas_uso_dia);
     if (!Number.isFinite(horas) || horas <= 0) {
       await alert({
-        title: 'Horas de uso inválidas',
-        message: 'Las horas de uso por día deben ser mayores a 0.',
-        detail: 'Indique cuántas horas al día utiliza este equipo (por ejemplo: 0.5, 1, 2).',
+        title: 'Tiempo de uso inválido',
+        message: 'El tiempo de uso por día debe ser mayor a 0.',
+        detail: 'Indique horas (ej. 0.5, 1, 2) o active minutos e ingrese la duración diaria (ej. 15 min).',
         variant: 'warning',
         confirmLabel: 'Entendido',
       });
