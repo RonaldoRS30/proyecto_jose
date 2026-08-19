@@ -21,7 +21,7 @@ const rowNumber = (page, index) => (page - 1) * PAGE_SIZE + index + 1;
 
 const emptyForm = {
   nombre: '', apellido: '', documento: '', email: '', telefono: '',
-  direccion: '', empresa_distribuidora: 'Luz del Sur', tarifa: 'BT5B residencial',
+  direccion: '', empresa_distribuidora: 'LUZ DEL SUR', tarifa: 'BT5B residencial',
   potencia_contratada: '10 KW', alumbrado_publico: '', electrificacion_rural: '', medidor: '3φ - 3 hilos', notas: '',
   tipo_cliente: 'natural',
 };
@@ -546,7 +546,7 @@ export default function ClientesPage() {
                 value={form.empresa_distribuidora}
                 onChange={(val) => setForm({ ...form, empresa_distribuidora: val })}
                 options={[
-                  'Luz del Sur', 'PLUZ PERU', 'ELECTROCENTRO', 
+                  'LUZ DEL SUR', 'PLUZ PERU', 'ELECTROCENTRO', 
                   'HIDRANDINA', 'ENSA', 'ENOSA', 'ELECTRO DUNAS', 'SEAL', 
                   'ELECTROORIENTE', 'ELECTRO UCAYALI', 'ELECTRO SUR ESTE', 
                   'ELECTROSUR', 'ELECTRO PUNO'

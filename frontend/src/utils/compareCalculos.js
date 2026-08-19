@@ -40,10 +40,12 @@ export function extractCalculoMetrics(calculo) {
       gastoEnergiaMes,
       gastoEnergiaAnio: roundNumber(gastoEnergiaMes * 12),
       facturaTotalMes: roundNumber(facturaTotalMes),
+      facturaTotalAnio: roundNumber(facturaTotalMes * 12),
     };
   }
 
   const factura = buildFacturaFromCalculo(calculo);
+  const facturaTotalMes = parseFloat(factura.totalMes ?? calculo.factura_total_mes ?? 0);
 
   return {
     id: calculo.id,
@@ -64,7 +66,8 @@ export function extractCalculoMetrics(calculo) {
       ?? 0,
     ),
     gastoEnergiaAnio: parseFloat(calculo.gasto_anual_total ?? 0),
-    facturaTotalMes: parseFloat(factura.totalMes ?? calculo.factura_total_mes ?? 0),
+    facturaTotalMes: roundNumber(facturaTotalMes),
+    facturaTotalAnio: roundNumber(facturaTotalMes * 12),
   };
 }
 
@@ -139,6 +142,7 @@ export function compareCalculos(actual, referencia) {
     gastoEnergiaMes: buildMetricPair(A.gastoEnergiaMes, B.gastoEnergiaMes),
     gastoEnergiaAnio: buildMetricPair(A.gastoEnergiaAnio, B.gastoEnergiaAnio),
     facturaTotalMes: buildMetricPair(A.facturaTotalMes, B.facturaTotalMes),
+    facturaTotalAnio: buildMetricPair(A.facturaTotalAnio, B.facturaTotalAnio),
   };
   result.tieneVariacion = hasComparacionVariacion(result);
   return result;
@@ -244,6 +248,14 @@ export function buildComparacionBarData(comparison, metricas = {}) {
       tipo: comparison.facturaTotalMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
     });
   }
+  if (metricas.ahorroAnual) {
+    ahorro.push({
+      name: 'S/ total/año',
+      value: Math.abs(comparison.facturaTotalAnio.ahorro),
+      fill: comparison.facturaTotalAnio.ahorro >= 0 ? '#10b981' : '#ef4444',
+      tipo: comparison.facturaTotalAnio.ahorro >= 0 ? 'Ahorro' : 'Aumento',
+    });
+  }
 
   return {
     kwh: showConsumo ? [
@@ -266,4 +278,5 @@ export const COMPARACION_METRICAS = [
   { key: 'consumoKwh', label: 'Consumo por energía (kWh)', field: 'consumoMesKwh', unit: 'kWh' },
   { key: 'gastoEnergia', label: 'Gasto por energía (S/mes)', field: 'gastoEnergiaMes', unit: 'S/' },
   { key: 'totalFactura', label: 'Total a pagar (S/mes)', field: 'facturaTotalMes', unit: 'S/' },
+  { key: 'ahorroAnual', label: 'Ahorro en años (S/año)', field: 'facturaTotalAnio', unit: 'S/' },
 ];

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   GitCompare, Download, Zap, DollarSign, TrendingDown, TrendingUp,
-  AlertTriangle, CheckSquare, Square, FileText, Calculator,
+  AlertTriangle, CheckSquare, Square, FileText, Calculator, CalendarRange,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -27,6 +27,7 @@ const DEFAULT_METRICAS = {
   consumoKwh: true,
   gastoEnergia: true,
   totalFactura: true,
+  ahorroAnual: true,
 };
 
 function ComparacionEscenarioOption({ option }) {
@@ -201,8 +202,10 @@ export default function ComparacionPage() {
   const kwhAhorro = comparison?.consumoMesKwh.ahorro ?? 0;
   const facturaAhorro = comparison?.facturaTotalMes.ahorro ?? 0;
   const energiaAhorro = comparison?.gastoEnergiaMes.ahorro ?? 0;
+  const anualAhorro = comparison?.facturaTotalAnio.ahorro ?? 0;
   const KwhIcon = kwhAhorro >= 0 ? TrendingDown : TrendingUp;
   const SolesIcon = facturaAhorro >= 0 ? TrendingDown : TrendingUp;
+  const AnualIcon = anualAhorro >= 0 ? CalendarRange : TrendingUp;
   const neutralColor = '#64748b';
   const pdfDisabled = !comparison || isReciboRegistro(actualCalculo);
   const actualTipo = comparison ? escenarioLabel(comparison, 'actual') : '';
@@ -353,6 +356,19 @@ export default function ComparacionPage() {
                 subtext={`${actualTipo}: ${formatCurrency(comparison.facturaTotalMes.actual)} · ${refTipo}: ${formatCurrency(comparison.facturaTotalMes.referencia)}`}
               />
             )}
+            {metricas.ahorroAnual && (
+              <StatCard
+                icon={AnualIcon}
+                label="Ahorro en años"
+                value={formatAhorroLabel(
+                  comparison.facturaTotalAnio.ahorro,
+                  comparison.facturaTotalAnio.pctAhorro,
+                  'S/',
+                )}
+                color={sinVariacion ? neutralColor : ahorroColor(anualAhorro)}
+                subtext={`${actualTipo}: ${formatCurrency(comparison.facturaTotalAnio.actual)} · ${refTipo}: ${formatCurrency(comparison.facturaTotalAnio.referencia)}`}
+              />
+            )}
           </div>
 
           <ComparacionCharts comparison={comparison} metricas={metricas} />
@@ -398,6 +414,33 @@ export default function ComparacionPage() {
                       <td>{formatCurrency(comparison.facturaTotalMes.referencia)}</td>
                       <td>{formatCurrency(comparison.facturaTotalMes.diferencia)}</td>
                       <td>{comparison.facturaTotalMes.pctAhorro != null ? `${comparison.facturaTotalMes.pctAhorro}%` : '—'}</td>
+                    </tr>
+                  )}
+                  {metricas.consumoKwh && (
+                    <tr>
+                      <td>Consumo kWh/año</td>
+                      <td>{formatNumber(comparison.consumoAnioKwh.actual)}</td>
+                      <td>{formatNumber(comparison.consumoAnioKwh.referencia)}</td>
+                      <td>{formatNumber(comparison.consumoAnioKwh.diferencia)}</td>
+                      <td>{comparison.consumoAnioKwh.pctAhorro != null ? `${comparison.consumoAnioKwh.pctAhorro}%` : '—'}</td>
+                    </tr>
+                  )}
+                  {metricas.gastoEnergia && (
+                    <tr>
+                      <td>Gasto energía S/año</td>
+                      <td>{formatCurrency(comparison.gastoEnergiaAnio.actual)}</td>
+                      <td>{formatCurrency(comparison.gastoEnergiaAnio.referencia)}</td>
+                      <td>{formatCurrency(comparison.gastoEnergiaAnio.diferencia)}</td>
+                      <td>{comparison.gastoEnergiaAnio.pctAhorro != null ? `${comparison.gastoEnergiaAnio.pctAhorro}%` : '—'}</td>
+                    </tr>
+                  )}
+                  {metricas.ahorroAnual && (
+                    <tr>
+                      <td>Total a pagar S/año</td>
+                      <td>{formatCurrency(comparison.facturaTotalAnio.actual)}</td>
+                      <td>{formatCurrency(comparison.facturaTotalAnio.referencia)}</td>
+                      <td>{formatCurrency(comparison.facturaTotalAnio.diferencia)}</td>
+                      <td>{comparison.facturaTotalAnio.pctAhorro != null ? `${comparison.facturaTotalAnio.pctAhorro}%` : '—'}</td>
                     </tr>
                   )}
                 </tbody>

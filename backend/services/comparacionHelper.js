@@ -44,10 +44,13 @@ function extractCalculoMetrics(calculo) {
       gastoEnergiaMes,
       gastoEnergiaAnio: roundNum(gastoEnergiaMes * 12),
       facturaTotalMes: roundNum(facturaTotalMes),
+      facturaTotalAnio: roundNum(facturaTotalMes * 12),
     };
   }
 
   const factura = buildFacturaParaCalculo(calculo);
+  const facturaTotalMes = parseFloat(factura.totalMes ?? calculo.factura_total_mes ?? 0);
+
   return {
     id: calculo.id,
     fecha: calculo.created_at,
@@ -59,7 +62,8 @@ function extractCalculoMetrics(calculo) {
       calculo.gasto_mensual_total ?? factura.gastoEnergiaMensual ?? 0,
     ),
     gastoEnergiaAnio: parseFloat(calculo.gasto_anual_total ?? 0),
-    facturaTotalMes: parseFloat(factura.totalMes ?? calculo.factura_total_mes ?? 0),
+    facturaTotalMes: roundNum(facturaTotalMes),
+    facturaTotalAnio: roundNum(facturaTotalMes * 12),
   };
 }
 
@@ -92,6 +96,7 @@ function compareCalculos(actual, referencia) {
     gastoEnergiaMes: buildMetricPair(A.gastoEnergiaMes, B.gastoEnergiaMes),
     gastoEnergiaAnio: buildMetricPair(A.gastoEnergiaAnio, B.gastoEnergiaAnio),
     facturaTotalMes: buildMetricPair(A.facturaTotalMes, B.facturaTotalMes),
+    facturaTotalAnio: buildMetricPair(A.facturaTotalAnio, B.facturaTotalAnio),
   };
 }
 

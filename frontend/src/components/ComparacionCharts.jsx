@@ -96,6 +96,7 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
   if (metricas.consumoKwh !== false) metricFields.push('consumoMesKwh');
   if (metricas.gastoEnergia !== false) metricFields.push('gastoEnergiaMes');
   if (metricas.totalFactura !== false) metricFields.push('facturaTotalMes');
+  if (metricas.ahorroAnual !== false) metricFields.push('facturaTotalAnio');
   const sinVariacion = !hasComparacionVariacion(comparison, metricFields);
 
   const refSubtitle = comparison.referenciaEsRecibo
