@@ -1,23 +1,47 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { formatNumber, formatCurrency } from '../utils/helpers';
+import { formatNumber, formatCurrency, formatChartAxisKwh, formatChartAxisSoles } from '../utils/helpers';
 import { buildComparacionBarData, hasComparacionVariacion } from '../utils/compareCalculos';
 import { DashboardSimpleTooltip, DashboardChartPanel } from './DashboardChartPanel';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const formatKwh = (v) => `${formatNumber(v)} kWh`;
 const formatSoles = (v) => formatCurrency(v);
 
-function ComparacionBarPanel({ title, subtitle, data, formatValue, valueLabel, wide = false }) {
+const CHART_MARGIN = { top: 8, right: 12, left: 4, bottom: 4 };
+
+function ComparacionYAxis({ axisType = 'number', compact = false }) {
+  const formatAxis = axisType === 'kwh'
+    ? (v) => formatChartAxisKwh(v, { compact })
+    : (v) => formatChartAxisSoles(v, { compact });
+
+  return (
+    <YAxis
+      tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+      tickFormatter={formatAxis}
+      width={compact ? 44 : 56}
+      allowDecimals={false}
+      tickCount={5}
+      tickLine={false}
+      axisLine={{ stroke: 'var(--border)' }}
+    />
+  );
+}
+
+function ComparacionBarPanel({ title, subtitle, data, formatValue, valueLabel, axisType = 'number', wide = false }) {
   if (!data?.length) return null;
+
+  const breakpoint = useBreakpoint();
+  const compact = breakpoint === 'mobile';
 
   return (
     <DashboardChartPanel title={title} subtitle={subtitle} wide={wide}>
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+        <BarChart data={data} margin={CHART_MARGIN}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => formatNumber(v)} width={56} />
+          <ComparacionYAxis axisType={axisType} compact={compact} />
           <Tooltip content={<DashboardSimpleTooltip formatValue={formatValue} valueLabel={valueLabel} titleKey="name" />} />
           <Bar dataKey="value" name={valueLabel} radius={[4, 4, 0, 0]} maxBarSize={72}>
             {data.map((entry) => (
@@ -47,6 +71,9 @@ function VariacionTooltip({ active, payload, formatValue }) {
 }
 
 function ComparacionVariacionPanel({ data, sinVariacion = false }) {
+  const breakpoint = useBreakpoint();
+  const compact = breakpoint === 'mobile';
+
   if (sinVariacion || !data?.length || data.every((d) => (d.value ?? 0) < 0.001)) {
     return (
       <DashboardChartPanel title="Variación (ahorro o aumento)" subtitle="Respecto al recibo o referencia" wide>
@@ -72,10 +99,10 @@ function ComparacionVariacionPanel({ data, sinVariacion = false }) {
         <span><i style={{ background: '#ef4444' }} /> Aumento — consumiste o pagaste más que la referencia</span>
       </div>
       <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+        <BarChart data={data} margin={CHART_MARGIN}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => formatNumber(v)} width={56} />
+          <ComparacionYAxis axisType="number" compact={compact} />
           <Tooltip content={<VariacionTooltip formatValue={formatVariacion} />} />
           <Bar dataKey="value" name="Variación" radius={[4, 4, 0, 0]} maxBarSize={72}>
             {data.map((entry) => (
@@ -112,6 +139,7 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
           data={barData.kwh}
           formatValue={formatKwh}
           valueLabel="Consumo"
+          axisType="kwh"
         />
       )}
       {barData.factura.length > 0 && (
@@ -121,6 +149,7 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
           data={barData.factura}
           formatValue={formatSoles}
           valueLabel="Total a pagar"
+          axisType="soles"
         />
       )}
       {barData.gasto.length > 0 && (
@@ -130,6 +159,7 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
           data={barData.gasto}
           formatValue={formatSoles}
           valueLabel="Gasto energía"
+          axisType="soles"
         />
       )}
       {barData.ahorro.length > 0 && (

@@ -33,7 +33,7 @@ export const formatChartCurrency = (value) => `S/ ${Number(value).toFixed(DECIMA
 export const formatChartKwh = (value) => `${Number(value).toFixed(DECIMALS_KWH_MONTH)} kWh`;
 
 /** Etiquetas compactas en ejes Y (soles, sin decimales) */
-export const formatChartAxisSoles = (value, { compact = false } = {}) => {
+export const formatChartAxisNumber = (value, { compact = false } = {}) => {
   const n = Number(value);
   if (Number.isNaN(n)) return '0';
   if (compact && Math.abs(n) >= 1000) {
@@ -45,6 +45,11 @@ export const formatChartAxisSoles = (value, { compact = false } = {}) => {
     maximumFractionDigits: 0,
   });
 };
+
+export const formatChartAxisSoles = (value, options = {}) => formatChartAxisNumber(value, options);
+
+/** Etiquetas compactas en ejes Y (kWh, sin decimales) */
+export const formatChartAxisKwh = (value, options = {}) => formatChartAxisNumber(value, options);
 
 export const formatDate = (date) => {
   if (!date) return '-';
