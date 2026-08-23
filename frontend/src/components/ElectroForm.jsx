@@ -4,7 +4,6 @@ import SearchableSelect from './SearchableSelect';
 import { useMarcaModeloCatalog } from '../hooks/useMarcaModeloCatalog';
 import {
   calcPotenciaFromEficiencia,
-  calcEnergiaPreview,
   horasFromMinutos,
   emptyEficienciaFields,
   getPlantillaMeta,
@@ -69,16 +68,6 @@ export default function ElectroForm({
     if (!eficienciaActiva || !plantillaId) return null;
     return calcPotenciaFromEficiencia(plantillaId, form);
   }, [eficienciaActiva, plantillaId, form.kwh_por_ciclo, form.minutos_por_ciclo, form.kwh_anual, form.btu_h, form.hp, form.potencia_w]);
-
-  const energiaCalculada = useMemo(() => {
-    if (!eficienciaActiva || !plantillaId) return null;
-    return calcEnergiaPreview(plantillaId, form);
-  }, [eficienciaActiva, plantillaId, form.potencia_w, form.minutos_por_ciclo]);
-
-  const horasMinutosPreview = useMemo(() => {
-    if (!form.minutos_por_ciclo) return null;
-    return horasFromMinutos(form.minutos_por_ciclo);
-  }, [form.minutos_por_ciclo]);
 
   const horasDesdeMinutosUsoPreview = useMemo(() => {
     if (!usarMinutosUsoDia || !minutosUsoDia) return null;
@@ -220,9 +209,6 @@ export default function ElectroForm({
             })}
             placeholder="Ej. 90"
           />
-          {horasMinutosPreview != null && (
-            <small className="form-hint">= {formatNumber(horasMinutosPreview, 4)} horas</small>
-          )}
         </div>
       );
     }
@@ -390,25 +376,10 @@ export default function ElectroForm({
             />
             <span>Usar etiqueta de eficiencia energética (datos del fabricante)</span>
           </label>
-          {plantillaMeta && (
-            <small className="form-hint">{plantillaMeta.description}</small>
-          )}
 
           {eficienciaActiva && plantillaMeta && (
             <div className="form-row" style={{ marginTop: '0.75rem' }}>
               {plantillaMeta.fields.map((field) => renderEficienciaField(field))}
-            </div>
-          )}
-
-          {eficienciaActiva && potenciaCalculada != null && !potenciaFromUser && (
-            <div className="eficiencia-preview">
-              <strong>Potencia calculada:</strong> {formatNumber(potenciaCalculada, 4)} W
-            </div>
-          )}
-
-          {eficienciaActiva && energiaCalculada != null && (
-            <div className="eficiencia-preview">
-              <strong>Energía por uso calculada:</strong> {formatNumber(energiaCalculada, 4)} kWh
             </div>
           )}
         </div>
@@ -463,12 +434,12 @@ export default function ElectroForm({
               <span>Ingresar uso diario en minutos (se convierte automáticamente a horas)</span>
             </label>
           )}
-          {usoPorCiclos && (
+          {usoPorCiclos && !eficienciaActiva && (
             <small className="form-hint">
               Ciclos de lavado por día. Consumo/día ≈ cantidad × ciclos × kWh/ciclo
             </small>
           )}
-          {consumoCiclosPreview != null && (
+          {consumoCiclosPreview != null && !eficienciaActiva && (
             <small className="form-hint" style={{ display: 'block', marginTop: '0.25rem' }}>
               Consumo estimado: {formatNumber(consumoCiclosPreview, 4)} kWh/día
             </small>
