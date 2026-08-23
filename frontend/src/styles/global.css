@@ -2671,6 +2671,75 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 
 .actions { display: flex; gap: 0.5rem; align-items: center; }
 
+/* No aplicar flex directamente sobre <td> — rompe filas de la tabla */
+td.actions {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+/* Tablas admin — alinear estado y acciones */
+.admin-table-card table tbody td {
+  vertical-align: middle;
+}
+
+.admin-table-card table th.cell-status,
+.admin-table-card table td.cell-status {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.admin-table-card table th.cell-actions,
+.admin-table-card table td.cell-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.admin-table-card .table-status,
+.admin-table-card table td.cell-actions .actions {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.125rem;
+}
+
+.admin-table-card .table-status {
+  justify-content: center;
+}
+
+.admin-table-card table td.cell-actions .actions {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.admin-table-card table td.cell-actions .actions .btn {
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .admin-table-card .table-scroll-hint {
+    display: none !important;
+  }
+
+  .admin-table-card .table-dual-scroll {
+    overflow-x: visible;
+  }
+
+  .admin-table-card .table-dual-scroll table {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .admin-table-card .table-dual-scroll th:first-child,
+  .admin-table-card .table-dual-scroll td:first-child {
+    position: static;
+    box-shadow: none;
+  }
+}
+
 /* Historial — acciones alineadas en tabla (desktop) */
 .historial-records-card table tbody td {
   vertical-align: middle;

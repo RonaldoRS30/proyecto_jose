@@ -229,7 +229,7 @@ export default function RecomendacionesPage() {
         )}
       </div>
 
-      <div className="card card-list">
+      <div className="card card-list admin-table-card">
         <PaginatedResponsiveList
           key={search.trim().toLowerCase()}
           loading={loading}
@@ -250,8 +250,8 @@ export default function RecomendacionesPage() {
               <th>Potencia normal máx.</th>
               <th>Horas/día</th>
               <th>Eficiencia EE</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th className="cell-status">Estado</th>
+              <th className="cell-actions">Acciones</th>
             </tr>
           )}
           renderTableRow={(item) => (
@@ -273,12 +273,16 @@ export default function RecomendacionesPage() {
                   </span>
                 ) : '-'}
               </td>
-              <td>
-                <span className={`badge ${item.activo ? 'badge-success' : 'badge-warning'}`}>
-                  {item.activo ? 'Activa' : 'Inactiva'}
+              <td className="cell-status">
+                <span className="table-status">
+                  <span className={`badge ${item.activo ? 'badge-success' : 'badge-warning'}`}>
+                    {item.activo ? 'Activa' : 'Inactiva'}
+                  </span>
                 </span>
               </td>
-              <td className="actions">{renderActions(item)}</td>
+              <td className="cell-actions">
+                <div className="actions">{renderActions(item)}</div>
+              </td>
             </tr>
           )}
           renderCard={(item) => (
