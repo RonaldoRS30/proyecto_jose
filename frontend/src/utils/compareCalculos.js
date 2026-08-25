@@ -114,13 +114,13 @@ export function formatCalculoOptionLabel(calculo) {
 }
 
 function buildMetricPair(actualVal, refVal) {
-  const diferencia = roundNumber(actualVal - refVal);
   const ahorro = roundNumber(refVal - actualVal);
-  const pctAhorro = refVal ? roundNumber(((refVal - actualVal) / refVal) * 100) : null;
+  const rawPct = refVal ? ((refVal - actualVal) / refVal) * 100 : null;
+  const pctAhorro = rawPct != null ? roundNumber(Math.max(0, rawPct)) : null;
   return {
     actual: roundNumber(actualVal),
     referencia: roundNumber(refVal),
-    diferencia,
+    diferencia: roundNumber(Math.abs(actualVal - refVal)),
     ahorro,
     pctAhorro,
   };

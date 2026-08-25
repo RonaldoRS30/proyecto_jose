@@ -68,13 +68,13 @@ function extractCalculoMetrics(calculo) {
 }
 
 function buildMetricPair(actualVal, refVal) {
-  const diferencia = roundNum(actualVal - refVal);
   const ahorro = roundNum(refVal - actualVal);
-  const pctAhorro = refVal ? roundNum(((refVal - actualVal) / refVal) * 100) : null;
+  const rawPct = refVal ? ((refVal - actualVal) / refVal) * 100 : null;
+  const pctAhorro = rawPct != null ? roundNum(Math.max(0, rawPct)) : null;
   return {
     actual: roundNum(actualVal),
     referencia: roundNum(refVal),
-    diferencia,
+    diferencia: roundNum(Math.abs(actualVal - refVal)),
     ahorro,
     pctAhorro,
   };
