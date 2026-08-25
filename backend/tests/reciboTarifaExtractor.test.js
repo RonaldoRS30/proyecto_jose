@@ -142,6 +142,14 @@ const extraSamples = [
     electrificacion: 52.21,
   },
   {
+    name: 'Luz del Sur electrificacion con ajustes y deuda',
+    text: 'Cargo Fijo Mant. y Reposición de Conexión Alumbrado Público Interés Compensatorio SUBTOTAL IGV Electrificación Rural (Ley N° 28749) Interés Moratorio TOTAL DEL MES Ajuste redondeo mes anterior Ajuste redondeo mes actual Deuda vencida (1 mes) 2.24 1.67 35.20 4.65 469.85 84.58 7.55 0.46 562.44 0.03 -0.07 727.00',
+    tarifa: null,
+    potencia: null,
+    alumbrado: 35.2,
+    electrificacion: 7.55,
+  },
+  {
     name: 'PLUZ aporte ley 28749',
     text: '417.09 1.91 28.00 451.03 81.19 532.22 7.29 SUBTOTAL Mes Actual Cargo Fijo Interés Compensatorio Alumbrado Público Reposic. y Mant. de Conex Aporte Ley N° 28749 I.G.V. Cargo por Energía TOTAL Mes Actual',
     tarifa: null,

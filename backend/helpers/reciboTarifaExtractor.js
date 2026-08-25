@@ -207,8 +207,64 @@ function collectDecimalAmounts(text) {
     .filter((n) => n != null);
 }
 
+const LUZ_DEL_SUR_DETALLE_LABELS = [
+  [/Cargo\s+Fijo/i, 'cargo_fijo'],
+  [/Mant\.?\s*y\s+Reposici[oó]n/i, 'mant'],
+  [/Alumbrado\s*P[úu]blico|AlumbradoPublico/i, 'alumbrado'],
+  [/Inter[eé]s\s+Compensatorio/i, 'interes_comp'],
+  [/SUB\s*TOTAL|SUBTOTAL/i, 'subtotal'],
+  [/IGV/i, 'igv'],
+  [/Electrificaci[oó]n\s+Rural\s*\(\s*Ley\s+N[°º]?\s*28749\s*\)/i, 'electrificacion'],
+  [/Inter[eé]s\s+Moratorio/i, 'moratorio'],
+  [/TOTAL\s+DEL\s+MES/i, 'total_mes'],
+  [/Ajuste\s+redondeo\s+mes\s+anterior/i, 'ajuste_ant'],
+  [/Ajuste\s+redondeo\s+mes\s+actual/i, 'ajuste_act'],
+  [/Deuda\s+vencida/i, 'deuda'],
+];
+
+/**
+ * Luz del Sur: bloque con etiquetas en fila y columna numérica debajo
+ * (Cargo Fijo … Deuda vencida → 2.24 1.67 … 7.55 …).
+ */
+function extractLuzDelSurLabelValueMap(source) {
+  const startIdx = source.search(/Cargo\s+Fijo/i);
+  if (startIdx < 0) return null;
+
+  const tail = source.slice(startIdx);
+  const labels = [];
+  for (const [re, key] of LUZ_DEL_SUR_DETALLE_LABELS) {
+    re.lastIndex = 0;
+    const match = re.exec(tail);
+    if (!match) continue;
+    labels.push({
+      key,
+      index: startIdx + match.index,
+      end: startIdx + match.index + match[0].length,
+    });
+  }
+
+  if (!labels.length) return null;
+  labels.sort((a, b) => a.index - b.index);
+
+  const lastLabelEnd = labels[labels.length - 1].end;
+  const values = collectDecimalAmounts(source.slice(lastLabelEnd, lastLabelEnd + 420));
+  if (values.length < labels.length) return null;
+
+  const map = {};
+  labels.forEach((label, idx) => {
+    map[label.key] = values[idx];
+  });
+  return map;
+}
+
 /** Luz del Sur: etiquetas primero y bloque numérico después del SUBTOTAL. */
 function extractAlumbradoLabelsThenValues(source) {
+  const map = extractLuzDelSurLabelValueMap(source);
+  if (map?.alumbrado != null) {
+    const value = parseAlumbradoNumber(String(map.alumbrado));
+    if (value != null) return value;
+  }
+
   const cargoIdx = source.search(/Cargo\s+Fijo/i);
   const alumbradoIdx = source.search(/Alumbrado\s*P[úu]blico|AlumbradoPublico/i);
   const subtotalIdx = source.search(/SUB\s*TOTAL|SUBTOTAL/i);
@@ -279,9 +335,16 @@ function extractAlumbradoPublicoFromText(source) {
   return { alumbrado_publico: null, metodo: null };
 }
 
-/** Luz del Sur: tras SUBTOTAL vienen IGV, Electrificación Rural (Ley N° 28749), moratorio y total. */
+/** Luz del Sur: mapeo etiqueta → importe en columna invertida del PDF. */
 function extractElectrificacionLuzDelSurLayout(source) {
   if (!/Electrificaci[oó]n\s+Rural\s*\(\s*Ley\s+N[°º]?\s*28749\s*\)/i.test(source)) return null;
+
+  const map = extractLuzDelSurLabelValueMap(source);
+  if (map?.electrificacion != null) {
+    const value = parseElectrificacionNumber(String(map.electrificacion));
+    if (value != null) return value;
+  }
+
   if (source.search(/SUBTOTAL\s+IGV/i) < 0) return null;
 
   const numbersStart = source.search(/TOTAL\s+DEL\s+MES/i);
@@ -291,7 +354,7 @@ function extractElectrificacionLuzDelSurLayout(source) {
 
   let subtotalIdx = -1;
   for (let i = 0; i < numbers.length; i += 1) {
-    if (numbers[i] >= 500) {
+    if (numbers[i] >= 100) {
       subtotalIdx = i;
       break;
     }
