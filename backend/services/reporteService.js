@@ -255,7 +255,7 @@ const generarComparacionPDF = async (actualId, referenciaId, clienteId) => {
     doc.moveDown(0.2);
     doc.font('Helvetica').fontSize(9).fillColor('#64748b')
       .text(
-        `Actual #${actualId} (${formatDatePE(actualEnriquecido.created_at)}) vs Referencia #${referenciaId} (${formatDatePE(referenciaEnriquecido.created_at)})`,
+        `Recibo subido (${formatDatePE(referenciaEnriquecido.created_at)}) vs Cálculo estimado (${formatDatePE(actualEnriquecido.created_at)})`,
         MARGIN,
         doc.y,
         { width: 595.28 - MARGIN * 2 },
@@ -264,26 +264,42 @@ const generarComparacionPDF = async (actualId, referenciaId, clienteId) => {
 
     drawClientePanel(doc, cliente);
 
+    const formatAhorroResumen = (label, metric, unit) => {
+      const abs = Math.abs(metric.ahorro ?? 0);
+      const pct = metric.pctAhorro ?? 0;
+      if (abs < 0.001) return `${label}: Sin variación (0%)`;
+      const tipo = metric.ahorro >= 0 ? 'Ahorro' : 'Aumento';
+      const val = unit === 'kWh' ? `${formatNum(abs)} kWh` : `${formatNum(abs)} S/`;
+      return `${label}: ${tipo} de ${val} (${pct}%)`;
+    };
+
     doc.font('Helvetica-Bold').fontSize(11).fillColor('#1A4AB0')
       .text('Resumen de ahorro', MARGIN, doc.y);
     doc.moveDown(0.4);
     doc.font('Helvetica').fontSize(9).fillColor('#1f2937')
       .text(
-        `kWh/mes: ${comparacion.consumoMesKwh.ahorro >= 0 ? 'Ahorro' : 'Aumento'} de ${formatNum(Math.abs(comparacion.consumoMesKwh.ahorro))} kWh (${comparacion.consumoMesKwh.pctAhorro ?? 0}%)`,
+        formatAhorroResumen('Ahorro de consumo mensual', comparacion.consumoMesKwh, 'kWh'),
         MARGIN,
         doc.y,
-      { width: 595.28 - MARGIN * 2 },
-    );
+        { width: 595.28 - MARGIN * 2 },
+      );
     doc.moveDown(0.3);
     doc.text(
-      `Energía S/mes: ${comparacion.gastoEnergiaMes.ahorro >= 0 ? 'Ahorro' : 'Aumento'} de ${formatNum(Math.abs(comparacion.gastoEnergiaMes.ahorro))} S/ (${comparacion.gastoEnergiaMes.pctAhorro ?? 0}%)`,
+      formatAhorroResumen('Ahorro de gasto por energía (mes)', comparacion.gastoEnergiaMes, 'S/'),
       MARGIN,
       doc.y,
       { width: 595.28 - MARGIN * 2 },
     );
     doc.moveDown(0.3);
     doc.text(
-      `Energía S/año: ${comparacion.gastoEnergiaAnio.ahorro >= 0 ? 'Ahorro' : 'Aumento'} de ${formatNum(Math.abs(comparacion.gastoEnergiaAnio.ahorro))} S/`,
+      formatAhorroResumen('Ahorro en total a pagar (mes)', comparacion.facturaTotalMes, 'S/'),
+      MARGIN,
+      doc.y,
+      { width: 595.28 - MARGIN * 2 },
+    );
+    doc.moveDown(0.3);
+    doc.text(
+      formatAhorroResumen('Ahorro en total a pagar (año)', comparacion.facturaTotalAnio, 'S/'),
       MARGIN,
       doc.y,
       { width: 595.28 - MARGIN * 2 },
@@ -292,8 +308,8 @@ const generarComparacionPDF = async (actualId, referenciaId, clienteId) => {
 
     drawComparacionSection(doc, {
       comparacion,
-      actualFecha: formatDatePE(actualEnriquecido.created_at),
-      referenciaFecha: formatDatePE(referenciaEnriquecido.created_at),
+      reciboFecha: formatDatePE(referenciaEnriquecido.created_at),
+      calculoFecha: formatDatePE(actualEnriquecido.created_at),
       formatNum,
     });
 

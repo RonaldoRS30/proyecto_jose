@@ -237,11 +237,12 @@ function drawCleanHBars(doc, opts) {
     originX = MARGIN,
     originW = CONTENT_W,
     allowZeroValues = false,
+    preserveOrder = false,
   } = opts;
 
-  const data = [...items]
-    .filter((d) => allowZeroValues || (d.value || 0) > 0 || (d.value2 || 0) > 0)
-    .sort((a, b) => (b.value || 0) - (a.value || 0))
+  const filtered = [...items]
+    .filter((d) => allowZeroValues || (d.value || 0) > 0 || (d.value2 || 0) > 0);
+  const data = (preserveOrder ? filtered : filtered.sort((a, b) => (b.value || 0) - (a.value || 0)))
     .slice(0, maxBars);
 
   if (!data.length) return;
@@ -607,20 +608,21 @@ function drawChartsSection(doc, {
 }
 
 function drawComparacionResumenTable(doc, comparacion, formatNum) {
-  const { MARGIN, applyPdfPageMargins, PDF_BOTTOM_MARGIN } = require('./pdfReciboLayout');
   const rows = [
     ['Consumo kWh/mes', comparacion.consumoMesKwh],
     ['Gasto energía S/mes', comparacion.gastoEnergiaMes],
+    ['Total a pagar S/mes', comparacion.facturaTotalMes],
+    ['Consumo kWh/año', comparacion.consumoAnioKwh],
     ['Gasto energía S/año', comparacion.gastoEnergiaAnio],
-    ['Total factura S/mes', comparacion.facturaTotalMes],
+    ['Total a pagar S/año', comparacion.facturaTotalAnio],
   ];
 
   ensureSpace(doc, 30 + rows.length * 18);
 
-  sectionTitle(doc, 'DETALLE NUMÉRICO', 'Actual − Referencia · % ahorro sobre referencia');
+  sectionTitle(doc, 'DETALLE DE LA COMPARACIÓN', 'Recibo subido vs cálculo estimado · Diferencia en positivo · % ahorro mínimo 0%');
 
   const colW = [CONTENT_W * 0.28, CONTENT_W * 0.18, CONTENT_W * 0.18, CONTENT_W * 0.18, CONTENT_W * 0.18];
-  const headers = ['Concepto', 'Actual', 'Referencia', 'Diferencia', '% ahorro'];
+  const headers = ['Concepto', 'Recibo subido', 'Cálculo estimado', 'Diferencia', '% ahorro'];
   let x = MARGIN;
   let y = doc.y;
 
@@ -634,11 +636,10 @@ function drawComparacionResumenTable(doc, comparacion, formatNum) {
   rows.forEach(([label, m], idx) => {
     x = MARGIN;
     const isCurrency = label.includes('S/');
-    const fmt = (v) => (isCurrency ? `${formatNum(v)} S/` : `${formatNum(v)} kWh`);
     const cells = [
       label,
-      isCurrency ? `${formatNum(m.actual)} S/` : `${formatNum(m.actual)} kWh`,
       isCurrency ? `${formatNum(m.referencia)} S/` : `${formatNum(m.referencia)} kWh`,
+      isCurrency ? `${formatNum(m.actual)} S/` : `${formatNum(m.actual)} kWh`,
       isCurrency ? `${formatNum(m.diferencia)} S/` : `${formatNum(m.diferencia)} kWh`,
       m.pctAhorro != null ? `${formatNum(m.pctAhorro)}%` : '—',
     ];
@@ -658,16 +659,16 @@ function drawComparacionResumenTable(doc, comparacion, formatNum) {
   doc.y = y + 10;
 }
 
-function drawComparacionSection(doc, { comparacion, actualFecha, referenciaFecha, formatNum }) {
+function drawComparacionSection(doc, { comparacion, reciboFecha, calculoFecha, formatNum }) {
   sectionTitle(
     doc,
     'COMPARACIÓN DE REPORTES',
-    `Actual: ${actualFecha}  ·  Referencia: ${referenciaFecha}`,
+    `Recibo subido: ${reciboFecha}  ·  Cálculo estimado: ${calculoFecha}`,
   );
 
   if (comparacion.tarifaDistinta) {
     doc.font('Helvetica').fontSize(7.5).fillColor(C.amber)
-      .text('Nota: los cálculos usaron tarifas distintas; la comparación en soles puede incluir cambio de precio kWh.', MARGIN, doc.y, {
+      .text('Nota: las tarifas kWh difieren; la comparación en soles puede incluir cambio de precio.', MARGIN, doc.y, {
         width: CONTENT_W,
       });
     doc.moveDown(0.8);
@@ -675,68 +676,104 @@ function drawComparacionSection(doc, { comparacion, actualFecha, referenciaFecha
 
   drawCleanHBars(doc, {
     title: 'CONSUMO MENSUAL (kWh)',
-    sub: 'Barras: Actual vs Referencia',
+    sub: 'Recibo subido vs cálculo estimado',
     items: [
-      { label: 'Actual', value: comparacion.consumoMesKwh.actual },
-      { label: 'Referencia', value: comparacion.consumoMesKwh.referencia },
+      { label: 'Recibo', value: comparacion.consumoMesKwh.referencia },
+      { label: 'Cálculo estimado', value: comparacion.consumoMesKwh.actual },
     ],
     unit: 'kWh',
-    color: C.primary,
-    color2: C.muted,
+    color: [C.muted, C.primary],
     maxBars: 2,
     allowZeroValues: true,
+    preserveOrder: true,
   });
 
   drawCleanHBars(doc, {
-    title: 'GASTO POR ENERGÍA MENSUAL (S/)',
-    sub: 'Costo de energía (kWh × tarifa)',
+    title: 'TOTAL A PAGAR (S/mes)',
+    sub: 'Total facturado del mes — recibo subido vs cálculo estimado',
     items: [
-      { label: 'Actual', value: comparacion.gastoEnergiaMes.actual },
-      { label: 'Referencia', value: comparacion.gastoEnergiaMes.referencia },
+      { label: 'Recibo', value: comparacion.facturaTotalMes.referencia },
+      { label: 'Cálculo estimado', value: comparacion.facturaTotalMes.actual },
     ],
     unit: 'S/',
-    color: C.green,
-    color2: C.muted,
+    color: [C.muted, C.green],
     maxBars: 2,
     allowZeroValues: true,
+    preserveOrder: true,
+  });
+
+  drawCleanHBars(doc, {
+    title: 'GASTO POR ENERGÍA (S/mes)',
+    sub: 'Consumo kWh × tarifa — recibo subido vs cálculo estimado',
+    items: [
+      { label: 'Recibo', value: comparacion.gastoEnergiaMes.referencia },
+      { label: 'Cálculo estimado', value: comparacion.gastoEnergiaMes.actual },
+    ],
+    unit: 'S/',
+    color: [C.muted, '#0ea5e9'],
+    maxBars: 2,
+    allowZeroValues: true,
+    preserveOrder: true,
+  });
+
+  drawCleanHBars(doc, {
+    title: 'TOTAL A PAGAR (S/año)',
+    sub: 'Recibo subido vs cálculo estimado',
+    items: [
+      { label: 'Recibo', value: comparacion.facturaTotalAnio.referencia },
+      { label: 'Cálculo estimado', value: comparacion.facturaTotalAnio.actual },
+    ],
+    unit: 'S/',
+    color: [C.muted, '#8b5cf6'],
+    maxBars: 2,
+    allowZeroValues: true,
+    preserveOrder: true,
   });
 
   const ahorroKwh = comparacion.consumoMesKwh.ahorro;
   const ahorroMes = comparacion.gastoEnergiaMes.ahorro;
-  const ahorroAnio = comparacion.gastoEnergiaAnio.ahorro;
+  const ahorroTotalMes = comparacion.facturaTotalMes.ahorro;
+  const ahorroTotalAnio = comparacion.facturaTotalAnio.ahorro;
 
   drawCleanHBars(doc, {
     title: 'VARIACIÓN (AHORRO O AUMENTO)',
-    sub: 'Valores absolutos respecto a la referencia',
+    sub: 'Valores absolutos vs recibo subido — verde = ahorro, rojo = aumento',
     items: [
       {
-        label: 'kWh/mes',
+        label: 'Ahorro de consumo mensual',
         value: Math.abs(ahorroKwh),
         sublabel: ahorroKwh >= 0 ? 'Ahorro' : 'Aumento',
       },
       {
-        label: 'S/ energía/mes',
+        label: 'Ahorro de gasto por energía (mes)',
         value: Math.abs(ahorroMes),
         sublabel: ahorroMes >= 0 ? 'Ahorro' : 'Aumento',
       },
       {
-        label: 'S/ energía/año',
-        value: Math.abs(ahorroAnio),
-        sublabel: ahorroAnio >= 0 ? 'Ahorro' : 'Aumento',
+        label: 'Ahorro en total a pagar (mes)',
+        value: Math.abs(ahorroTotalMes),
+        sublabel: ahorroTotalMes >= 0 ? 'Ahorro' : 'Aumento',
+      },
+      {
+        label: 'Ahorro en total a pagar (año)',
+        value: Math.abs(ahorroTotalAnio),
+        sublabel: ahorroTotalAnio >= 0 ? 'Ahorro' : 'Aumento',
       },
     ],
     unit: '',
     color: [
       ahorroKwh >= 0 ? C.green : C.red,
       ahorroMes >= 0 ? C.green : C.red,
-      ahorroAnio >= 0 ? C.green : C.red,
+      ahorroTotalMes >= 0 ? C.green : C.red,
+      ahorroTotalAnio >= 0 ? C.green : C.red,
     ],
     legend: [
-      { color: C.green, label: 'Ahorro (consumiste menos)' },
-      { color: C.red, label: 'Aumento (consumiste más)' },
+      { color: C.green, label: 'Ahorro — consumiste o pagaste menos que el recibo' },
+      { color: C.red, label: 'Aumento — consumiste o pagaste más que el recibo' },
     ],
-    maxBars: 3,
+    maxBars: 4,
     allowZeroValues: true,
+    preserveOrder: true,
   });
 
   drawComparacionResumenTable(doc, comparacion, formatNum);
