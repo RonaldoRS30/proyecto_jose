@@ -210,7 +210,8 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   const ahorro = [];
   if (showConsumo) {
     ahorro.push({
-      name: 'kWh/mes',
+      name: 'Ahorro de consumo mensual',
+      valueUnit: 'kwh',
       value: Math.abs(comparison.consumoMesKwh.ahorro),
       fill: comparison.consumoMesKwh.ahorro >= 0 ? '#10b981' : '#ef4444',
       tipo: comparison.consumoMesKwh.ahorro >= 0 ? 'Ahorro' : 'Aumento',
@@ -218,7 +219,8 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   }
   if (showGasto) {
     ahorro.push({
-      name: 'S/ energía/mes',
+      name: 'Ahorro de gasto por energía (mes)',
+      valueUnit: 'soles',
       value: Math.abs(comparison.gastoEnergiaMes.ahorro),
       fill: comparison.gastoEnergiaMes.ahorro >= 0 ? '#10b981' : '#ef4444',
       tipo: comparison.gastoEnergiaMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
@@ -226,7 +228,8 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   }
   if (showTotal) {
     ahorro.push({
-      name: 'S/ total/mes',
+      name: 'Ahorro en total a pagar (mes)',
+      valueUnit: 'soles',
       value: Math.abs(comparison.facturaTotalMes.ahorro),
       fill: comparison.facturaTotalMes.ahorro >= 0 ? '#10b981' : '#ef4444',
       tipo: comparison.facturaTotalMes.ahorro >= 0 ? 'Ahorro' : 'Aumento',
@@ -234,7 +237,8 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   }
   if (metricas.ahorroAnual) {
     ahorro.push({
-      name: 'S/ total/año',
+      name: 'Ahorro en total a pagar (año)',
+      valueUnit: 'soles',
       value: Math.abs(comparison.facturaTotalAnio.ahorro),
       fill: comparison.facturaTotalAnio.ahorro >= 0 ? '#10b981' : '#ef4444',
       tipo: comparison.facturaTotalAnio.ahorro >= 0 ? 'Ahorro' : 'Aumento',

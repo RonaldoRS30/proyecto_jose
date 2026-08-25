@@ -54,17 +54,21 @@ function ComparacionBarPanel({ title, subtitle, data, formatValue, valueLabel, a
   );
 }
 
-function VariacionTooltip({ active, payload, formatValue }) {
+function VariacionTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload ?? {};
   const entry = payload[0];
+  const formatted = row.valueUnit === 'kwh'
+    ? formatKwh(row.value)
+    : formatSoles(row.value);
+
   return (
     <div className="dashboard-chart-tooltip">
       <p className="dashboard-chart-tooltip__title">{row.name}</p>
       <p className="dashboard-chart-tooltip__row">
         <span className="dashboard-chart-tooltip__dot" style={{ background: entry.color }} aria-hidden />
         <span className="dashboard-chart-tooltip__label">{row.tipo}: </span>
-        <strong>{formatValue ? formatValue(row.value, row.name) : row.value}</strong>
+        <strong>{formatted}</strong>
       </p>
     </div>
   );
@@ -84,26 +88,29 @@ function ComparacionVariacionPanel({ data, sinVariacion = false }) {
     );
   }
 
-  const formatVariacion = (v, name) => (
-    String(name || '').includes('kWh') ? formatKwh(v) : formatSoles(v)
-  );
-
   return (
     <DashboardChartPanel
       title="Variación (ahorro o aumento)"
-      subtitle="Valores absolutos vs recibo/referencia — verde = ahorro, rojo = aumento"
+      subtitle="Valores absolutos vs recibo subido — verde = ahorro, rojo = aumento"
       wide
     >
       <div className="comparacion-variacion-legend" aria-hidden="false">
-        <span><i style={{ background: '#10b981' }} /> Ahorro — consumiste o pagaste menos que la referencia</span>
-        <span><i style={{ background: '#ef4444' }} /> Aumento — consumiste o pagaste más que la referencia</span>
+        <span><i style={{ background: '#10b981' }} /> Ahorro — consumiste o pagaste menos que el recibo</span>
+        <span><i style={{ background: '#ef4444' }} /> Aumento — consumiste o pagaste más que el recibo</span>
       </div>
       <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={data} margin={CHART_MARGIN}>
+        <BarChart data={data} margin={{ ...CHART_MARGIN, bottom: 28 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+          <XAxis
+            dataKey="name"
+            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            interval={0}
+            angle={-12}
+            textAnchor="end"
+            height={56}
+          />
           <ComparacionYAxis axisType="number" compact={compact} />
-          <Tooltip content={<VariacionTooltip formatValue={formatVariacion} />} />
+          <Tooltip content={<VariacionTooltip />} />
           <Bar dataKey="value" name="Variación" radius={[4, 4, 0, 0]} maxBarSize={72}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
