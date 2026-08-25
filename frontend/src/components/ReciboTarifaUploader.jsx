@@ -169,7 +169,7 @@ export default function ReciboTarifaUploader({
       <small style={{ display: 'block', marginTop: '8px', color: '#718096', fontSize: '0.75rem' }}>
         Extrae empresa distribuidora, tarifa (S/kWh), potencia, alumbrado, electrificación rural (Ley N° 28749) y total a pagar del recibo.
         El total y consumo del recibo crean su escenario inicial en Historial (informativo).
-        Cada «Ejecutar Cálculo» agrega escenarios estimados según sus equipos.
+        Cada «Ejecutar Reporte» en Inicio agrega escenarios estimados según sus equipos.
       </small>
       {message && (
         <small style={{ display: 'block', marginTop: '6px', color: '#10b981', fontSize: '0.75rem' }}>

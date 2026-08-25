@@ -65,24 +65,14 @@ function formHasChanges(cliente, form, tipo) {
   return checks.some(Boolean);
 }
 
-function billingFieldsChanged(cliente, payload) {
-  if (!cliente) return false;
-  return tarifaValuesDiffer(cliente.tarifa_kwh, payload.tarifa_kwh)
-    || String(cliente.alumbrado_publico ?? '') !== String(payload.alumbrado_publico ?? '')
-    || String(cliente.electrificacion_rural ?? '') !== String(payload.electrificacion_rural ?? '')
-    || (cliente.potencia_contratada || '') !== (payload.potencia_contratada || '')
-    || (cliente.empresa_distribuidora || '') !== (payload.empresa_distribuidora || '');
-}
-
 export default function PerfilPage() {
-  const { refreshPreview, refreshCalculos, refreshAll, ejecutarCalculo } = useCalculo();
+  const { refreshPreview, refreshCalculos, refreshAll } = useCalculo();
   const { updateUser } = useAuth();
   const [cliente, setCliente] = useState(null);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [calculoAutoActualizado, setCalculoAutoActualizado] = useState(false);
   const [error, setError] = useState('');
   const [extractingTarifa, setExtractingTarifa] = useState(false);
   const [tarifaDesdeRecibo, setTarifaDesdeRecibo] = useState(false);
@@ -168,7 +158,6 @@ export default function PerfilPage() {
 
     setSaving(true);
     setSaved(false);
-    setCalculoAutoActualizado(false);
     setError('');
     try {
       const payload = {
@@ -194,7 +183,6 @@ export default function PerfilPage() {
       }
 
       const { data } = await updateMiPerfil(payload);
-      const billingChanged = billingFieldsChanged(cliente, payload);
       setCliente(data.data);
       setForm(buildFormFromCliente(data.data));
       updateUser({ ...data.data, role: 'cliente' });
@@ -205,18 +193,10 @@ export default function PerfilPage() {
         await registrarReciboHistorialCliente(data.data.id, pendingReciboHistorial);
         setPendingReciboHistorial(null);
       }
-      const previewData = await refreshPreview();
-      const equipos = previewData?.resumenGeneral?.cantidadEquipos ?? 0;
-      if (billingChanged && equipos > 0) {
-        await ejecutarCalculo();
-        setCalculoAutoActualizado(true);
-      } else {
-        await refreshCalculos();
-      }
+      await Promise.all([refreshPreview(), refreshCalculos()]);
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
-        setCalculoAutoActualizado(false);
       }, 5000);
     } catch (e) {
       setError(e.response?.data?.message || 'Error al guardar el perfil');
@@ -348,7 +328,7 @@ export default function PerfilPage() {
                 }}
               >
                 <strong>Recibo detectado.</strong> Pulse «Guardar perfil» para aplicar tarifa, alumbrado y electrificación rural.
-                Luego vaya a Inicio y pulse «Ejecutar Cálculo» para actualizar el estimado del sistema.
+                Luego vaya a Inicio y pulse «Ejecutar Reporte» cuando quiera guardar el estimado en Historial.
               </div>
             )}
           </div>
@@ -583,7 +563,7 @@ export default function PerfilPage() {
           ) : extractingTarifa ? (
             <><Loader2 size={18} className="spin" /> Analizando recibo...</>
           ) : saved ? (
-            <><Check size={18} /> {calculoAutoActualizado ? 'Perfil y cálculo actualizados' : 'Perfil guardado'}</>
+            <><Check size={18} /> Perfil guardado</>
           ) : (
             <><Save size={18} /> Guardar perfil</>
           )}

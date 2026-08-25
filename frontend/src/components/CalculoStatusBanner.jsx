@@ -37,11 +37,11 @@ export default function CalculoStatusBanner() {
           <span>
             Vista actual: {formatNumber(resumenGeneral.consumoMes ?? 0)} kWh/mes ·{' '}
             {formatCurrency(resumenGeneral.gastoMensual ?? 0)}/mes.
-            {' '}El recibo PDF solo se guarda en Historial; para actualizar el estimado pulse «Ejecutar Cálculo».
+            {' '}El recibo PDF solo se guarda en Historial; para guardar el estimado pulse «Ejecutar Reporte» en Inicio.
             {(tarifaCambiada || configFacturacionCambiada) && (
               <> Si subió un recibo en Mi Perfil, guarde primero el perfil para aplicar tarifa y alumbrado.</>
             )}
-            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Cálculo».'}
+            {!isInicio && ' Vaya a Inicio y pulse «Ejecutar Reporte».'}
           </span>
         </div>
         {!isInicio && (
