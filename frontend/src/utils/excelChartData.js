@@ -83,22 +83,6 @@ export function buildFacturaStepsData(factura) {
   ];
 }
 
-/** Gasto tarifario (columna J) vs cargos fijos C44–C47 */
-export function buildGastoVsCargosData(factura, precioKwh) {
-  const f = normalizeFacturaChart(factura);
-  if (!f) return [];
-  const gastoEnergia = f.gastoEnergia > 0
-    ? f.gastoEnergia
-    : roundNumber(f.consumoKwh * (Number(precioKwh) || 0));
-  const cargosFijos = roundNumber(
-    f.cargoFijo + f.mantReposicion + f.alumbradoPublico + f.interesCompensatorio,
-  );
-  return [
-    { name: 'Gasto por energía', shortName: 'Energía', value: gastoEnergia, color: EXCEL_CHART_COLORS.gastoEnergia },
-    { name: 'Cargos fijos', shortName: 'Cargos', value: cargosFijos, color: EXCEL_CHART_COLORS.cargosFijos },
-  ].filter((row) => row.value > 0);
-}
-
 /** Un solo circular: partes del total factura */
 export function buildTotalFacturaPieData(factura) {
   const f = normalizeFacturaChart(factura);

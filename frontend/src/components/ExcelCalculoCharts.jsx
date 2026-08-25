@@ -8,7 +8,6 @@ import { toPieChartData } from '../utils/chartPieData';
 import {
   buildSubtotalCompositionData,
   buildFacturaStepsData,
-  buildGastoVsCargosData,
   buildTotalFacturaPieData,
   EXCEL_CHART_COLORS,
 } from '../utils/excelChartData';
@@ -68,39 +67,6 @@ export function ExcelFacturaStepsBar({ factura, title, subtitle }) {
           <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} width={56} />
           <Tooltip content={<DashboardSimpleTooltip formatValue={formatSoles} />} />
           <Bar dataKey="value" name="Monto" radius={[4, 4, 0, 0]} maxBarSize={56}>
-            {data.map((entry) => (
-              <Cell key={entry.name} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </DashboardChartPanel>
-  );
-}
-
-export function ExcelGastoVsCargosBar({ factura, precioKwh, title, subtitle }) {
-  const data = useMemo(
-    () => buildGastoVsCargosData(factura, precioKwh),
-    [factura, precioKwh],
-  );
-
-  if (!data.length) {
-    return (
-      <DashboardChartPanel title={title} subtitle={subtitle}>
-        <div className="dashboard-empty dashboard-empty--compact"><p>Sin comparación tarifaria.</p></div>
-      </DashboardChartPanel>
-    );
-  }
-
-  return (
-    <DashboardChartPanel title={title} subtitle={subtitle}>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey="shortName" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} width={56} />
-          <Tooltip content={<DashboardSimpleTooltip formatValue={formatSoles} titleKey="name" />} />
-          <Bar dataKey="value" name="Monto" radius={[4, 4, 0, 0]} maxBarSize={64}>
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.color} />
             ))}
@@ -229,7 +195,6 @@ export function ExcelSubtotalTrendArea({ data = [], title, subtitle, wide = fals
 export default function ExcelCalculoChartsBlock({
   facturaPromedio,
   facturaTrend = [],
-  precioKwh,
   showTrends = true,
 }) {
   return (
@@ -261,13 +226,6 @@ export default function ExcelCalculoChartsBlock({
         factura={facturaPromedio}
         title="Hacia el total del mes"
         subtitle="Subtotal → IGV → Electrificación rural → Total a pagar"
-      />
-
-      <ExcelGastoVsCargosBar
-        factura={facturaPromedio}
-        precioKwh={precioKwh}
-        title="Gasto por energía vs cargos fijos"
-        subtitle="Costo por consumo (kWh × tarifa) frente a cargos regulados"
       />
 
       <ExcelTotalFacturaPie

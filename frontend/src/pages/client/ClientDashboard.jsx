@@ -237,7 +237,6 @@ export default function ClientDashboard() {
         <div className="dashboard-charts-grid">
           <ExcelCalculoChartsBlock
             facturaPromedio={facturaPreview}
-            precioKwh={precioKwh}
             showTrends={false}
           />
 

@@ -98,7 +98,6 @@ export default function ClientHistorialCharts({
         <ExcelCalculoChartsBlock
           facturaPromedio={facturaPromedio}
           facturaTrend={facturaTrend}
-          precioKwh={precioKwh}
           showTrends={facturaTrend.length > 0}
         />
 
