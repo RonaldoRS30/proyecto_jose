@@ -1,6 +1,130 @@
-const { Recomendacion } = require('../models');
+const { Op } = require('sequelize');
+const { Recomendacion, Electrodomestico } = require('../models');
 const { AppError } = require('../utils/errorHandler');
+const { normalizeNombreEquipo } = require('../helpers/nombreEquipoHelper');
 const { matchRecomendacionesForEquipos } = require('./recomendacionMatcher');
+
+const MODULOS_VALIDOS = ['aparato', 'fantasma', 'iluminacion'];
+
+const TEXTO_RECOMENDACION_CLIENTE = 'Equipo registrado por un cliente. Personalice la recomendación, potencia de referencia y fórmulas desde este panel.';
+
+function normalizeModulo(modulo) {
+  const value = String(modulo || 'aparato').toLowerCase();
+  if (!MODULOS_VALIDOS.includes(value)) {
+    throw new AppError('Módulo inválido.', 400);
+  }
+  return value;
+}
+
+function findRecomendacionByNombreModulo(recomendaciones, nombre, modulo) {
+  const buscado = normalizeNombreEquipo(nombre);
+  if (!buscado) return null;
+  return recomendaciones.find(
+    (rec) => rec.modulo === modulo && normalizeNombreEquipo(rec.nombre) === buscado,
+  ) || null;
+}
+
+async function loadRecomendacionesIndex() {
+  const rows = await Recomendacion.findAll({
+    attributes: ['id', 'nombre', 'modulo', 'potencia_w', 'horas_uso_dia', 'texto', 'orden'],
+  });
+  const byModulo = new Map();
+  for (const modulo of MODULOS_VALIDOS) {
+    byModulo.set(modulo, []);
+  }
+  rows.forEach((row) => {
+    const list = byModulo.get(row.modulo);
+    if (list) list.push(row);
+  });
+  return byModulo;
+}
+
+/**
+ * Crea o reutiliza una recomendación de catálogo para un equipo del cliente.
+ * Devuelve el id de recomendación vinculado.
+ */
+async function ensureRecomendacionFromEquipo(data, { index = null } = {}) {
+  const nombre = String(data.nombre || '').trim();
+  if (!nombre) return null;
+
+  const modulo = normalizeModulo(data.modulo);
+  const catalogIndex = index || await loadRecomendacionesIndex();
+  const catalogoModulo = catalogIndex.get(modulo) || [];
+
+  if (data.recomendacion_id) {
+    const linked = catalogoModulo.find((rec) => Number(rec.id) === Number(data.recomendacion_id))
+      || (await Recomendacion.findByPk(data.recomendacion_id));
+    if (linked
+      && linked.modulo === modulo
+      && normalizeNombreEquipo(linked.nombre) === normalizeNombreEquipo(nombre)) {
+      return linked.id;
+    }
+  }
+
+  const existing = findRecomendacionByNombreModulo(catalogoModulo, nombre, modulo);
+  if (existing) {
+    const updates = {};
+    if ((existing.potencia_w == null || existing.potencia_w === '') && data.potencia_w != null) {
+      updates.potencia_w = data.potencia_w;
+    }
+    if ((existing.horas_uso_dia == null || existing.horas_uso_dia === '') && data.horas_uso_dia != null) {
+      updates.horas_uso_dia = data.horas_uso_dia;
+    }
+    if (Object.keys(updates).length) {
+      await existing.update(updates);
+    }
+    return existing.id;
+  }
+
+  const maxOrden = catalogoModulo.reduce((max, rec) => Math.max(max, rec.orden || 0), 0);
+  const created = await Recomendacion.create({
+    nombre,
+    texto: TEXTO_RECOMENDACION_CLIENTE,
+    aliases: [],
+    categoria: data.categoria || 'Otros',
+    modulo,
+    potencia_w: data.potencia_w ?? null,
+    horas_uso_dia: data.horas_uso_dia ?? null,
+    activo: true,
+    orden: maxOrden + 1,
+    eficiencia_habilitada: false,
+    plantilla_eficiencia: null,
+    eficiencia_config: null,
+  });
+
+  catalogoModulo.push(created);
+  return created.id;
+}
+
+/** Sincroniza equipos ya guardados por clientes que aún no tienen recomendación en admin. */
+async function syncRecomendacionesDesdeEquipos() {
+  const equipos = await Electrodomestico.findAll({
+    where: { activo: true },
+    attributes: [
+      'id', 'nombre', 'modulo', 'categoria', 'potencia_w', 'horas_uso_dia', 'recomendacion_id',
+    ],
+  });
+
+  if (!equipos.length) return { synced: 0, created: 0 };
+
+  const index = await loadRecomendacionesIndex();
+  let synced = 0;
+  let created = 0;
+
+  for (const equipo of equipos) {
+    const beforeCount = [...index.values()].reduce((sum, list) => sum + list.length, 0);
+    const recomendacionId = await ensureRecomendacionFromEquipo(equipo.toJSON(), { index });
+    const afterCount = [...index.values()].reduce((sum, list) => sum + list.length, 0);
+    if (afterCount > beforeCount) created += 1;
+
+    if (recomendacionId && Number(equipo.recomendacion_id) !== Number(recomendacionId)) {
+      await equipo.update({ recomendacion_id: recomendacionId });
+      synced += 1;
+    }
+  }
+
+  return { synced, created };
+}
 
 const listar = async ({ soloActivas = false, modulo = null } = {}) => {
   const where = {};
@@ -86,6 +210,7 @@ const obtenerParaEquipos = async (equipos) => {
 };
 
 module.exports = {
+  TEXTO_RECOMENDACION_CLIENTE,
   listar,
   obtener,
   crear,
@@ -93,4 +218,7 @@ module.exports = {
   eliminar,
   toggleActivo,
   obtenerParaEquipos,
+  ensureRecomendacionFromEquipo,
+  syncRecomendacionesDesdeEquipos,
+  findRecomendacionByNombreModulo,
 };

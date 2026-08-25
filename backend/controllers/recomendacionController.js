@@ -13,6 +13,9 @@ const validate = (req, res, next) => {
 const listar = asyncHandler(async (req, res) => {
   const soloActivas = req.user.role === 'cliente' || req.query.activas === '1';
   const { modulo } = req.query;
+  if (req.user.role === 'admin') {
+    await recomendacionService.syncRecomendacionesDesdeEquipos();
+  }
   const data = await recomendacionService.listar({ soloActivas, modulo: modulo || null });
   res.json({ success: true, data });
 });

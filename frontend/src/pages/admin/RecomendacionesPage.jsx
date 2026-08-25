@@ -14,6 +14,10 @@ import {
 import { CATEGORIAS_APARATO } from '../../utils/helpers';
 import { useConfirm, useAlert } from '../../contexts/ConfirmContext';
 import { PLANTILLA_OPTIONS, PLANTILLAS_EFICIENCIA } from '../../utils/plantillasEficiencia';
+import {
+  esRecomendacionRegistradaPorCliente,
+  labelModuloRecomendacion,
+} from '../../utils/recomendacionesAdmin';
 
 const emptyForm = {
   nombre: '',
@@ -258,8 +262,18 @@ export default function RecomendacionesPage() {
             <tr key={item.id}>
               <td>
                 <strong>{item.nombre}</strong>
+                {esRecomendacionRegistradaPorCliente(item) && (
+                  <>
+                    <br />
+                    <span className="badge badge-warning" style={{ marginTop: '0.25rem' }}>
+                      Registrado por cliente
+                    </span>
+                  </>
+                )}
                 <br />
                 <small style={{ color: 'var(--text-muted)' }}>
+                  {labelModuloRecomendacion(item.modulo)}
+                  {' · '}
                   {item.texto.substring(0, 80)}{item.texto.length > 80 ? '…' : ''}
                 </small>
               </td>

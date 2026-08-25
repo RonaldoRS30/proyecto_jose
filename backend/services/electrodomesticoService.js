@@ -2,10 +2,21 @@ const { Electrodomestico } = require('../models');
 const { AppError } = require('../utils/errorHandler');
 
 const { registerMarcaModelo } = require('./marcaModeloCatalogService');
+const { ensureRecomendacionFromEquipo } = require('./recomendacionService');
 const { applyEficienciaToPayload } = require('../helpers/eficienciaEnergeticaHelper');
 const { usaCiclosDiarios } = require('../helpers/consumoDispositivoHelper');
 const { normalizeNombreEquipo } = require('../helpers/nombreEquipoHelper');
 const { Recomendacion } = require('../models');
+
+const MODULOS_VALIDOS = ['aparato', 'fantasma', 'iluminacion'];
+
+function normalizeModulo(modulo) {
+  const value = String(modulo || 'aparato').toLowerCase();
+  if (!MODULOS_VALIDOS.includes(value)) {
+    throw new AppError('Módulo inválido.', 400);
+  }
+  return value;
+}
 
 async function preparePayload(data) {
   let recomendacion = null;
@@ -16,11 +27,16 @@ async function preparePayload(data) {
   if (normalized.nombre != null) {
     normalized.nombre = String(normalized.nombre).trim();
   }
+  normalized.modulo = normalizeModulo(normalized.modulo);
   if (!normalized.eficiencia_energetica) {
     const potencia = parseFloat(normalized.potencia_w);
     if (!Number.isFinite(potencia) || potencia < 0) {
       throw new AppError('La potencia (W) es obligatoria.', 400);
     }
+  }
+  const recomendacionId = await ensureRecomendacionFromEquipo(normalized);
+  if (recomendacionId) {
+    normalized.recomendacion_id = recomendacionId;
   }
   return normalized;
 }

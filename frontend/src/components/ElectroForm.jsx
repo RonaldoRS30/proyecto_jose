@@ -85,6 +85,9 @@ export default function ElectroForm({
     setPresetKey('');
     setSelectedConsejo('');
     setIsManual(!!editId);
+    if (modulo) {
+      setForm((prev) => (prev.modulo === modulo ? prev : { ...prev, modulo }));
+    }
     const enMinutos = shouldDefaultUsoEnMinutos(form.horas_uso_dia) && (
       !form.eficiencia_energetica || esEquipoHpUsoMinutos(form, catalogEntry)
     );
@@ -92,7 +95,7 @@ export default function ElectroForm({
     setMinutosUsoDia(enMinutos ? horasToMinutosUso(form.horas_uso_dia) : '');
     // Solo al abrir el modal (create/edit), no al sincronizar horas desde minutos
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, editId]);
+  }, [isOpen, editId, modulo]);
 
   useEffect(() => {
     if (!eficienciaActiva || !plantillaMeta?.locksHorasUsoDia) return;
@@ -307,7 +310,12 @@ export default function ElectroForm({
             getOptionValue={(opt) => opt.nombre}
             onNotFound={(searchQuery) => {
               setIsManual(true);
-              setForm({ ...form, nombre: searchQuery });
+              setForm({
+                ...form,
+                nombre: searchQuery,
+                modulo: modulo || form.modulo,
+                recomendacion_id: null,
+              });
             }}
             renderOption={(opt) => (
               <span className="searchable-option-content">

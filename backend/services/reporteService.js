@@ -78,6 +78,16 @@ const generarReportePDF = async (calculoId, clienteId) => {
     electroMap = Object.fromEntries(electros.map((e) => [e.id, e.recomendacion_id]));
   }
 
+  await recomendacionService.syncRecomendacionesDesdeEquipos();
+
+  if (electroIds.length > 0) {
+    const electrosActualizados = await Electrodomestico.findAll({
+      where: { id: electroIds },
+      attributes: ['id', 'recomendacion_id'],
+    });
+    electroMap = Object.fromEntries(electrosActualizados.map((e) => [e.id, e.recomendacion_id]));
+  }
+
   const equiposParaMatch = detalles.map((detalle) => ({
     nombre: detalle.nombre,
     modulo: detalle.modulo,
