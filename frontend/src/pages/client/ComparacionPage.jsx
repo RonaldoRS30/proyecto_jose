@@ -65,18 +65,13 @@ function ahorroColor(value, neutral = false) {
   return value >= 0 ? '#10b981' : '#ef4444';
 }
 
-function escenarioLabel(comparison, side) {
-  const esRecibo = side === 'actual' ? comparison.actualEsRecibo : comparison.referenciaEsRecibo;
-  return esRecibo ? 'Recibo real' : 'Cálculo';
-}
-
 export default function ComparacionPage() {
   const alert = useAlert();
   const [calculos, setCalculos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [actualId, setActualId] = useState('');
-  const [referenciaId, setReferenciaId] = useState('');
+  const [reciboId, setReciboId] = useState('');
+  const [calculoId, setCalculoId] = useState('');
   const [metricas, setMetricas] = useState(DEFAULT_METRICAS);
 
   const fetchCalculos = useCallback(async () => {
@@ -87,9 +82,9 @@ export default function ComparacionPage() {
         (a, b) => new Date(b.created_at) - new Date(a.created_at),
       );
       setCalculos(list);
-      const { actualId: aId, referenciaId: rId } = pickComparacionDefaults(list);
-      if (aId) setActualId(aId);
-      if (rId) setReferenciaId(rId);
+      const { reciboId: rId, calculoId: cId } = pickComparacionDefaults(list);
+      if (rId) setReciboId(rId);
+      if (cId) setCalculoId(cId);
     } catch {
       await alert({
         title: 'Error',
@@ -103,27 +98,24 @@ export default function ComparacionPage() {
 
   useEffect(() => { fetchCalculos(); }, [fetchCalculos]);
 
-  useEffect(() => {
-    if (calculos.length < 2 || !actualId || !referenciaId) return;
-    if (actualId === referenciaId) {
-      const { referenciaId: rId } = pickComparacionDefaults(calculos);
-      if (rId && rId !== actualId) setReferenciaId(rId);
-    }
-  }, [calculos, actualId, referenciaId]);
-
-  const options = useMemo(
-    () => buildComparacionSelectOptions(calculos),
+  const recibos = useMemo(
+    () => calculos.filter(isReciboRegistro),
     [calculos],
   );
 
-  const referenciaOptions = useMemo(
-    () => options.filter((o) => o.value !== actualId),
-    [options, actualId],
+  const calculosEstimados = useMemo(
+    () => calculos.filter((c) => !isReciboRegistro(c)),
+    [calculos],
   );
 
-  const actualOptions = useMemo(
-    () => options.filter((o) => o.value !== referenciaId),
-    [options, referenciaId],
+  const reciboOptions = useMemo(
+    () => buildComparacionSelectOptions(recibos),
+    [recibos],
+  );
+
+  const calculoOptions = useMemo(
+    () => buildComparacionSelectOptions(calculosEstimados),
+    [calculosEstimados],
   );
 
   const renderEscenarioOption = useCallback(
@@ -131,20 +123,20 @@ export default function ComparacionPage() {
     [],
   );
 
-  const actualCalculo = useMemo(
-    () => calculos.find((c) => String(c.id) === actualId),
-    [calculos, actualId],
+  const reciboCalculo = useMemo(
+    () => calculos.find((c) => String(c.id) === reciboId),
+    [calculos, reciboId],
   );
 
-  const referenciaCalculo = useMemo(
-    () => calculos.find((c) => String(c.id) === referenciaId),
-    [calculos, referenciaId],
+  const calculoEstimado = useMemo(
+    () => calculos.find((c) => String(c.id) === calculoId),
+    [calculos, calculoId],
   );
 
   const comparison = useMemo(() => {
-    if (!actualCalculo || !referenciaCalculo || actualId === referenciaId) return null;
-    return compareCalculos(actualCalculo, referenciaCalculo);
-  }, [actualCalculo, referenciaCalculo, actualId, referenciaId]);
+    if (!reciboCalculo || !calculoEstimado) return null;
+    return compareCalculos(calculoEstimado, reciboCalculo);
+  }, [reciboCalculo, calculoEstimado]);
 
   const activeMetricKeys = useMemo(
     () => COMPARACION_METRICAS.filter((m) => metricas[m.key]).map((m) => m.field),
@@ -152,15 +144,15 @@ export default function ComparacionPage() {
   );
 
   const handlePDF = async () => {
-    if (!comparison || isReciboRegistro(actualCalculo)) return;
+    if (!comparison) return;
     setPdfLoading(true);
     try {
-      const { data } = await generarPDFComparacion(Number(actualId), Number(referenciaId));
+      const { data } = await generarPDFComparacion(Number(calculoId), Number(reciboId));
       const blob = await downloadReporte(data.data.id);
       const url = window.URL.createObjectURL(blob.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `comparacion_${actualId}_vs_${referenciaId}.pdf`;
+      a.download = `comparacion_${calculoId}_vs_${reciboId}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -174,7 +166,9 @@ export default function ComparacionPage() {
     }
   };
 
-  const canCompare = calculos.length >= 2;
+  const canCompare = recibos.length >= 1 && calculosEstimados.length >= 1;
+  const faltaRecibo = recibos.length === 0;
+  const faltaCalculo = calculosEstimados.length === 0;
 
   if (loading) return <div className="loading">Cargando comparación...</div>;
 
@@ -183,14 +177,26 @@ export default function ComparacionPage() {
       <div className="comparacion-page">
         <PageHeader
           title="Comparación de reportes"
-          subtitle="Compare recibos reales y cálculos estimados en un mismo selector"
+          subtitle="Compare sus recibos subidos contra los cálculos estimados del sistema"
         />
         <div className="dashboard-empty">
           <GitCompare size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} aria-hidden />
-          <p>
-            Necesita al menos <strong>2 escenarios</strong> en su historial
-            (recibo PDF, cálculos estimados, o ambos).
-          </p>
+          {faltaRecibo && faltaCalculo && (
+            <p>
+              Necesita al menos <strong>1 recibo subido</strong> y <strong>1 cálculo estimado</strong> en su historial.
+              Suba su recibo en Mi Perfil y ejecute «Ejecutar Reporte» en Inicio.
+            </p>
+          )}
+          {faltaRecibo && !faltaCalculo && (
+            <p>
+              Suba al menos un <strong>recibo PDF</strong> en Mi Perfil para compararlo con sus cálculos estimados.
+            </p>
+          )}
+          {!faltaRecibo && faltaCalculo && (
+            <p>
+              Ejecute al menos un <strong>cálculo estimado</strong> desde Inicio («Ejecutar Reporte») para compararlo con sus recibos.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -207,16 +213,13 @@ export default function ComparacionPage() {
   const SolesIcon = facturaAhorro >= 0 ? TrendingDown : TrendingUp;
   const AnualIcon = anualAhorro >= 0 ? CalendarRange : TrendingUp;
   const neutralColor = '#64748b';
-  const pdfDisabled = !comparison || isReciboRegistro(actualCalculo);
-  const actualTipo = comparison ? escenarioLabel(comparison, 'actual') : '';
-  const refTipo = comparison ? escenarioLabel(comparison, 'referencia') : '';
 
   return (
     <div className="comparacion-page">
       <PageHeader
         title="Comparación de reportes"
-        subtitle="Seleccione cualquier escenario: recibos reales (PDF) o cálculos del sistema"
-        action={comparison && !pdfDisabled ? {
+        subtitle="Compare un recibo subido contra un cálculo estimado con sus equipos"
+        action={comparison ? {
           label: pdfLoading ? 'Generando...' : 'Descargar PDF',
           icon: Download,
           onClick: handlePDF,
@@ -255,12 +258,12 @@ export default function ComparacionPage() {
       <div className="comparacion-selectors card">
         <div className="comparacion-selectors__grid">
           <div className="form-group">
-            <label htmlFor="comparacion-actual">Escenario actual</label>
+            <label htmlFor="comparacion-recibo">Recibos subidos</label>
             <SearchableSelect
-              options={actualOptions}
-              value={actualId}
-              onChange={setActualId}
-              placeholder="Seleccione escenario..."
+              options={reciboOptions}
+              value={reciboId}
+              onChange={setReciboId}
+              placeholder="Seleccione un recibo..."
               clearable={false}
               renderOption={renderEscenarioOption}
               renderValue={renderEscenarioOption}
@@ -268,12 +271,12 @@ export default function ComparacionPage() {
           </div>
           <div className="comparacion-selectors__vs" aria-hidden>vs</div>
           <div className="form-group">
-            <label htmlFor="comparacion-ref">Comparar con (referencia)</label>
+            <label htmlFor="comparacion-calculo">Cálculo estimado</label>
             <SearchableSelect
-              options={referenciaOptions}
-              value={referenciaId}
-              onChange={setReferenciaId}
-              placeholder="Seleccione referencia..."
+              options={calculoOptions}
+              value={calculoId}
+              onChange={setCalculoId}
+              placeholder="Seleccione un cálculo..."
               clearable={false}
               renderOption={renderEscenarioOption}
               renderValue={renderEscenarioOption}
@@ -281,24 +284,10 @@ export default function ComparacionPage() {
           </div>
         </div>
         <p className="comparacion-selectors__hint">
-          Puede comparar recibo vs cálculo, cálculo vs cálculo, o recibo vs recibo.
-          El escenario actual se mide contra la referencia; el ahorro indica cuánto menos consume o paga.
+          A la izquierda elige el recibo real (PDF) y a la derecha el cálculo estimado con sus equipos.
+          El ahorro indica cuánto menos consume o paga su estimación respecto al recibo.
         </p>
       </div>
-
-      {actualId === referenciaId && (
-        <div className="comparacion-alert">
-          <AlertTriangle size={18} aria-hidden />
-          Seleccione dos escenarios distintos para comparar.
-        </div>
-      )}
-
-      {pdfDisabled && comparison && isReciboRegistro(actualCalculo) && (
-        <div className="comparacion-alert comparacion-alert--info">
-          <AlertTriangle size={18} aria-hidden />
-          El PDF comparativo requiere un cálculo estimado como escenario actual. Puede invertir los selectores o elegir otro escenario.
-        </div>
-      )}
 
       {sinVariacion && (
         <div className="comparacion-alert comparacion-alert--info">
@@ -327,7 +316,7 @@ export default function ComparacionPage() {
                   'kWh',
                 )}
                 color={sinVariacion ? neutralColor : ahorroColor(kwhAhorro)}
-                subtext={`${actualTipo}: ${formatNumber(comparison.consumoMesKwh.actual)} kWh · ${refTipo}: ${formatNumber(comparison.consumoMesKwh.referencia)} kWh`}
+                subtext={`Recibo: ${formatNumber(comparison.consumoMesKwh.referencia)} kWh · Cálculo: ${formatNumber(comparison.consumoMesKwh.actual)} kWh`}
               />
             )}
             {metricas.gastoEnergia && (
@@ -340,7 +329,7 @@ export default function ComparacionPage() {
                   'S/',
                 )}
                 color={sinVariacion ? neutralColor : ahorroColor(energiaAhorro)}
-                subtext={`${actualTipo}: ${formatCurrency(comparison.gastoEnergiaMes.actual)} · ${refTipo}: ${formatCurrency(comparison.gastoEnergiaMes.referencia)}`}
+                subtext={`Recibo: ${formatCurrency(comparison.gastoEnergiaMes.referencia)} · Cálculo: ${formatCurrency(comparison.gastoEnergiaMes.actual)}`}
               />
             )}
             {metricas.totalFactura && (
@@ -353,7 +342,7 @@ export default function ComparacionPage() {
                   'S/',
                 )}
                 color={sinVariacion ? neutralColor : ahorroColor(facturaAhorro)}
-                subtext={`${actualTipo}: ${formatCurrency(comparison.facturaTotalMes.actual)} · ${refTipo}: ${formatCurrency(comparison.facturaTotalMes.referencia)}`}
+                subtext={`Recibo: ${formatCurrency(comparison.facturaTotalMes.referencia)} · Cálculo: ${formatCurrency(comparison.facturaTotalMes.actual)}`}
               />
             )}
             {metricas.ahorroAnual && (
@@ -366,7 +355,7 @@ export default function ComparacionPage() {
                   'S/',
                 )}
                 color={sinVariacion ? neutralColor : ahorroColor(anualAhorro)}
-                subtext={`${actualTipo}: ${formatCurrency(comparison.facturaTotalAnio.actual)} · ${refTipo}: ${formatCurrency(comparison.facturaTotalAnio.referencia)}`}
+                subtext={`Recibo: ${formatCurrency(comparison.facturaTotalAnio.referencia)} · Cálculo: ${formatCurrency(comparison.facturaTotalAnio.actual)}`}
               />
             )}
           </div>
@@ -382,8 +371,8 @@ export default function ComparacionPage() {
                 <thead>
                   <tr>
                     <th>Concepto</th>
-                    <th>Actual ({actualTipo})</th>
-                    <th>Referencia ({refTipo})</th>
+                    <th>Recibo subido</th>
+                    <th>Cálculo estimado</th>
                     <th>Diferencia</th>
                     <th>% ahorro</th>
                   </tr>
@@ -392,8 +381,8 @@ export default function ComparacionPage() {
                   {metricas.consumoKwh && (
                     <tr>
                       <td>Consumo kWh/mes</td>
-                      <td>{formatNumber(comparison.consumoMesKwh.actual)}</td>
                       <td>{formatNumber(comparison.consumoMesKwh.referencia)}</td>
+                      <td>{formatNumber(comparison.consumoMesKwh.actual)}</td>
                       <td>{formatNumber(comparison.consumoMesKwh.diferencia)}</td>
                       <td>{comparison.consumoMesKwh.pctAhorro != null ? `${comparison.consumoMesKwh.pctAhorro}%` : '—'}</td>
                     </tr>
@@ -401,8 +390,8 @@ export default function ComparacionPage() {
                   {metricas.gastoEnergia && (
                     <tr>
                       <td>Gasto energía S/mes</td>
-                      <td>{formatCurrency(comparison.gastoEnergiaMes.actual)}</td>
                       <td>{formatCurrency(comparison.gastoEnergiaMes.referencia)}</td>
+                      <td>{formatCurrency(comparison.gastoEnergiaMes.actual)}</td>
                       <td>{formatCurrency(comparison.gastoEnergiaMes.diferencia)}</td>
                       <td>{comparison.gastoEnergiaMes.pctAhorro != null ? `${comparison.gastoEnergiaMes.pctAhorro}%` : '—'}</td>
                     </tr>
@@ -410,8 +399,8 @@ export default function ComparacionPage() {
                   {metricas.totalFactura && (
                     <tr>
                       <td>Total a pagar S/mes</td>
-                      <td>{formatCurrency(comparison.facturaTotalMes.actual)}</td>
                       <td>{formatCurrency(comparison.facturaTotalMes.referencia)}</td>
+                      <td>{formatCurrency(comparison.facturaTotalMes.actual)}</td>
                       <td>{formatCurrency(comparison.facturaTotalMes.diferencia)}</td>
                       <td>{comparison.facturaTotalMes.pctAhorro != null ? `${comparison.facturaTotalMes.pctAhorro}%` : '—'}</td>
                     </tr>
@@ -419,8 +408,8 @@ export default function ComparacionPage() {
                   {metricas.consumoKwh && (
                     <tr>
                       <td>Consumo kWh/año</td>
-                      <td>{formatNumber(comparison.consumoAnioKwh.actual)}</td>
                       <td>{formatNumber(comparison.consumoAnioKwh.referencia)}</td>
+                      <td>{formatNumber(comparison.consumoAnioKwh.actual)}</td>
                       <td>{formatNumber(comparison.consumoAnioKwh.diferencia)}</td>
                       <td>{comparison.consumoAnioKwh.pctAhorro != null ? `${comparison.consumoAnioKwh.pctAhorro}%` : '—'}</td>
                     </tr>
@@ -428,8 +417,8 @@ export default function ComparacionPage() {
                   {metricas.gastoEnergia && (
                     <tr>
                       <td>Gasto energía S/año</td>
-                      <td>{formatCurrency(comparison.gastoEnergiaAnio.actual)}</td>
                       <td>{formatCurrency(comparison.gastoEnergiaAnio.referencia)}</td>
+                      <td>{formatCurrency(comparison.gastoEnergiaAnio.actual)}</td>
                       <td>{formatCurrency(comparison.gastoEnergiaAnio.diferencia)}</td>
                       <td>{comparison.gastoEnergiaAnio.pctAhorro != null ? `${comparison.gastoEnergiaAnio.pctAhorro}%` : '—'}</td>
                     </tr>
@@ -437,8 +426,8 @@ export default function ComparacionPage() {
                   {metricas.ahorroAnual && (
                     <tr>
                       <td>Total a pagar S/año</td>
-                      <td>{formatCurrency(comparison.facturaTotalAnio.actual)}</td>
                       <td>{formatCurrency(comparison.facturaTotalAnio.referencia)}</td>
+                      <td>{formatCurrency(comparison.facturaTotalAnio.actual)}</td>
                       <td>{formatCurrency(comparison.facturaTotalAnio.diferencia)}</td>
                       <td>{comparison.facturaTotalAnio.pctAhorro != null ? `${comparison.facturaTotalAnio.pctAhorro}%` : '—'}</td>
                     </tr>

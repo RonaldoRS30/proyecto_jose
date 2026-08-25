@@ -127,8 +127,8 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
   const sinVariacion = !hasComparacionVariacion(comparison, metricFields);
 
   const refSubtitle = comparison.referenciaEsRecibo
-    ? 'Escenario estimado vs recibo real'
-    : 'Escenario actual vs referencia';
+    ? 'Cálculo estimado vs recibo subido'
+    : 'Cálculo estimado vs referencia';
 
   return (
     <div className="dashboard-charts-grid comparacion-charts-grid">

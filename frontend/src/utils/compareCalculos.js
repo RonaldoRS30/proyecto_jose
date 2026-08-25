@@ -153,39 +153,22 @@ export function findReciboReferencia(calculos) {
   return calculos.find(isEscenarioInicial) ?? calculos.find(isReciboRegistro) ?? null;
 }
 
-/** Elige par por defecto: cálculo más reciente vs recibo inicial o segundo cálculo distinto. */
+/** Elige par por defecto: recibo más reciente (o escenario inicial) y cálculo estimado más reciente. */
 export function pickComparacionDefaults(calculos) {
-  if (!calculos?.length) return { actualId: '', referenciaId: '' };
+  if (!calculos?.length) return { reciboId: '', calculoId: '' };
 
   const list = [...calculos].sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at),
   );
-  const reciboRef = findReciboReferencia(list);
+  const recibos = list.filter(isReciboRegistro);
   const calculosEstimados = list.filter((c) => !isReciboRegistro(c));
 
-  if (reciboRef && calculosEstimados.length >= 1) {
-    return {
-      actualId: String(calculosEstimados[0].id),
-      referenciaId: String(reciboRef.id),
-    };
-  }
-
-  if (list.length === 1) {
-    return { actualId: String(list[0].id), referenciaId: '' };
-  }
-
-  const actual = calculosEstimados[0] ?? list[0];
-  const actualM = extractCalculoMetrics(actual);
-  const referencia = list.find((c) => {
-    if (String(c.id) === String(actual.id)) return false;
-    const m = extractCalculoMetrics(c);
-    return m.consumoMesKwh !== actualM.consumoMesKwh
-      || m.facturaTotalMes !== actualM.facturaTotalMes;
-  }) ?? list.find((c) => String(c.id) !== String(actual.id)) ?? list[1];
+  const recibo = findReciboReferencia(recibos) ?? recibos[0] ?? null;
+  const calculo = calculosEstimados[0] ?? null;
 
   return {
-    actualId: String(actual.id),
-    referenciaId: String(referencia.id),
+    reciboId: recibo ? String(recibo.id) : '',
+    calculoId: calculo ? String(calculo.id) : '',
   };
 }
 
@@ -220,8 +203,8 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   const showTotal = metricas.totalFactura !== false;
   const showGasto = metricas.gastoEnergia !== false;
 
-  const refLabel = comparison.referenciaEsRecibo ? 'Recibo real' : 'Referencia';
-  const actualLabel = comparison.actualEsRecibo ? 'Recibo real' : 'Escenario';
+  const refLabel = comparison.referenciaEsRecibo ? 'Recibo' : 'Referencia';
+  const actualLabel = comparison.actualEsRecibo ? 'Recibo' : 'Cálculo estimado';
 
   const ahorro = [];
   if (showConsumo) {
