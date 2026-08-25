@@ -3,7 +3,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ComposedChart, Line, Cell, Legend,
 } from 'recharts';
-import { formatNumber, formatCurrency } from '../utils/helpers';
+import { formatNumber, formatCurrency, formatChartAxisSoles } from '../utils/helpers';
 import { toPieChartData } from '../utils/chartPieData';
 import {
   buildSubtotalCompositionData,
@@ -16,6 +16,22 @@ import DashboardPieChart from './DashboardPieChart';
 
 const formatKwh = (v) => `${formatNumber(v)} kWh`;
 const formatSoles = (v) => formatCurrency(v);
+
+/** Eje Y/X en soles: sin decimales y compacto (ej. 260k) para lectura clara */
+const formatAxisSolesTick = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'S/ 0';
+  const compact = Math.abs(n) >= 1000;
+  const formatted = formatChartAxisSoles(n, { compact });
+  return `S/ ${formatted}`;
+};
+
+const CHART_Y_AXIS_SOLES = {
+  width: 72,
+  tick: { fill: 'var(--text-muted)', fontSize: 11 },
+  tickFormatter: formatAxisSolesTick,
+  tickMargin: 6,
+};
 
 export function ExcelSubtotalItemsBar({ factura, title, subtitle }) {
   const data = useMemo(() => buildSubtotalCompositionData(factura), [factura]);
@@ -31,9 +47,9 @@ export function ExcelSubtotalItemsBar({ factura, title, subtitle }) {
   return (
     <DashboardChartPanel title={title} subtitle={subtitle}>
       <ResponsiveContainer width="100%" height={Math.max(180, data.length * 36)}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-          <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} />
+          <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatAxisSolesTick} />
           <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} width={130} />
           <Tooltip content={<DashboardSimpleTooltip formatValue={formatSoles} />} />
           <Bar dataKey="value" name="Monto" radius={[0, 4, 4, 0]} maxBarSize={22}>
@@ -61,10 +77,10 @@ export function ExcelFacturaStepsBar({ factura, title, subtitle }) {
   return (
     <DashboardChartPanel title={title} subtitle={subtitle}>
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+        <BarChart data={data} margin={{ top: 8, right: 16, left: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} width={56} />
+          <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} interval={0} />
+          <YAxis {...CHART_Y_AXIS_SOLES} />
           <Tooltip content={<DashboardSimpleTooltip formatValue={formatSoles} />} />
           <Bar dataKey="value" name="Monto" radius={[4, 4, 0, 0]} maxBarSize={56}>
             {data.map((entry) => (
@@ -112,9 +128,10 @@ export function ExcelFacturaTrendChart({ data = [], title, subtitle, wide = fals
           <YAxis
             yAxisId="soles"
             orientation="right"
+            width={72}
             tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-            tickFormatter={(v) => `S/${formatNumber(v)}`}
-            width={56}
+            tickFormatter={formatAxisSolesTick}
+            tickMargin={6}
           />
           <Tooltip
             content={(
@@ -179,7 +196,7 @@ export function ExcelSubtotalTrendArea({ data = [], title, subtitle, wide = fals
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="mesLabel" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={(v) => `S/${formatNumber(v)}`} width={56} />
+          <YAxis width={72} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatAxisSolesTick} tickMargin={6} />
           <Tooltip content={<DashboardMesTooltip formatValue={formatSoles} />} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Area type="monotone" dataKey="subtotal" name="Subtotal" stroke={EXCEL_CHART_COLORS.subtotal} fill="transparent" strokeWidth={2} />
