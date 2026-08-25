@@ -16,7 +16,7 @@ import {
 import { saveElectrodomestico } from '../../utils/saveElectrodomestico';
 import { getAllEquiposFromModulos } from '../../utils/nombreEquipo';
 import { CATEGORIAS_APARATO, formatCurrency } from '../../utils/helpers';
-import { emptyEficienciaFields, eficienciaFieldsFromItem } from '../../utils/eficienciaEnergetica';
+import { emptyEficienciaFields, eficienciaFieldsFromItem, mostrarEtiquetaEeEnLista } from '../../utils/eficienciaEnergetica';
 
 const emptyForm = {
   nombre: '', categoria: 'Cocina', marca: '', modelo: '',
@@ -153,7 +153,7 @@ export default function ElectrodomesticosPage() {
                 <td><span className="badge badge-info">{item.categoria}</span></td>
                 <td>
                   {item.potencia_w} W
-                  {item.eficiencia_energetica && (
+                  {mostrarEtiquetaEeEnLista(item) && (
                     <><br /><small style={{ color: 'var(--text-muted)' }}>Etiqueta EE</small></>
                   )}
                 </td>

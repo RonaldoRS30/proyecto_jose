@@ -60,6 +60,35 @@ function normalizeNombre(nombre) {
     .replace(/\p{Diacritic}/gu, '');
 }
 
+/** Bomba de agua y motor mecánico (HP): checkbox propio y minutos siempre disponibles. */
+export function matchesEquipoHpUsoMinutos(nombre) {
+  const n = normalizeNombre(nombre);
+  if (!n) return false;
+  if (n.includes('bomba') && n.includes('agua')) return true;
+  if (n.includes('motor') && n.includes('mecanico')) return true;
+  return false;
+}
+
+export function esEquipoHpUsoMinutos(form, catalogEntry = null) {
+  const plantilla = form?.plantilla_eficiencia || catalogEntry?.plantilla_eficiencia;
+  if (plantilla !== 'hp_potencia') return false;
+  return matchesEquipoHpUsoMinutos(form?.nombre)
+    || matchesEquipoHpUsoMinutos(catalogEntry?.nombre);
+}
+
+export function labelCheckboxEficiencia(form, catalogEntry = null) {
+  if (esEquipoHpUsoMinutos(form, catalogEntry)) return 'Potencia nominal (HP)';
+  return 'Usar etiqueta de eficiencia energética (datos del fabricante)';
+}
+
+export function mostrarEtiquetaEeEnLista(item) {
+  if (!item?.eficiencia_energetica) return false;
+  return !esEquipoHpUsoMinutos({
+    nombre: item.nombre,
+    plantilla_eficiencia: item.plantilla_eficiencia,
+  });
+}
+
 /** Lavadora + EE: el campo de uso diario representa ciclos, no horas. */
 export function usaCiclosDiariosLavadora(form, catalogEntry = null) {
   if (!form?.eficiencia_energetica) return false;
@@ -90,6 +119,7 @@ export function horasToMinutosUso(horas) {
 }
 
 export function puedeUsarMinutosUsoDiario(form, catalogEntry = null) {
+  if (esEquipoHpUsoMinutos(form, catalogEntry)) return true;
   if (form?.eficiencia_energetica) return false;
   if (usaCiclosDiariosLavadora(form, catalogEntry)) return false;
   return true;

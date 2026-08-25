@@ -13,6 +13,8 @@ import {
   shouldDefaultUsoEnMinutos,
   horasToMinutosUso,
   puedeUsarMinutosUsoDiario,
+  esEquipoHpUsoMinutos,
+  labelCheckboxEficiencia,
 } from '../utils/eficienciaEnergetica';
 import { getFieldLabel, sanitizeMinutosInput } from '../utils/plantillasEficiencia';
 import { formatNumber } from '../utils/helpers';
@@ -42,6 +44,10 @@ export default function ElectroForm({
   const eficienciaDisponible = allowEficienciaEnergetica && Boolean(catalogEntry);
   const eficienciaActiva = Boolean(form.eficiencia_energetica && plantillaId && plantillaMeta);
   const eficienciaConfig = catalogEntry?.eficiencia_config || {};
+  const esHpUsoMinutos = esEquipoHpUsoMinutos(
+    { ...form, plantilla_eficiencia: plantillaId },
+    catalogEntry,
+  );
   const potenciaFromUser = Boolean(plantillaMeta?.potenciaFromUser);
   const usoPorCiclos = eficienciaActiva && usaCiclosDiariosLavadora(form, catalogEntry);
   const minutosUsoDisponible = puedeUsarMinutosUsoDiario(
@@ -79,7 +85,9 @@ export default function ElectroForm({
     setPresetKey('');
     setSelectedConsejo('');
     setIsManual(!!editId);
-    const enMinutos = !form.eficiencia_energetica && shouldDefaultUsoEnMinutos(form.horas_uso_dia);
+    const enMinutos = shouldDefaultUsoEnMinutos(form.horas_uso_dia) && (
+      !form.eficiencia_energetica || esEquipoHpUsoMinutos(form, catalogEntry)
+    );
     setUsarMinutosUsoDia(enMinutos);
     setMinutosUsoDia(enMinutos ? horasToMinutosUso(form.horas_uso_dia) : '');
     // Solo al abrir el modal (create/edit), no al sincronizar horas desde minutos
@@ -108,11 +116,11 @@ export default function ElectroForm({
   }, [minutosUsoDisponible, usarMinutosUsoDia, minutosUsoDia, form.horas_uso_dia, setForm]);
 
   useEffect(() => {
-    if (eficienciaActiva && usarMinutosUsoDia) {
+    if (eficienciaActiva && usarMinutosUsoDia && !esHpUsoMinutos) {
       setUsarMinutosUsoDia(false);
       setMinutosUsoDia('');
     }
-  }, [eficienciaActiva, usarMinutosUsoDia]);
+  }, [eficienciaActiva, usarMinutosUsoDia, esHpUsoMinutos]);
 
   useEffect(() => {
     if (!eficienciaActiva || potenciaFromUser || potenciaCalculada == null) return;
@@ -222,6 +230,20 @@ export default function ElectroForm({
             value={form.potencia_w ?? ''}
             onChange={(e) => setForm({ ...form, potencia_w: e.target.value })}
             placeholder="Ej. 800"
+          />
+        </div>
+      );
+    }
+
+    if (field === 'hp' && esHpUsoMinutos) {
+      return (
+        <div className="form-group" key={field}>
+          <input
+            {...commonProps}
+            value={form.hp ?? ''}
+            onChange={(e) => setForm({ ...form, hp: e.target.value })}
+            placeholder="Ej. 1"
+            aria-label="Potencia nominal (HP)"
           />
         </div>
       );
@@ -374,11 +396,14 @@ export default function ElectroForm({
               checked={Boolean(form.eficiencia_energetica)}
               onChange={(e) => toggleEficiencia(e.target.checked)}
             />
-            <span>Usar etiqueta de eficiencia energética (datos del fabricante)</span>
+            <span>{labelCheckboxEficiencia(form, catalogEntry)}</span>
           </label>
 
           {eficienciaActiva && plantillaMeta && (
-            <div className="form-row" style={{ marginTop: '0.75rem' }}>
+            <div
+              className="form-row"
+              style={{ marginTop: esHpUsoMinutos ? '0.5rem' : '0.75rem' }}
+            >
               {plantillaMeta.fields.map((field) => renderEficienciaField(field))}
             </div>
           )}
