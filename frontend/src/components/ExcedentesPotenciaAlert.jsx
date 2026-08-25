@@ -197,8 +197,7 @@ export default function ExcedentesPotenciaAlert({ items = [], adminCliente = nul
             <div className="excedentes-potencia-alert__titles">
               <h3>Equipos que superan la referencia del catálogo</h3>
               <p>
-                Estos equipos superan la potencia normal máx. (W) y/o las horas de uso sugeridas
-                configuradas en Admin → Recomendaciones.
+                Estos equipos superan la potencia normal máx. (W) y/o las horas de uso sugeridas.
               </p>
             </div>
           </>

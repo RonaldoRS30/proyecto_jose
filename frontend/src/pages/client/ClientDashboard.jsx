@@ -274,7 +274,7 @@ export default function ClientDashboard() {
             : 'Registre equipos y ejecute el cálculo estimado (el recibo PDF es solo referencia)'
         }
         action={{
-          label: 'Ejecutar Cálculo',
+          label: 'Ejecutar Reporte',
           icon: Calculator,
           onClick: handleCalcular,
           disabled: calculating || !hasEquipos,
