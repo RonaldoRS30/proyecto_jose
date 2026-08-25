@@ -127,8 +127,8 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
   const sinVariacion = !hasComparacionVariacion(comparison, metricFields);
 
   const refSubtitle = comparison.referenciaEsRecibo
-    ? 'Cálculo estimado vs recibo subido'
-    : 'Cálculo estimado vs referencia';
+    ? 'Recibo subido vs cálculo estimado'
+    : 'Referencia vs cálculo estimado';
 
   return (
     <div className="dashboard-charts-grid comparacion-charts-grid">
@@ -155,10 +155,20 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
       {barData.gasto.length > 0 && (
         <ComparacionBarPanel
           title="Gasto por energía (S/mes)"
-          subtitle="Consumo kWh × tarifa — escenario vs recibo/referencia"
+          subtitle="Consumo kWh × tarifa — recibo subido vs cálculo estimado"
           data={barData.gasto}
           formatValue={formatSoles}
           valueLabel="Gasto energía"
+          axisType="soles"
+        />
+      )}
+      {barData.facturaAnio.length > 0 && (
+        <ComparacionBarPanel
+          title="Total a pagar (S/año)"
+          subtitle={refSubtitle}
+          data={barData.facturaAnio}
+          formatValue={formatSoles}
+          valueLabel="Total a pagar"
           axisType="soles"
         />
       )}

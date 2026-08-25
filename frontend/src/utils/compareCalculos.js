@@ -197,11 +197,12 @@ export function formatAhorroLabel(ahorro, pct, unit = '') {
 }
 
 export function buildComparacionBarData(comparison, metricas = {}) {
-  if (!comparison) return { kwh: [], factura: [], gasto: [], ahorro: [] };
+  if (!comparison) return { kwh: [], factura: [], facturaAnio: [], gasto: [], ahorro: [] };
 
   const showConsumo = metricas.consumoKwh !== false;
   const showTotal = metricas.totalFactura !== false;
   const showGasto = metricas.gastoEnergia !== false;
+  const showAnual = metricas.ahorroAnual !== false;
 
   const refLabel = comparison.referenciaEsRecibo ? 'Recibo' : 'Referencia';
   const actualLabel = comparison.actualEsRecibo ? 'Recibo' : 'Cálculo estimado';
@@ -242,16 +243,20 @@ export function buildComparacionBarData(comparison, metricas = {}) {
 
   return {
     kwh: showConsumo ? [
-      { name: actualLabel, value: comparison.consumoMesKwh.actual, fill: '#1A4AB0' },
       { name: refLabel, value: comparison.consumoMesKwh.referencia, fill: '#64748b' },
+      { name: actualLabel, value: comparison.consumoMesKwh.actual, fill: '#1A4AB0' },
     ] : [],
     factura: showTotal ? [
-      { name: actualLabel, value: comparison.facturaTotalMes.actual, fill: '#10b981' },
       { name: refLabel, value: comparison.facturaTotalMes.referencia, fill: '#94a3b8' },
+      { name: actualLabel, value: comparison.facturaTotalMes.actual, fill: '#10b981' },
     ] : [],
     gasto: showGasto ? [
-      { name: actualLabel, value: comparison.gastoEnergiaMes.actual, fill: '#0ea5e9' },
       { name: refLabel, value: comparison.gastoEnergiaMes.referencia, fill: '#94a3b8' },
+      { name: actualLabel, value: comparison.gastoEnergiaMes.actual, fill: '#0ea5e9' },
+    ] : [],
+    facturaAnio: showAnual ? [
+      { name: refLabel, value: comparison.facturaTotalAnio.referencia, fill: '#94a3b8' },
+      { name: actualLabel, value: comparison.facturaTotalAnio.actual, fill: '#8b5cf6' },
     ] : [],
     ahorro,
   };
