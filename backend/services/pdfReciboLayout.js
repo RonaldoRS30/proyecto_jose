@@ -307,9 +307,8 @@ function drawResumenPanel(doc, resumen, formatNum) {
 
     doc.restore();
     y += 60;
-    y = drawKeyValueRow(doc, x, y, w, 'Demanda contratada', `${formatNum(resumen.demandaTotal)} kW`);
     return y + 4;
-  }, { estimatedBodyH: 76 });
+  }, { estimatedBodyH: 64 });
 }
 
 function drawFacturaLineRow(doc, opts) {
