@@ -281,6 +281,132 @@ function drawCleanHBars(doc, opts) {
   doc.y = Math.max(bottomY + 8, frameY + chartH + 10);
 }
 
+const GASTO_PERIODO_COLORS = {
+  diario: C.amber,
+  mensual: C.green,
+  anual: C.purple,
+};
+
+function drawGastoEquipoPeriodosAt(doc, opts) {
+  const {
+    items = [],
+    originX,
+    originY,
+    originW,
+    labelW = LABEL_W,
+    valueW = 78,
+  } = opts;
+
+  if (!items.length) return originY;
+
+  const barAreaX = originX + labelW + 6;
+  const barAreaW = originW - labelW - valueW - 14;
+  const barH = 9;
+  const barGap = 2;
+  const rowH = barH * 3 + barGap * 2 + 10;
+
+  const scaleMax = Math.max(
+    ...items.flatMap((i) => [i.diario, i.mensual, i.anual]),
+    0.001,
+  );
+
+  items.forEach((item, index) => {
+    const rowY = originY + index * rowH;
+
+    if (index % 2 === 0) {
+      doc.rect(originX + 4, rowY, originW - 8, rowH - 2).fill(C.bgAlt);
+    }
+
+    doc.font('Helvetica').fontSize(7.5).fillColor(C.text)
+      .text(String(item.label || ''), originX + 10, rowY + 12, {
+        width: labelW - 12,
+        lineBreak: false,
+        ellipsis: true,
+      });
+
+    const periods = [
+      { key: 'diario', value: item.diario },
+      { key: 'mensual', value: item.mensual },
+      { key: 'anual', value: item.anual },
+    ];
+
+    periods.forEach((period, barIndex) => {
+      const barY = rowY + 4 + barIndex * (barH + barGap);
+      if (period.value <= 0) return;
+      const proportional = (period.value / scaleMax) * barAreaW;
+      const width = Math.max(2, proportional);
+      doc.roundedRect(barAreaX, barY, width, barH, 3).fill(GASTO_PERIODO_COLORS[period.key]);
+    });
+
+    doc.font('Helvetica').fontSize(6.5).fillColor(C.muted)
+      .text(formatValue(item.diario, 'S/'), originX + originW - valueW - 6, rowY + 4, {
+        width: valueW,
+        align: 'right',
+        lineBreak: false,
+      })
+      .text(formatValue(item.mensual, 'S/'), originX + originW - valueW - 6, rowY + 14, {
+        width: valueW,
+        align: 'right',
+        lineBreak: false,
+      })
+      .text(formatValue(item.anual, 'S/'), originX + originW - valueW - 6, rowY + 24, {
+        width: valueW,
+        align: 'right',
+        lineBreak: false,
+      });
+  });
+
+  return originY + items.length * rowH + ROW_PAD;
+}
+
+function drawGastoEquipoPeriodosChart(doc, detalles) {
+  const items = detalles
+    .filter((d) => (parseFloat(d.gasto_mensual) || 0) > 0
+      || (parseFloat(d.gasto_diario) || 0) > 0
+      || (parseFloat(d.gasto_anual) || 0) > 0)
+    .map((d) => ({
+      label: d.nombre,
+      diario: parseFloat(d.gasto_diario) || 0,
+      mensual: parseFloat(d.gasto_mensual) || 0,
+      anual: parseFloat(d.gasto_anual) || 0,
+    }))
+    .sort((a, b) => b.mensual - a.mensual)
+    .slice(0, 10);
+
+  if (!items.length) return;
+
+  const rowH = 9 * 3 + 2 * 2 + 10;
+  const chartH = items.length * rowH + ROW_PAD + 12;
+  const legend = [
+    { color: GASTO_PERIODO_COLORS.diario, label: 'Gasto diario' },
+    { color: GASTO_PERIODO_COLORS.mensual, label: 'Gasto mensual' },
+    { color: GASTO_PERIODO_COLORS.anual, label: 'Gasto anual' },
+  ];
+  const estimatedHeaderH = 18 + 16 + 24 + 10;
+
+  ensureSpace(doc, estimatedHeaderH + chartH + 14);
+
+  const headerEndY = drawChartHeader(doc, {
+    title: 'GASTO POR EQUIPO (S/)',
+    sub: 'Diario, mensual y anual · barras proporcionales al monto en S/',
+    legend,
+    originX: MARGIN,
+    originW: CONTENT_W,
+  });
+
+  const frameY = headerEndY + 6;
+  drawChartFrame(doc, MARGIN, frameY, CONTENT_W, chartH);
+
+  const bottomY = drawGastoEquipoPeriodosAt(doc, {
+    items,
+    originX: MARGIN + 6,
+    originY: frameY + 10,
+    originW: CONTENT_W - 12,
+  });
+
+  doc.y = Math.max(bottomY + 8, frameY + chartH + 10);
+}
+
 function drawPieChartAt(doc, items, cx, cy, radius) {
   const total = items.reduce((s, d) => s + (d.value || 0), 0);
   if (total <= 0) return;
@@ -571,46 +697,14 @@ function drawChartsSection(doc, {
     divider(doc);
   }
 
-  const gastoEquipoItems = detalles
-    .filter((d) => (parseFloat(d.gasto_mensual) || 0) > 0)
-    .map((d) => ({ label: d.nombre, value: parseFloat(d.gasto_mensual) || 0 }));
+  const gastoEquipoItems = detalles.some(
+    (d) => (parseFloat(d.gasto_mensual) || 0) > 0
+      || (parseFloat(d.gasto_diario) || 0) > 0
+      || (parseFloat(d.gasto_anual) || 0) > 0,
+  );
 
-  if (gastoEquipoItems.length > 0) {
-    drawCleanHBars(doc, {
-      title: 'GASTO POR EQUIPO (S/mes)',
-      sub: 'Top 10 equipos con mayor gasto mensual',
-      items: gastoEquipoItems,
-      color: C.green,
-      unit: 'S/',
-      maxBars: 10,
-    });
-    divider(doc);
-  }
-
-  const comparativaItems = detalles
-    .filter((d) => (parseFloat(d.gasto_anual) || 0) > 0)
-    .map((d) => ({
-      label: d.nombre,
-      value: parseFloat(d.gasto_anual) || 0,
-      value2: parseFloat(d.gasto_diario) || 0,
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
-  if (comparativaItems.length > 0) {
-    drawCleanHBars(doc, {
-      title: 'GASTO ANUAL Y DIARIO POR EQUIPO (S/)',
-      sub: 'Barra superior = anual · Barra inferior = diario',
-      items: comparativaItems,
-      unit: 'S/',
-      color: C.purple,
-      color2: C.amber,
-      legend: [
-        { color: C.purple, label: 'Gasto anual' },
-        { color: C.amber, label: 'Gasto diario' },
-      ],
-      maxBars: 8,
-    });
+  if (gastoEquipoItems) {
+    drawGastoEquipoPeriodosChart(doc, detalles);
   }
 }
 
