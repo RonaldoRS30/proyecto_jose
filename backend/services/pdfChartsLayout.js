@@ -308,6 +308,13 @@ function drawPieChartAt(doc, items, cx, cy, radius) {
   doc.circle(cx, cy, radius).lineWidth(0.6).strokeColor(C.white).stroke();
 }
 
+function drawDonutChartAt(doc, items, cx, cy, outerRadius, innerRadius = null) {
+  const inner = innerRadius ?? outerRadius * 0.52;
+  drawPieChartAt(doc, items, cx, cy, outerRadius);
+  doc.circle(cx, cy, inner).fill(C.bgLight);
+  doc.circle(cx, cy, inner).lineWidth(0.5).strokeColor(C.border).stroke();
+}
+
 function drawVerticalLegend(doc, items, x, y, maxWidth) {
   let cy = y;
   const rowH = 13;
@@ -659,6 +666,62 @@ function drawComparacionResumenTable(doc, comparacion, formatNum) {
   doc.y = y + 10;
 }
 
+function drawComparacionAhorroPieChart(doc, comparacion, formatNum) {
+  const items = [
+    { label: 'Consumo kWh/mes', value: comparacion.consumoMesKwh.pctAhorro ?? 0 },
+    { label: 'Gasto energía S/mes', value: comparacion.gastoEnergiaMes.pctAhorro ?? 0 },
+    { label: 'Total a pagar S/mes', value: comparacion.facturaTotalMes.pctAhorro ?? 0 },
+    { label: 'Consumo kWh/año', value: comparacion.consumoAnioKwh.pctAhorro ?? 0 },
+    { label: 'Gasto energía S/año', value: comparacion.gastoEnergiaAnio.pctAhorro ?? 0 },
+    { label: 'Total a pagar S/año', value: comparacion.facturaTotalAnio.pctAhorro ?? 0 },
+  ].filter((item) => item.value > 0);
+
+  if (!items.length) return;
+
+  const panelH = computeCategoryPanelHeight(items) + 24;
+  ensureSpace(doc, panelH + 16);
+
+  const topY = doc.y;
+  drawChartFrame(doc, MARGIN, topY, CONTENT_W, panelH);
+
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(C.primary)
+    .text('DISTRIBUCIÓN DE % AHORRO', MARGIN + 8, topY + 10, {
+      width: CONTENT_W - 16,
+      align: 'center',
+      lineGap: 0,
+    });
+  doc.font('Helvetica').fontSize(7.5).fillColor(C.muted)
+    .text(
+      'Participación relativa del porcentaje de ahorro por concepto',
+      MARGIN + 8,
+      topY + 24,
+      { width: CONTENT_W - 16, align: 'center', lineGap: 0 },
+    );
+
+  const titleBlockH = 40;
+  const legendRowH = 13;
+  const legendPad = 12;
+  const legendH = items.length * legendRowH + legendPad;
+  const pieTop = topY + titleBlockH;
+  const pieBottom = topY + panelH - legendH - 8;
+  const pieAreaH = Math.max(72, pieBottom - pieTop);
+  const cx = MARGIN + CONTENT_W / 2;
+  const cy = pieTop + pieAreaH / 2;
+  const radius = Math.min(52, pieAreaH / 2 - 4, CONTENT_W / 2 - 36);
+
+  drawDonutChartAt(doc, items, cx, cy, radius);
+
+  const legendItems = items.map((item, i) => ({
+    color: PALETTE[i % PALETTE.length],
+    label: `${item.label}: ${formatNum(item.value)}%`,
+  }));
+
+  const legendY = topY + panelH - legendH + 4;
+  drawVerticalLegend(doc, legendItems, MARGIN + 12, legendY, CONTENT_W - 24);
+
+  doc.y = topY + panelH + 12;
+}
+
 function drawComparacionSection(doc, { comparacion, reciboFecha, calculoFecha, formatNum }) {
   sectionTitle(
     doc,
@@ -777,6 +840,7 @@ function drawComparacionSection(doc, { comparacion, reciboFecha, calculoFecha, f
   });
 
   drawComparacionResumenTable(doc, comparacion, formatNum);
+  drawComparacionAhorroPieChart(doc, comparacion, formatNum);
 }
 
 module.exports = { drawChartsSection, drawComparacionSection };
