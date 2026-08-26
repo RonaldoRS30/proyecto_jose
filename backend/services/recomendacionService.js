@@ -2,7 +2,6 @@ const { Op } = require('sequelize');
 const { Recomendacion, Electrodomestico } = require('../models');
 const { AppError } = require('../utils/errorHandler');
 const { normalizeNombreEquipo } = require('../helpers/nombreEquipoHelper');
-const { matchRecomendacionesForEquipos } = require('./recomendacionMatcher');
 
 const MODULOS_VALIDOS = ['aparato', 'fantasma', 'iluminacion'];
 
@@ -182,31 +181,18 @@ const toggleActivo = async (id) => {
 
 const obtenerParaEquipos = async (equipos) => {
   const recomendaciones = await listar({ soloActivas: true });
-  const matched = [];
-  const seen = new Set();
+  const byId = new Map(recomendaciones.map((rec) => [Number(rec.id), rec]));
 
-  const addRecomendacion = (rec) => {
-    if (!rec || seen.has(rec.id)) return;
-    seen.add(rec.id);
-    matched.push(rec);
-  };
-
-  const ids = new Set(
+  const ids = [...new Set(
     (equipos || [])
       .map((equipo) => Number(equipo.recomendacion_id))
-      .filter(Boolean)
-  );
+      .filter(Boolean),
+  )];
 
-  if (ids.size > 0) {
-    recomendaciones
-      .filter((rec) => ids.has(rec.id))
-      .forEach(addRecomendacion);
-  }
-
-  const equiposSinId = (equipos || []).filter((equipo) => !equipo.recomendacion_id);
-  matchRecomendacionesForEquipos(equiposSinId, recomendaciones).forEach(addRecomendacion);
-
-  return matched.sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.nombre.localeCompare(b.nombre));
+  return ids
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0) || a.nombre.localeCompare(b.nombre));
 };
 
 module.exports = {

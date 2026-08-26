@@ -1,5 +1,8 @@
 const assert = require('assert');
-const { findRecomendacionByNombreModulo } = require('../services/recomendacionService');
+const {
+  findRecomendacionByNombreModulo,
+  obtenerParaEquipos,
+} = require('../services/recomendacionService');
 
 const catalogoFantasma = [
   { id: 10, nombre: 'Stand-by computadora', modulo: 'fantasma' },
