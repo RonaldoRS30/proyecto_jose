@@ -32,7 +32,6 @@ export default function AuthServicesPanel({ introActive = false }) {
           alt="ElectrixStudio"
           className="auth-promo-logo"
         />
-        <span className="auth-promo-kit">Kit Express</span>
       </div>
 
       <h2 className="auth-promo-title">
