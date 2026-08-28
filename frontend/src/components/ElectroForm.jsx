@@ -16,7 +16,7 @@ import {
   esEquipoHpUsoMinutos,
   labelCheckboxEficiencia,
 } from '../utils/eficienciaEnergetica';
-import { getFieldLabel, sanitizeMinutosInput } from '../utils/plantillasEficiencia';
+import { getFieldLabel, sanitizeMinutosInput, sanitizePositiveIntegerInput } from '../utils/plantillasEficiencia';
 import { formatNumber } from '../utils/helpers';
 
 export default function ElectroForm({
@@ -421,7 +421,19 @@ export default function ElectroForm({
       <div className="form-row">
         <div className="form-group">
           <label>Cantidad de equipos *</label>
-          <input className="form-control" type="number" min="1" step="1" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} required />
+          <input
+            className="form-control"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={form.cantidad === '' || form.cantidad == null ? '' : String(form.cantidad)}
+            onChange={(e) => setForm({
+              ...form,
+              cantidad: sanitizePositiveIntegerInput(e.target.value),
+            })}
+            placeholder="Ej. 1"
+            required
+          />
         </div>
         <div className="form-group">
           <label>{labelUsoDiarioField} *</label>
@@ -481,8 +493,20 @@ export default function ElectroForm({
       </div>
 
       <div className="form-group">
-        <label>Días de uso por mes</label>
-        <input className="form-control" type="number" min="1" max="31" value={form.dias_uso_mes || 30} onChange={(e) => setForm({ ...form, dias_uso_mes: e.target.value })} />
+        <label>Días de uso por mes *</label>
+        <input
+          className="form-control"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={form.dias_uso_mes === '' || form.dias_uso_mes == null ? '' : String(form.dias_uso_mes)}
+          onChange={(e) => setForm({
+            ...form,
+            dias_uso_mes: sanitizePositiveIntegerInput(e.target.value, { max: 31 }),
+          })}
+          placeholder="Ej. 30"
+          required
+        />
       </div>
 
       <div className="form-group">

@@ -25,6 +25,28 @@ export async function saveElectrodomestico({
     }
   }
 
+  const cantidad = Number(payload.cantidad);
+  if (!Number.isFinite(cantidad) || cantidad <= 0 || !Number.isInteger(cantidad)) {
+    await alert({
+      title: 'Cantidad inválida',
+      message: 'Indique la cantidad de equipos (número entero mayor a 0).',
+      variant: 'warning',
+      confirmLabel: 'Entendido',
+    });
+    return false;
+  }
+
+  const diasUsoMes = Number(payload.dias_uso_mes);
+  if (!Number.isFinite(diasUsoMes) || diasUsoMes <= 0 || diasUsoMes > 31 || !Number.isInteger(diasUsoMes)) {
+    await alert({
+      title: 'Días de uso obligatorios',
+      message: 'Indique los días de uso por mes (número entero entre 1 y 31).',
+      variant: 'warning',
+      confirmLabel: 'Entendido',
+    });
+    return false;
+  }
+
   const catalogEntry = matchCatalogEficiencia(payload.nombre, payload.recomendacion_id, catalogo);
   const porCiclos = usaCiclosDiariosLavadora(payload, catalogEntry);
 
@@ -70,8 +92,13 @@ export async function saveElectrodomestico({
   }
 
   try {
-    if (editId) await updateElectrodomestico(editId, payload);
-    else await createElectrodomestico(payload);
+    const payloadNormalizado = {
+      ...payload,
+      cantidad,
+      dias_uso_mes: diasUsoMes,
+    };
+    if (editId) await updateElectrodomestico(editId, payloadNormalizado);
+    else await createElectrodomestico(payloadNormalizado);
     return true;
   } catch (err) {
     const message = err.response?.data?.message;

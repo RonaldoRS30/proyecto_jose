@@ -84,6 +84,16 @@ export function sanitizeMinutosInput(value) {
   return String(value ?? '').replace(/\D/g, '');
 }
 
+/** Entero positivo editable (vacío permitido mientras escribe). */
+export function sanitizePositiveIntegerInput(value, { max = null } = {}) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  let n = parseInt(digits, 10);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  if (max != null && n > max) n = max;
+  return String(n);
+}
+
 export function calcPotenciaEnergiaTiempo(kwhPorCiclo, minutosPorCiclo) {
   const horas = minutosToHoras(minutosPorCiclo);
   const e = Number(kwhPorCiclo);
