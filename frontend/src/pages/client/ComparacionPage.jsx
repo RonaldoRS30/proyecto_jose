@@ -6,7 +6,7 @@ import {
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import SearchableSelect from '../../components/SearchableSelect';
-import ComparacionCharts, { ComparacionAhorroPie } from '../../components/ComparacionCharts';
+import ComparacionCharts from '../../components/ComparacionCharts';
 import { useAlert } from '../../contexts/ConfirmContext';
 import {
   getCalculos,
@@ -436,8 +436,6 @@ export default function ComparacionPage() {
               </table>
             </div>
           </div>
-
-          <ComparacionAhorroPie comparison={comparison} metricas={metricas} />
         </>
       )}
     </div>

@@ -2,9 +2,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { formatNumber, formatCurrency, formatChartAxisKwh, formatChartAxisSoles } from '../utils/helpers';
-import { buildComparacionBarData, buildComparacionAhorroPieData, hasComparacionVariacion } from '../utils/compareCalculos';
+import { buildComparacionBarData, hasComparacionVariacion } from '../utils/compareCalculos';
 import { DashboardSimpleTooltip, DashboardChartPanel } from './DashboardChartPanel';
-import DashboardPieChart from './DashboardPieChart';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const formatKwh = (v) => `${formatNumber(v)} kWh`;
@@ -184,25 +183,5 @@ export default function ComparacionCharts({ comparison, metricas = {} }) {
         <ComparacionVariacionPanel data={barData.ahorro} sinVariacion={sinVariacion} />
       )}
     </div>
-  );
-}
-
-export function ComparacionAhorroPie({ comparison, metricas = {} }) {
-  const pieData = buildComparacionAhorroPieData(comparison, metricas);
-  if (!pieData.length) return null;
-
-  return (
-    <DashboardChartPanel
-      title="Distribución de % ahorro"
-      subtitle="Participación relativa del porcentaje de ahorro por concepto"
-      wide
-    >
-      <DashboardPieChart
-        data={pieData}
-        formatValue={(value) => `${formatNumber(value)}% ahorro`}
-        emptyMessage="Sin porcentajes de ahorro para mostrar"
-        height={300}
-      />
-    </DashboardChartPanel>
   );
 }

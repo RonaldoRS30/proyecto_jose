@@ -266,28 +266,6 @@ export function buildComparacionBarData(comparison, metricas = {}) {
   };
 }
 
-export function buildComparacionAhorroPieData(comparison, metricas = {}) {
-  if (!comparison) return [];
-
-  const items = [];
-  if (metricas.consumoKwh !== false) {
-    items.push({ name: 'Consumo kWh/mes', value: comparison.consumoMesKwh.pctAhorro ?? 0 });
-    items.push({ name: 'Consumo kWh/año', value: comparison.consumoAnioKwh.pctAhorro ?? 0 });
-  }
-  if (metricas.gastoEnergia !== false) {
-    items.push({ name: 'Gasto energía S/mes', value: comparison.gastoEnergiaMes.pctAhorro ?? 0 });
-    items.push({ name: 'Gasto energía S/año', value: comparison.gastoEnergiaAnio.pctAhorro ?? 0 });
-  }
-  if (metricas.totalFactura !== false) {
-    items.push({ name: 'Total a pagar S/mes', value: comparison.facturaTotalMes.pctAhorro ?? 0 });
-  }
-  if (metricas.ahorroAnual !== false) {
-    items.push({ name: 'Total a pagar S/año', value: comparison.facturaTotalAnio.pctAhorro ?? 0 });
-  }
-
-  return items.filter((item) => (item.value ?? 0) > 0);
-}
-
 export const COMPARACION_METRICAS = [
   { key: 'consumoKwh', label: 'Consumo por energía (kWh)', field: 'consumoMesKwh', unit: 'kWh' },
   { key: 'gastoEnergia', label: 'Gasto por energía (S/mes)', field: 'gastoEnergiaMes', unit: 'S/' },
