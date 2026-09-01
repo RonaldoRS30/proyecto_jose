@@ -143,6 +143,7 @@ const toCalcInput = (items) =>
     cantidad: e.cantidad,
     horasDiarias: parseFloat(e.horas_uso_dia),
     potenciaW: parseFloat(e.potencia_w),
+    dias_uso_mes: e.dias_uso_mes != null ? parseInt(e.dias_uso_mes, 10) : 30,
     recomendacion_id: e.recomendacion_id || null,
     eficiencia_energetica: Boolean(e.eficiencia_energetica),
     plantilla_eficiencia: e.plantilla_eficiencia || null,

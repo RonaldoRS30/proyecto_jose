@@ -29,8 +29,17 @@ function calcularConsumoDiaDispositivo(device) {
   return (cantidad * potenciaW * usoDiario) / 1000;
 }
 
+/** Días del mes en que se usa el equipo (1–31). Por defecto 30 si no viene informado. */
+function resolveDiasUsoMes(device) {
+  const raw = device?.dias_uso_mes ?? device?.diasUsoMes ?? null;
+  const n = Number(raw);
+  if (Number.isFinite(n) && Number.isInteger(n) && n >= 1 && n <= 31) return n;
+  return 30;
+}
+
 module.exports = {
   usaCiclosDiarios,
   calcularConsumoDiaDispositivo,
+  resolveDiasUsoMes,
   PLANTILLAS_EFICIENCIA,
 };

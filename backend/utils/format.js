@@ -1,7 +1,7 @@
 /** Decimales por tipo de dato (réplica Excel CÁLCULO - CONSUMO ELÉCTRICO.xlsx) */
 const DECIMALS = 3;
 const DECIMALS_KWH_DAY = 4;
-const DECIMALS_KWH_MONTH = 0;
+const DECIMALS_KWH_MONTH = 2;
 const DECIMALS_KWH_YEAR = 2;
 const DECIMALS_KWH_TOTAL = 2;
 const DECIMALS_MONEY = 2;

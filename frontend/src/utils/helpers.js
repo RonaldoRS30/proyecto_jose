@@ -1,7 +1,7 @@
 /** Decimales estándar — réplica Excel */
 export const DECIMALS = 3;
 export const DECIMALS_KWH_DAY = 4;
-export const DECIMALS_KWH_MONTH = 3;
+export const DECIMALS_KWH_MONTH = 2;
 export const DECIMALS_KWH_YEAR = 2;
 export const DECIMALS_MONEY = 2;
 

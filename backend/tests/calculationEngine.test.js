@@ -37,8 +37,8 @@ assertEqual(ref.gastoAnual, 1073.98, 'Refrigerador gasto anual');
 // Lavadora 1067 W — réplica fila Excel (G=32, F=1.0667, J=19.62)
 const lav = calcularDispositivo({ cantidad: 1, horasDiarias: 1, potenciaW: 1067 });
 assertEqual(lav.consumoDia, 1.0667, 'Lavadora consumo día');
-assertEqual(lav.consumoMes, 32, 'Lavadora consumo mes');
-assertEqual(lav.consumoAnio, 389.33, 'Lavadora consumo año');
+assertEqual(lav.consumoMes, 32.01, 'Lavadora consumo mes');
+assertEqual(lav.consumoAnio, 389.46, 'Lavadora consumo año');
 assertEqual(lav.gastoDiario, 0.65, 'Lavadora gasto diario');
 assertEqual(lav.gastoMensual, 19.62, 'Lavadora gasto mensual');
 
@@ -65,6 +65,17 @@ const lavEeMulti = calcularDispositivo({
   kwh_por_ciclo: 1.6,
 });
 assertEqual(lavEeMulti.consumoDia, 9.6, 'Lavadora EE 3 equipos × 2 ciclos × 1.6 kWh');
+
+// Licuadora: 500 W, 15 min/día (0.25 h), solo 4 días al mes
+const licuadora = calcularDispositivo({
+  nombre: 'Licuadora',
+  cantidad: 1,
+  horasDiarias: 0.25,
+  potenciaW: 500,
+  dias_uso_mes: 4,
+});
+assertEqual(licuadora.consumoMes, 0.5, 'Licuadora consumo mes (4 días × 0.125 kWh/día uso)');
+assertEqual(licuadora.consumoDia, 0.0167, 'Licuadora consumo día promedio calendario');
 
 // 3 equipos ejemplo Excel (Lavadora + Horno + Licuadora)
 const ejemploExcel = calcularCompleto({

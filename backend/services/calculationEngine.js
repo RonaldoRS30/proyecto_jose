@@ -3,8 +3,8 @@
  * Fuente: CÁLCULO - CONSUMO ELÉCTRICO.xlsx
  *
  * Fórmulas por dispositivo (filas 5+ en todas las hojas):
- *   G = ROUND((C * E * D) / 1000 * 30, 0)  → Consumo mensual kWh
- *   F = ROUND(G / 30, 4)                   → Consumo diario kWh (derivado del mes)
+ *   G = ROUND((C * E * D) / 1000 * dias_uso_mes, 2)  → Consumo mensual kWh
+ *   F = ROUND(G / 30, 4)                   → Consumo diario kWh (promedio calendario)
  *   H = ROUND(G / 30 * 365, 2)             → Consumo anual kWh
  *   I = ROUND(precioKwh * F, 2)            → Gasto diario S/
  *   J = ROUND(precioKwh * G, 2)            → Gasto mensual S/
@@ -37,6 +37,7 @@ const DEFAULT_TARIFF = {
 
 const {
   calcularConsumoDiaDispositivo,
+  resolveDiasUsoMes,
 } = require('../helpers/consumoDispositivoHelper');
 
 /**
@@ -56,9 +57,11 @@ function calcularDispositivo(device, precioKwh = DEFAULT_TARIFF.precioKwh) {
     horasDiarias,
     potenciaW,
   });
-  const consumoMes = round(consumoDiaRaw * DEFAULT_TARIFF.diasMes, KWH_MONTH);
-  const consumoDia = round(consumoMes / DEFAULT_TARIFF.diasMes, KWH_DAY);
-  const consumoAnio = round((consumoMes / DEFAULT_TARIFF.diasMes) * DEFAULT_TARIFF.diasAnio, KWH_YEAR);
+  const diasUsoMes = resolveDiasUsoMes(device);
+  const diasCalendario = DEFAULT_TARIFF.diasMes;
+  const consumoMes = round(consumoDiaRaw * diasUsoMes, KWH_MONTH);
+  const consumoDia = round(consumoMes / diasCalendario, KWH_DAY);
+  const consumoAnio = round((consumoMes / diasCalendario) * DEFAULT_TARIFF.diasAnio, KWH_YEAR);
   const gastoDiario = round(precioKwh * consumoDia, MONEY);
   const gastoMensual = round(precioKwh * consumoMes, MONEY);
   const gastoAnual = round(precioKwh * consumoAnio, MONEY);
