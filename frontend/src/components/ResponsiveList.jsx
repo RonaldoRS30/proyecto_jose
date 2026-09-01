@@ -36,8 +36,8 @@ export default function ResponsiveList({
         {!tableOnly && (
           <p className="table-scroll-hint">Desliza horizontalmente para ver más columnas</p>
         )}
-        <div className={tableOnly ? 'table-wrapper' : 'table-mobile-scroll table-dual-scroll'}>
-          <table className={tableClassName || undefined}>
+        <div className="table-mobile-scroll table-dual-scroll">
+          <table className={tableClassName || 'data-table'}>
             <thead>{tableHead}</thead>
             <tbody>{items.map((item, index) => renderTableRow(item, index))}</tbody>
           </table>

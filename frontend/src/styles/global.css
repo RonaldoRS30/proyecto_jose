@@ -259,6 +259,13 @@ a { color: var(--primary); text-decoration: none; }
 
 .card-list {
   margin-bottom: 0.25rem;
+  overflow: visible;
+}
+
+.card:has(.table-mobile-scroll),
+.card:has(.table-dual-scroll),
+.card:has(.table-wrapper) {
+  overflow: visible;
 }
 
 .page-header {
@@ -376,7 +383,23 @@ a { color: var(--primary); text-decoration: none; }
 .form-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem; }
 
 /* Table */
-.table-wrapper { overflow-x: auto; }
+.table-wrapper,
+.table-mobile-scroll,
+.table-dual-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  max-width: 100%;
+}
+
+.table-wrapper table,
+.table-mobile-scroll table,
+.table-dual-scroll table {
+  min-width: max-content;
+  width: max-content;
+}
+
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 0.875rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
 th { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; background: var(--bg); }
@@ -2675,6 +2698,24 @@ tr:hover td { background: rgba(37,99,235,0.03); }
 td.actions {
   display: table-cell;
   vertical-align: middle;
+  white-space: nowrap;
+  width: 1%;
+}
+
+td.actions .actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+td.actions .actions .btn {
+  flex-shrink: 0;
+}
+
+.card-list th:last-child,
+.card:has(.table-mobile-scroll) th:last-child {
+  white-space: nowrap;
 }
 
 /* Tablas admin — alinear estado y acciones */
@@ -2725,12 +2766,12 @@ td.actions {
   }
 
   .admin-table-card .table-dual-scroll {
-    overflow-x: visible;
+    overflow-x: auto;
   }
 
   .admin-table-card .table-dual-scroll table {
-    width: 100%;
-    min-width: 100%;
+    width: max-content;
+    min-width: max-content;
   }
 
   .admin-table-card .table-dual-scroll th:first-child,
@@ -2891,6 +2932,19 @@ td.actions {
 
 .table-scroll-hint {
   display: none;
+}
+
+.card-list .view-desktop .table-scroll-hint,
+.card:has(.table-mobile-scroll) .view-desktop .table-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.625rem 1rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .table-mobile-scroll table {
@@ -3262,12 +3316,12 @@ td.actions {
   }
 
   .historial-records-card .table-dual-scroll {
-    overflow-x: visible;
+    overflow-x: auto;
   }
 
   .historial-records-card .table-dual-scroll table {
-    width: 100%;
-    min-width: 100%;
+    width: max-content;
+    min-width: max-content;
     table-layout: auto;
   }
 

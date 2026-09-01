@@ -114,7 +114,7 @@ export default function IluminacionPage() {
 
       <ModuloResumen totales={totales} color="#10b981" Icon={Lightbulb} />
 
-      <div className="card">
+      <div className="card card-list">
         <ServerPaginatedResponsiveList
           loading={loading}
           empty={!loading && total === 0}

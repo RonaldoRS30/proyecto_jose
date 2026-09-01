@@ -114,7 +114,7 @@ export default function FantasmaPage() {
 
       <ModuloResumen totales={totales} color="#f59e0b" Icon={Ghost} />
 
-      <div className="card">
+      <div className="card card-list">
         <ServerPaginatedResponsiveList
           loading={loading}
           empty={!loading && total === 0}
