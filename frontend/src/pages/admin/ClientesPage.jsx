@@ -198,19 +198,11 @@ export default function ClientesPage() {
 
     const payload = buildClientePayload(form, tipoCliente);
 
-    if (tipoCliente === 'natural' && !payload.apellido) {
-      setError('El apellido es obligatorio para persona natural.');
-      return;
-    }
-    if (tipoCliente === 'empresa' && form.apellido?.trim()) {
-      setError('Una empresa no puede tener apellido. Use solo razón social.');
-      return;
-    }
-    if (tipoCliente === 'empresa' && payload.documento.length !== 11) {
+    if (tipoCliente === 'empresa' && payload.documento && payload.documento.length !== 11) {
       setError('El RUC debe tener exactamente 11 dígitos.');
       return;
     }
-    if (tipoCliente === 'natural' && payload.documento.length !== 8) {
+    if (tipoCliente === 'natural' && payload.documento && payload.documento.length !== 8) {
       setError('El DNI debe tener exactamente 8 dígitos.');
       return;
     }
@@ -482,36 +474,34 @@ export default function ClientesPage() {
                 </div>
                 <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-muted)' }}>
                   {tipoCliente === 'natural'
-                    ? 'Persona natural: nombre, apellido y DNI (8 dígitos).'
-                    : 'Empresa: solo razón social y RUC (11 dígitos), sin apellido.'}
+                    ? 'Persona natural: todos los campos son opcionales. Si ingresa DNI debe tener 8 dígitos.'
+                    : 'Empresa: todos los campos son opcionales. Si ingresa RUC debe tener 11 dígitos.'}
                 </small>
               </>
             )}
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>{tipoCliente === 'empresa' ? 'Razón Social *' : 'Nombre *'}</label>
-              <input className="form-control" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+              <label>{tipoCliente === 'empresa' ? 'Razón Social' : 'Nombre'}</label>
+              <input className="form-control" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Opcional" />
             </div>
             {tipoCliente === 'natural' && (
               <div className="form-group">
-                <label>Apellido *</label>
-                <input className="form-control" value={form.apellido || ''} onChange={(e) => setForm({ ...form, apellido: e.target.value })} required />
+                <label>Apellido</label>
+                <input className="form-control" value={form.apellido || ''} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Opcional" />
               </div>
             )}
           </div>
           <div className="form-row">
             <div className="form-group" style={tipoCliente === 'empresa' ? { gridColumn: '1 / -1' } : {}}>
-              <label>{tipoCliente === 'empresa' ? 'RUC *' : 'Documento (DNI) *'}</label>
+              <label>{tipoCliente === 'empresa' ? 'RUC' : 'Documento (DNI)'}</label>
               <input 
                 className="form-control" 
                 value={form.documento || ''} 
                 onChange={(e) => setForm({ ...form, documento: e.target.value.replace(/\D/g, '') })} 
                 maxLength={tipoCliente === 'empresa' ? 11 : 8}
-                minLength={tipoCliente === 'empresa' ? 11 : 8}
-                pattern={tipoCliente === 'empresa' ? "\\d{11}" : "\\d{8}"}
                 title={tipoCliente === 'empresa' ? 'El RUC debe tener exactamente 11 dígitos' : 'El DNI debe tener exactamente 8 dígitos'}
-                required
+                placeholder={tipoCliente === 'empresa' ? 'Opcional (11 dígitos)' : 'Opcional (8 dígitos)'}
               />
             </div>
 
@@ -528,16 +518,14 @@ export default function ClientesPage() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Teléfono *</label>
+              <label>Teléfono</label>
               <input 
                 className="form-control" 
                 value={form.telefono || ''} 
                 onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, '') })} 
                 maxLength={9}
-                minLength={7}
-                pattern="\d{7,9}"
+                placeholder="Opcional"
                 title="El teléfono debe tener entre 7 y 9 dígitos"
-                required
               />
             </div>
             <div className="form-group">
